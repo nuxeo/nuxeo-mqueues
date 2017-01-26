@@ -86,7 +86,8 @@ To build and run the tests, simply start the Maven build:
     mvn clean install
 
 ### Following Project QA Status
-[![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=addons_nuxeo-mqueues-master)](https://qa.nuxeo.org/jenkins/job/addons_nuxeo-mqueues-master/)
+
+[![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=master/addon_nuxeo-mqueues-master)](https://qa.nuxeo.org/jenkins/job/master/job/addon_nuxeo-mqueues-master/)
 
 
 ## About Nuxeo

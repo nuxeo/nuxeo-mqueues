@@ -3,11 +3,11 @@ nuxeo-mqueues
 
 ## About
 
-This addon provides a generic producers/consumers pattern using multiple message queues. Visit [nuxeo-mqueues-core](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/README.md) for more information.
+This addon provides a generic message queue with producer/consumer pattern called mqueues: visit [nuxeo-mqueues-core](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/README.md) for more information.
 
-It comes with some implementations to produce/consume Nuxeo Document and Nuxeo Blob. Visit [nuxeo-mqueues-importer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-importer/README.md) for more information.
+The initial purpose of the mqueues is to perform mass import, this addon comes with some implementations to produce/consume Nuxeo Document and Nuxeo Blob. Visit [nuxeo-mqueues-importer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-importer/README.md) for more information.
 
-These implementations are exposed via automation operations. Visit [nuxeo-mqueues-automation](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-automation/README.md) for more information.
+These importer implementations are exposed via automation operations. Visit [nuxeo-mqueues-automation](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-automation/README.md) for more information.
 
 
 ## Warning
@@ -22,7 +22,8 @@ To build and run the tests, simply start the Maven build:
     mvn clean install
 
 ### Following Project QA Status
-[![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=addons_nuxeo-mqueues-master)](https://qa.nuxeo.org/jenkins/job/addons_nuxeo-mqueues-master/)
+
+[![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=master/addon_nuxeo-mqueues-master)](https://qa.nuxeo.org/jenkins/job/master/job/addon_nuxeo-mqueues-master/)
 
 
 ## About Nuxeo
