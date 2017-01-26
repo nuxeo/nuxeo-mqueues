@@ -21,53 +21,6 @@
     <module>nuxeo-mqueues-marketplace</module>
   </modules>
 
-  <properties>
-    <nuxeo.mqueues.version>9.1-SNAPSHOT</nuxeo.mqueues.version>
-  </properties>
-
-  <dependencyManagement>
-    <dependencies>
-     <dependency>
-        <groupId>org.nuxeo.ecm.platform</groupId>
-        <artifactId>nuxeo-mqueues-core</artifactId>
-        <version>${nuxeo.mqueues.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.nuxeo.ecm.platform</groupId>
-        <artifactId>nuxeo-mqueues-importer</artifactId>
-        <version>${nuxeo.mqueues.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.nuxeo.ecm.platform</groupId>
-        <artifactId>nuxeo-mqueues-automation</artifactId>
-        <version>${nuxeo.mqueues.version}</version>
-      </dependency>
-      
-      <dependency>
-        <groupId>net.openhft</groupId>
-        <artifactId>chronicle-queue</artifactId>
-        <version>4.5.19</version>
-      </dependency>
-      <dependency>
-        <groupId>net.openhft</groupId>
-        <artifactId>chronicle-core</artifactId>
-        <version>1.7.9</version>
-      </dependency>
-      <dependency>
-        <groupId>net.openhft</groupId>
-        <artifactId>chronicle-wire</artifactId>
-        <version>1.7.19</version>
-      </dependency>
-      <dependency>
-        <groupId>net.jodah</groupId>
-        <artifactId>failsafe</artifactId>
-        <version>1.0.1</version>
-      </dependency>
-
-    </dependencies>
-  </dependencyManagement>
-
-
   <repositories>
     <repository>
       <id>public</id>
