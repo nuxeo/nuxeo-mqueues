@@ -1,0 +1,26 @@
+<!-- See documentation at http://doc.nuxeo.com/x/HgIz -->
+<package type="addon" name="nuxeo-platform-importer" version="@VERSION@">
+  <title>MQueues document importer</title>
+  <description>
+    <p></p>
+  </description>
+  <home-page></home-page>
+  <vendor>Nuxeo</vendor>
+  <installer restart="true" />
+  <uninstaller restart="true" />
+  <!-- <hotreload-support>false</hotreload-support> -->
+  <require-terms-and-conditions-acceptance>true</require-terms-and-conditions-acceptance>
+  <nuxeo-validation>nuxeo_certified</nuxeo-validation>
+  <production-state>production_ready</production-state>
+  <supported>true</supported>
+  <platforms>
+    <platform>server-@DISTRIB_VERSION@</platform>
+    <platform>server-@DISTRIB_VERSION@-*</platform>
+  </platforms>
+  <conflicts>
+    <package>nuxeo-scan-importer</package>
+  </conflicts>
+  <license>LGPL</license>
+  <license-url>http://www.gnu.org/licenses/lgpl-2.1.html</license-url>
+  <visibility>MARKETPLACE</visibility>
+</package>

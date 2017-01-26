@@ -1,0 +1,118 @@
+<project name="mqueues-assembly" default="build" xmlns:nx="urn:nuxeo-build" xmlns:artifact="urn:nuxeo-artifact">
+  <taskdef resource="org/nuxeo/build/antlib.xml" uri="urn:nuxeo-build" />
+  <taskdef resource="org/nuxeo/build/artifact/antlib.xml" uri="urn:nuxeo-artifact" />
+  <taskdef resource="net/sf/antcontrib/antlib.xml" />
+
+  <target name="init" unless="init.done">
+    <property name="outdir" value="${maven.project.build.directory}" />
+    <antcall target="expand" />
+    <property name="init.done" value="true" />
+  </target>
+
+  <target name="expand">
+    <!-- Include your artifacts in the graph adding your groupId to groupPrefixes -->
+    <artifact:nuxeo-expand includeTestScope="true" groupPrefixes="org.nuxeo" />
+    <!-- For Nuxeo IDE being able to use that distribution as a SDK -->
+    <artifact:print output="${outdir}/artifacts-mqueues.properties" mode="sdk" />
+    <artifact:print output="${outdir}/test-artifacts-mqueues.properties" mode="sdk" scopes="test" />
+    <!-- Prints the graph for debugging purpose -->
+    <artifact:print output="${outdir}/dependency-tree.log" />
+  </target>
+
+  <target name="build" depends="init" description="Build Nuxeo MQueues Marketplace Package">
+    <tstamp />
+    <delete failonerror="false" dir="${outdir}/ear" />
+    <mkdir dir="${outdir}/ear" />
+    <delete failonerror="false" dir="${outdir}/marketplace" />
+    <mkdir dir="${outdir}/marketplace" />
+    <copy todir="${outdir}/marketplace">
+      <fileset dir="src/main/resources" />
+      <filterset>
+        <filter token="VERSION" value="${marketplace.mqueues.version}" />
+        <filter token="DISTRIB_VERSION" value="${nuxeo.distribution.version}" />
+      </filterset>
+    </copy>
+    <copy file="${outdir}/artifacts-mqueues.properties" todir="${outdir}/marketplace/install" />
+    <copy file="${outdir}/test-artifacts-mqueues.properties" todir="${outdir}/marketplace/install" />
+
+    <!-- Base distribution EAR -->
+    <copy todir="${outdir}">
+      <artifact:file key="org.nuxeo.ecm.distribution:nuxeo-nxr-server::zip" />
+    </copy>
+
+    <!-- Nuxeo bundles -->
+    <copy todir="${outdir}/ear/bundles" overwrite="true">
+      <artifact:set>
+        <includes>
+          <artifact groupId="org.nuxeo*" />
+        </includes>
+        <excludes>
+          <artifact groupId="org.nuxeo.lib*" />
+          <artifact scope="test" />
+          <artifact scope="provided" />
+          <artifact type="pom" />
+        </excludes>
+      </artifact:set>
+    </copy>
+    <!-- Third-party libraries -->
+    <copy todir="${outdir}/ear/lib" overwrite="true">
+      <artifact:set>
+        <includes>
+          <artifact groupId="!org.nuxeo*" scope="!test" />
+          <artifact groupId="org.nuxeo.lib*" scope="!test" />
+        </includes>
+      </artifact:set>
+    </copy>
+    <nx:rmdups dir="${outdir}/ear/lib" />
+    <!-- Temporary ZIP Nuxeo EAR to compare with base distribution EAR -->
+    <zip destfile="${outdir}/ear-${marketplace.mqueues.version}.zip" basedir="${outdir}/ear" />
+
+    <!-- Your MP only needs to include files not already provided by the base distribution -->
+    <nx:zipdiff file1="${outdir}/ear-${marketplace.mqueues.version}.zip"
+                file2="${outdir}/nuxeo-nxr-server-${nuxeo.distribution.version}.zip"
+                includesfile="${outdir}/includes"
+                excludesfile="${outdir}/excludesfile"
+                ignoreContentPattern=".*\.jar"
+                patternsetid="mqueues.versus.server">
+    </nx:zipdiff>
+    <unzip src="${outdir}/ear-${marketplace.mqueues.version}.zip" dest="${outdir}/marketplace/install">
+      <patternset refid="mqueues.versus.server" />
+    </unzip>
+
+    <!-- Generate install.xml content -->
+    <var name="install.bundles" value="" />
+    <var name="install.bundles"
+         value="${line.separator}
+  &lt;update file=&quot;${package.root}/install/bundles&quot; todir=&quot;${env.bundles}&quot; /&gt;" />
+
+    <var name="install.libs" value="" />
+    <if>
+      <available file="${outdir}/marketplace/install/lib" />
+      <then>
+        <var name="install.libs"
+             value="${line.separator}
+  &lt;update file=&quot;${package.root}/install/lib&quot; todir=&quot;${env.lib}&quot; /&gt;" />
+      </then>
+    </if>
+
+    <var name="install.properties"
+         value="${line.separator}
+  &lt;copy file=&quot;${package.root}/install/artifacts-mqueues.properties&quot;${line.separator}
+    todir=&quot;${env.server.home}/sdk&quot; overwrite=&quot;true&quot; /&gt;${line.separator}
+  &lt;copy file=&quot;${package.root}/install/test-artifacts-mqueues.properties&quot;${line.separator}
+    todir=&quot;${env.server.home}/sdk&quot; overwrite=&quot;true&quot; /&gt;" />
+
+    <copy file="src/main/resources/install.xml" todir="${outdir}/marketplace" overwrite="true">
+      <filterset>
+        <filter token="BUNDLES" value="${install.bundles}" />
+        <filter token="LIBS" value="${install.libs}" />
+        <filter token="PROPERTIES" value="${install.properties}" />
+      </filterset>
+    </copy>
+
+    <zip destfile="${outdir}/${maven.project.artifactId}-${marketplace.mqueues.version}.zip"
+         basedir="${outdir}/marketplace" />
+    <artifact:attach file="${outdir}/${maven.project.artifactId}-${marketplace.mqueues.version}.zip" type="zip" />
+  </target>
+
+</project>

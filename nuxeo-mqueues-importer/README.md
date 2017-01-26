@@ -1,18 +1,14 @@
-nuxeo-mqueues
-===========================
+nuxeo-mqueues-importer
+======================
 
 ## About
 
-This addon provides a generic producers/consumers pattern using multiple message queues. Visit [nuxeo-mqueues-core](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/README.md) for more information.
-
-It comes with some implementations to produce/consume Nuxeo Document and Nuxeo Blob. Visit [nuxeo-mqueues-importer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-importer/README.md) for more information.
-
-These implementations are exposed via automation operations. Visit [nuxeo-mqueues-automation](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-automation/README.md) for more information.
+This module implements consumer/producer for Nuxeo document and Blobs.
 
 
 ## Warning
 
-This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
+This module is under developpent and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
 
 ## Building
