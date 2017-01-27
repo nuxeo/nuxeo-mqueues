@@ -18,7 +18,6 @@
     <module>nuxeo-mqueues-core</module>
     <module>nuxeo-mqueues-importer</module>
     <module>nuxeo-mqueues-automation</module>
-    <module>nuxeo-mqueues-marketplace</module>
   </modules>
 
   <repositories>
