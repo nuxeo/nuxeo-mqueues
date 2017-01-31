@@ -3,83 +3,99 @@ nuxeo-mqueues-core
 
 ## About
 
-This module implements a generic message producers/consumers pattern using a set of unbounded persisted queues.
-
-A message describes an action that will happen in the future when a consumer will process it.
-
-This is a one-to-one relation between a producer and a consumer. 
-
-This can be seen as an async API for a service, or a work queue.
+This module implements a generic message queue (MQueues) used to implement different producers/consumers patterns.
 
 ## Warning
 
 This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
+## MQueues features
 
-## Features
+A MQueues (Multiple Queues) is a bounded array of queues, each queue is referenced by an index.
 
-Here is a list of features with rationals:
+A producer is responsible for choosing which message to assign to which queue:
+    - using a round robin algorithm a producer can balance messages between queues
+    - using a shard key (or any custom logic) producers can group messages by queue,
+      the "grouping" semantic is shared with the consumers.
 
-- A producer dispatch messages among a set of queues called a mqueues:
-    - the queue decouple producer and consumer work
-    - the message ordering and sharding is the producer responsability, this enable to have simple and generic consumer 
-
-- For each queue there is a single consumer thread:
-    - for a consumer the order of messages is deterministic
-    - it makes it easy to ensure that a message is delivered once and only once
-    - the consumer concurrency is equals to the number of queues,
-      the producer should distribute evenly the message to get the optimal concurrency
-
-- A consumer acts as a tailer:
-    - consumer don't destroy messages while reading
-    - messages can be processed again in the same order or from a random position
-
-- The queues are presisted:
-    - The messages appended by producers are presisted even if the JVM is stopped.
-    - The retention policy is up to the mqueue implementation
-
-- The queues are unbounded:
+Each queue is an ordered immutable sequence of messages that are appended:
     - the producer will never be blocked when appending a message.
-    - The mqueues implementation must be Off-Heap and have no limit in the number of messages.
+    - The messages are persisted outside of the JVM
+    - The retention policy is up to the MQueues implementation
 
-- Consumer follows a batch policy:
-    - consumer is pulled to accept message, start a batch, commit or rollback a batch
+Consumers read messages using a tailer, the current offset (read position) for a queue can be persisted (commit):
+    - Consumer don't destroy messages while reading from a queue.
+    - Consumer can start reading messages from the last committed message, the beginning or end of a queue.
 
-- Consumer's queue position is persisted:
-    - After a batch commit the consumer position is persisted
-    - A consumer can restart from the beginning or from the last successful batch
+Consumers can choose a namespace to persist its offset:
+    - multiple consumers can tail a queue at different speed
 
-- Consumer follows a retry policy:
-    - On consumer failure the consumer will replay the messages according to a retry policy.
-    - when retrying the batch size is set to one
+This is enough to implement the two main patterns of producer/consumer:
+1. queuing (aka work queue): a message is delivered to one and only one consumer
+    - producers dispatch messages in queues
+    - there is a single consumer per queue (nb of queues = nb of concurrent consumers)
+2. pub/sub (aka event bus): a message is delivered to multiple consumers interested in a topic
+    - each queue in a mqueues can be seen as a topic
+    - consumer subscribe a topic by getting a tailer to a queue
+    - consumer persists its offset in a private name space
 
-
-## Contracts
-
-The module takes care of:
-
-- driving the producers/consumers thread pools
-- following the consumer batch policy
-- following the consumer retry policy
-- save the consumer position when a batch of message is processed
-- start consumers where it was stopped/crasched
-- exposing metrics for producers and consumers
-
-The contract to implement a new producer/consumer is the following:
-
-- A [Message](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/message/Message.java) must implement the Java Externalizable interface (Serializable is not enough efficient).
-- A [Producer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/producer/Producer.java) must implement a Java Iterator of message and knows how to shard its messages.
-- A [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/consumer/Consumer.java) receives message and can performs action on batch steps (begin, commit, rollback)
 
 ## Default MQueues implementation
 
 The default queues implementation is using [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) which is an Off-Heap implementation.
 
-A MQueues of size N will creates N+1 Chronicle Queues, one for each queue and a special offset queue to track the consumer offset position. 
+A MQueues of size N will creates N Chronicle Queues, one for each queue.
+There is an additional Chronicle Queue created for each consumer offset namespace.
 
 The only limitation is the available disk storage, there is no retention policy so everything is kept for ever.
 
-Chronicle Queue creates a single file per queue and per day, so it is possible to script some retention policy like keep message queues for X days. 
+That being said Chronicle Queue creates a single file per queue and per day, so it is possible to script some retention policy like keep message queues for the last D days.
+
+## Patterns
+
+
+### Pattern 1: Queuing with a limited amount of messages
+
+Typical usage can be a mass import process where producers extract documents and consumer import documents, the gain is:
+- it decouples producers and consumers: import process can be run multiple time in a deterministic way for debugging and tuning.
+- it brings concurrency in import: the producer need to dispatch messages with a correct semantic and evenly.
+
+For efficiency consumer process message per batch.
+For reliability consumer follow a retry policy.
+
+This is a one time process:
+- Producers end on error or when all message are send.
+- Consumers stop in error (according to the retry policy) or when all messages are processed.
+
+The proposed solution takes care of:
+- driving producers/consumers thread pools
+- following the consumer the customizable batch policy
+- following the consumer the customizable retry policy
+- saving the consumer's offset when a batch of messages is successfully processed
+- starting consumers from the last successfully processed message
+- exposing metrics for producers and consumers
+
+To use this pattern one must implement a [ProducerIterator](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/producer/ProducerIterator.java) and a [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/consumer/Consumer.java) with factories.
+Both the producer and consumer implementation are driven (pulled) by the module.
+
+See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/TestQueuingPattern.java) for basic examples.
+
+### Pattern 2: TODO Queuing
+
+Almost the same as pattern as above but producers and consumers are always up processing an infinite flow of messages.
+There is no Producer interface, a producer just use a [MQueues](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/mqueues/MQueues.java) to append messages.
+
+The Consumer follow the same interface as in previous pattern but it is driven in a different way:
+- it will wait for ever on message
+- after a failre on the retry policy, the consumer will continue and take the next message
+
+A producer can wait for a message to be consumed.
+
+### Pattern 3: TODO Publish subscribe (Event bus)
+
+No producer interface.
+
+Multiple Consumer with different offset namespace.
 
 
 ## Building

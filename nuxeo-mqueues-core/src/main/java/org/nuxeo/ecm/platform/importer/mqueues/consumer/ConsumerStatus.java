@@ -19,7 +19,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.consumer;
 
 /**
- * The return status of a {@link ConsumerCallable}
+ * The return status of a {@link ConsumerRunner}
  *
  * @since 9.1
  */

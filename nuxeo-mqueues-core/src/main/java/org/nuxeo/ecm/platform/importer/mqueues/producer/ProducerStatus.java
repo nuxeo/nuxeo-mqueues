@@ -19,7 +19,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.producer;
 
 /**
- * The return status of a {@link ProducerCallable}
+ * The return status of a {@link ProducerLoop}
  *
  * @since 9.1
  */

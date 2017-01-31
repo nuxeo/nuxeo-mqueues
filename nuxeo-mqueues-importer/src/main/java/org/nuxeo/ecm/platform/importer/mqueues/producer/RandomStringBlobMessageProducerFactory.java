@@ -39,7 +39,7 @@ public class RandomStringBlobMessageProducerFactory implements ProducerFactory<B
     }
 
     @Override
-    public Producer<BlobMessage> createProducer(int producerId) {
+    public ProducerIterator<BlobMessage> createProducer(int producerId) {
         return new RandomStringBlobMessageProducer(producerId, nbBlobs, lang, averageSizeKB);
     }
 }

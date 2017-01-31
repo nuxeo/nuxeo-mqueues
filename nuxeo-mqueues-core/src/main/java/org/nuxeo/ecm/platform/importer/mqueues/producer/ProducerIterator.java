@@ -21,13 +21,13 @@ import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import java.util.Iterator;
 
 /**
- * A Producer is an iterator that returns {@link Message}.
+ * A ProducerIterator returns {@link Message}.
  *
  * It also has the logic to return a shard index, that will be used to run concurrent consumers.
  *
  * @since 9.1
  */
-public interface Producer<M extends Message> extends Iterator<M>, AutoCloseable {
+public interface ProducerIterator<M extends Message> extends Iterator<M>, AutoCloseable {
 
     /**
      * The remove method is not needed.

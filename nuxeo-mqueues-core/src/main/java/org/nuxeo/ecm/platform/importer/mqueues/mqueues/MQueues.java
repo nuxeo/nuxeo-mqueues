@@ -25,35 +25,67 @@ import java.util.concurrent.TimeUnit;
 /**
  * A MQueues (for Multiple Queues) is a set of unbounded persisted queues.
  *
- * This enable one or multiple producers to dipatch {@link Message} on different queues.
+ * Producers can dispatch {@link Message} on different queues.
  *
- * Using a {@link Tailer} a consumer can read message, the current position of a tailer can be committed.
- *
- * A common pattern is to choose the queue size equals to the number of concurrent consumers.
+ * Consumer read {@link Message} using a {@link Tailer}, the position of the tailer can be persisted.
  *
  * @since 9.1
  */
 public interface MQueues<M extends Message> extends AutoCloseable {
 
     /**
-     * Sequential reader from a queue.
-     *
-     * A tailer is not thread safe and must be used only by one consumer.
+     * Returns the size of the mqueues: the number of queues.
      *
      */
-    interface Tailer<M> {
+    int size();
+
+    /**
+     * Append a message into a queue.
+     *
+     * This method is thread safe, a queue can be shared by multiple producers.
+     *
+     * @param queue index lower than {@link #size()}
+     */
+    void append(int queue, M message);
+
+    /**
+     * Create a new {@link Tailer} associed with the queue index.
+     *
+     * The default position is the last committed one.
+     *
+     * The committed offset is shared by all tailers of the same queue.
+     *
+     * A tailer is not thread safe.
+     *
+     */
+    Tailer<M> createTailer(int queue);
+
+    /**
+     * Create a new {@link Tailer} associed to a queue index, using a specified offset name space.
+     *
+     * The default position is the last committed one on the name space.
+     *
+     * The committed offset position is shared by all tailers of the same queue with the same name.
+     *
+     * A tailer is not thread safe.
+     *
+     */
+    Tailer<M> createTailer(int queue, String name);
+
+    /**
+     * Sequential reader for a queue.
+     *
+     * A tailer is not thread safe and should not be shared by multiple threads.
+     *
+     */
+    interface Tailer<M> extends AutoCloseable {
 
         /**
-         * Get a message from the queue within the timeout.
+         * Read a message from the queue within the timeout.
          *
          * @return null if there is no message in the queue after the timeout.
          */
-        M get(long timeout, TimeUnit unit) throws InterruptedException;
-
-        /**
-         * Commit the offset of the last message returned by get.
-         */
-        void commit();
+        M read(long timeout, TimeUnit unit) throws InterruptedException;
 
         /**
          * Go to the end of the queue.
@@ -71,31 +103,14 @@ public interface MQueues<M extends Message> extends AutoCloseable {
         void toLastCommitted();
 
         /**
+         * Commit the offset of the last message returned by read.
+         */
+        void commit();
+
+        /**
          * Returns the associated queue index.
          */
         int getQueue();
     }
-
-    /**
-     * Returns the number of queues.
-     *
-     */
-    int size();
-
-    /**
-     * Put a message into a queue.
-     *
-     * This is thread safe, a queue can be shared by multiple producers.
-     *
-     * @param queue index starting from 0 and lower than {@link #size()}
-     */
-    void put(int queue, M message);
-
-    /**
-     * Get a {@link Tailer} associed to a queue index.
-     *
-     * This call is thread safe but {@link Tailer} are not.
-     */
-    Tailer<M> getTailer(int queue);
 
 }

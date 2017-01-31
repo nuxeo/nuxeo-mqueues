@@ -18,21 +18,33 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.producer;/*
  */
 
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.Producer;
 import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerIterator;
 
 /**
  * @since 9.1
  */
 public class RandomIdMessageProducerFactory implements ProducerFactory<IdMessage> {
     private final long nbDocuments;
+    private final ProducerType type;
+
+    public enum ProducerType {DEFAULT, ORDERED}
 
     public RandomIdMessageProducerFactory(long nbDocuments) {
+        this(nbDocuments, ProducerType.DEFAULT);
+    }
+
+    public RandomIdMessageProducerFactory(long nbDocuments, ProducerType type) {
         this.nbDocuments = nbDocuments;
+        this.type = type;
     }
 
     @Override
-    public Producer<IdMessage> createProducer(int producerId) {
+    public ProducerIterator<IdMessage> createProducer(int producerId) {
+        switch (type) {
+            case ORDERED:
+                return new OrderedIdMessageProducer(producerId, nbDocuments);
+        }
         return new RandomIdMessageProducer(producerId, nbDocuments);
     }
 

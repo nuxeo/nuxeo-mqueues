@@ -23,7 +23,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 /**
  * @since 9.1
  */
-public abstract class AbstractProducer<M extends Message> implements Producer<M> {
+public abstract class AbstractProducer<M extends Message> implements ProducerIterator<M> {
 
     private final int producerId;
 

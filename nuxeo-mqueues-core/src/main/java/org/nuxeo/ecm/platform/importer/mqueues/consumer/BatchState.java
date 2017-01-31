@@ -28,6 +28,10 @@ public class BatchState {
     private int counter;
     private long endMs;
 
+    public enum State {FILLING, FULL, TIMEOUT, LAST}
+
+    State state = State.FILLING;
+
     public BatchState(BatchPolicy policy) {
         this.policy = policy;
     }
@@ -35,17 +39,31 @@ public class BatchState {
     public void start() {
         endMs = System.currentTimeMillis() + policy.getThresholdMs();
         counter = 0;
+        state = State.FILLING;
     }
 
-    public void inc() {
-        counter++;
-    }
-
-    public boolean isFull() {
-        if (counter >= policy.getCapacity()) {
-            return true;
+    public State inc() {
+        if (state != State.FILLING) {
+            throw new IllegalStateException("Try to add an item to a batch in non filling state:" + state);
         }
-        return System.currentTimeMillis() > endMs;
+        counter++;
+        return getState();
+    }
+
+    public void last() {
+        state = State.LAST;
+    }
+
+    public State getState() {
+        if (state != State.FILLING) {
+            return state;
+        }
+        if (counter >= policy.getCapacity()) {
+            state = State.FULL;
+        } else if (System.currentTimeMillis() > endMs) {
+            state = State.TIMEOUT;
+        }
+        return state;
     }
 
     public int getSize() {

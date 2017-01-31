@@ -36,7 +36,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A Callable that run concurrent ConsumerCallable.
+ * A Callable that run concurrent ConsumerRunner.
  *
  * @since 9.1
  */
@@ -70,7 +70,7 @@ public class ConsumerPool<M extends Message> implements Callable<List<ConsumerSt
         consumerExecutor = Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory());
         consumerCompletionService = new ExecutorCompletionService<>(consumerExecutor);
         for (int i = 0; i < nbThreads; i++) {
-            ConsumerCallable<M> callable = new ConsumerCallable<>(factory, qm.getTailer(i), batchPolicy, retryPolicy);
+            ConsumerRunner<M> callable = new ConsumerRunner<>(factory, qm, i, batchPolicy, retryPolicy);
             consumerCompletionService.submit(callable);
         }
         log.info("All consumers are running");
@@ -108,19 +108,20 @@ public class ConsumerPool<M extends Message> implements Callable<List<ConsumerSt
     }
 
     private void logStat(List<ConsumerStatus> ret) {
-        long startTime = ret.stream().mapToLong(r -> r.startTime).min().getAsLong();
-        long stopTime = ret.stream().mapToLong(r -> r.stopTime).min().getAsLong();
+        long startTime = ret.stream().mapToLong(r -> r.startTime).min().orElse(0);
+        long stopTime = ret.stream().mapToLong(r -> r.stopTime).min().orElse(0);
         double elapsed = (stopTime - startTime) / 1000.;
         long committed = ret.stream().mapToLong(r -> r.committed).sum();
         double mps = (elapsed != 0) ? committed / elapsed : 0.0;
         int consumers = ret.size();
-        log.warn(String.format("All consumers terminated: %d consumers: committed: %d, elapsed: %.2fs, throughput: %.2f msg/s", consumers, committed, elapsed, mps));
+        log.warn(String.format("All %d consumers terminated: messages committed: %d, elapsed: %.2fs, throughput: %.2f msg/s",
+                consumers, committed, elapsed, mps));
     }
 
     private void logStat(ConsumerStatus status) {
         double elapsed = (status.stopTime - status.startTime) / 1000.;
         double mps = (elapsed != 0) ? status.committed / elapsed : 0.0;
-        log.info(String.format("Stat consumer %02d terminated, accepted (include retries): %d, committed: %d, batch: %d, batchFailure: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
+        log.warn(String.format("Stat consumer %02d terminated, accepted (include retries): %d, committed: %d, batch: %d, batchFailure: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
                 status.consumer, status.accepted, status.committed, status.batchCommit, status.batchFailure, elapsed, mps));
     }
 }

@@ -26,5 +26,5 @@ public interface ProducerFactory<M extends Message> {
     /**
      * @param producerId the producer index
      */
-    Producer<M> createProducer(int producerId);
+    ProducerIterator<M> createProducer(int producerId);
 }

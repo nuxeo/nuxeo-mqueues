@@ -18,7 +18,6 @@ This module provides producers to generate random blobs and document messages.
 
 This module is under developpent and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
-
 ## Building
 
 To build and run the tests, simply start the Maven build:

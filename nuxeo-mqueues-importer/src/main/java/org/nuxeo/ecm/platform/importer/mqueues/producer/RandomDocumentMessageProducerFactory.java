@@ -52,7 +52,7 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
     }
 
     @Override
-    public Producer<DocumentMessage> createProducer(int producerId) {
+    public ProducerIterator<DocumentMessage> createProducer(int producerId) {
         return new RandomDocumentMessageProducer(producerId, nbDocuments, lang, blobInfoDirectory).withBlob(blobSizeKb, false);
     }
 }

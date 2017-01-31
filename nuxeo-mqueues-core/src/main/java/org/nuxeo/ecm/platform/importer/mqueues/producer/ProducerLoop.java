@@ -33,29 +33,29 @@ import java.util.concurrent.Callable;
 import static java.lang.Thread.currentThread;
 
 /**
- * A callable running a producer loop.
+ * A callable pulling a producer iterator in loop.
  *
  * @since 9.1
  */
-public class ProducerCallable<M extends Message> implements Callable<ProducerStatus> {
-    private static final Log log = LogFactory.getLog(ProducerCallable.class);
+public class ProducerLoop<M extends Message> implements Callable<ProducerStatus> {
+    private static final Log log = LogFactory.getLog(ProducerLoop.class);
     private final int producerId;
     private final MQueues<M> mq;
-    private final Producer<M> producer;
+    private final ProducerIterator<M> producer;
     private String threadName;
 
     protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(MetricsService.class.getName());
     protected final Timer producerTimer;
     protected final Counter producersCount;
 
-    public ProducerCallable(ProducerFactory<M> factory, MQueues<M> mQueues, int producerId) {
+    public ProducerLoop(ProducerFactory<M> factory, MQueues<M> mQueues, int producerId) {
         this.producer = factory.createProducer(producerId);
         this.producerId = producerId;
         this.mq = mQueues;
         producerTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "producer", String.valueOf(producerId)));
         producersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "producers"));
 
-        log.debug("Producer thread created: " + producerId);
+        log.debug("ProducerIterator thread created: " + producerId);
     }
 
     private Counter newCounter(String name) {
@@ -89,7 +89,7 @@ public class ProducerCallable<M extends Message> implements Callable<ProducerSta
                 message = producer.next();
                 setThreadName(message);
             }
-            mq.put(producer.getShard(message, mq.size()), message);
+            mq.append(producer.getShard(message, mq.size()), message);
         }
     }
 

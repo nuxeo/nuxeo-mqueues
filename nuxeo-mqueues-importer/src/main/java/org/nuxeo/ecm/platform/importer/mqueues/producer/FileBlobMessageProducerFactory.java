@@ -37,7 +37,7 @@ public class FileBlobMessageProducerFactory implements ProducerFactory<BlobMessa
     }
 
     @Override
-    public Producer<BlobMessage> createProducer(int producerId) {
+    public ProducerIterator<BlobMessage> createProducer(int producerId) {
         return new FileBlobMessageProducer(producerId, listFile);
     }
 }

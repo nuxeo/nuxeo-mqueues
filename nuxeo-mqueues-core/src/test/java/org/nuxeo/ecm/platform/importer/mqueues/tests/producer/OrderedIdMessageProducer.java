@@ -21,27 +21,26 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.producer;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.producer.AbstractProducer;
 
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
+ * Produce ordered messages in each queues. This requires to have a number of producer <= nb consumers.
+ *
  * @since 9.1
  */
-public class RandomIdMessageProducer extends AbstractProducer<IdMessage> {
-
+public class OrderedIdMessageProducer extends AbstractProducer<IdMessage> {
     private final long nbMessage;
-    private AtomicLong totalCount = new AtomicLong(0);
     private long count = 0;
 
-    public RandomIdMessageProducer(int producerId, long nbMessage) {
+    public OrderedIdMessageProducer(int producerId, long nbMessage) {
         super(producerId);
         this.nbMessage = nbMessage;
     }
 
     @Override
     public int getShard(IdMessage message, int shards) {
-        // random attribution
-        return ThreadLocalRandom.current().nextInt(0, shards);
+        if (getProducerId() > shards) {
+            throw new IllegalStateException("You should use less producers than consumers to get ordering");
+        }
+        return getProducerId() % shards;
     }
 
     @Override
@@ -51,7 +50,7 @@ public class RandomIdMessageProducer extends AbstractProducer<IdMessage> {
 
     @Override
     public IdMessage next() {
-        IdMessage ret = new IdMessage("Random message " + totalCount.getAndIncrement());
+        IdMessage ret = new IdMessage(String.valueOf(count));
         count += 1;
         return ret;
     }

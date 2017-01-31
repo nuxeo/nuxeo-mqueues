@@ -36,8 +36,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A Callable that run concurrent ProducerCallable.
- * 
+ * A Callable that run concurrent ProducerLoop.
+ *
  * @since 9.1
  */
 public class ProducerPool<M extends Message> implements Callable<List<ProducerStatus>> {
@@ -51,9 +51,10 @@ public class ProducerPool<M extends Message> implements Callable<List<ProducerSt
     private static class NamedThreadFactory implements ThreadFactory {
         private final AtomicInteger count = new AtomicInteger(0);
 
+        @SuppressWarnings("NullableProblems")
         @Override
         public Thread newThread(Runnable r) {
-            return new Thread(r, String.format("Nuxeo-Producer-%02d", count.getAndIncrement()));
+            return new Thread(r, String.format("Nuxeo-ProducerIterator-%02d", count.getAndIncrement()));
         }
     }
 
@@ -75,7 +76,7 @@ public class ProducerPool<M extends Message> implements Callable<List<ProducerSt
         producerExecutor = Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory());
         producerCompletionService = new ExecutorCompletionService<>(producerExecutor);
         for (int i = 0; i < nbThreads; i++) {
-            ProducerCallable<M> callable = new ProducerCallable<>(factory, mq, i);
+            ProducerLoop<M> callable = new ProducerLoop<>(factory, mq, i);
             producerCompletionService.submit(callable);
         }
         log.info("All producers are running");
@@ -88,7 +89,7 @@ public class ProducerPool<M extends Message> implements Callable<List<ProducerSt
                 Future<ProducerStatus> future = producerCompletionService.take();
                 ProducerStatus status = future.get();
                 ret.add(status);
-                log.info(String.format("Producer %d terminated, produced: %d, elapsed: %.2fs.",
+                log.info(String.format("ProducerIterator %d terminated, produced: %d, elapsed: %.2fs.",
                         status.producer, status.nbProcessed, (status.stopTime - status.startTime) / 1000.));
             }
         } catch (ExecutionException e) {
@@ -103,13 +104,14 @@ public class ProducerPool<M extends Message> implements Callable<List<ProducerSt
     }
 
     private void logStat(List<ProducerStatus> ret) {
-        long startTime = ret.stream().mapToLong(r -> r.startTime).min().getAsLong();
-        long stopTime = ret.stream().mapToLong(r -> r.stopTime).min().getAsLong();
+        long startTime = ret.stream().mapToLong(r -> r.startTime).min().orElse(0);
+        long stopTime = ret.stream().mapToLong(r -> r.stopTime).min().orElse(0);
         double elapsed = (stopTime - startTime) / 1000.;
         long committed = ret.stream().mapToLong(r -> r.nbProcessed).sum();
         double mps = (elapsed != 0) ? committed / elapsed : 0.0;
         int producers = ret.size();
-        log.warn(String.format("All producers terminated: %d producers: committed: %d, elapsed: %.2fs, throughput: %.2f msg/s", producers, committed, elapsed, mps));
+        log.warn(String.format("All %d producers terminated: messages committed: %d, elapsed: %.2fs, throughput: %.2f msg/s, queues: %d",
+                producers, committed, elapsed, mps, mq.size()));
     }
 
 }

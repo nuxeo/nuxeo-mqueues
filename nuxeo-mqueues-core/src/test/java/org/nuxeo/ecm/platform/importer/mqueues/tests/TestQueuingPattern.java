@@ -42,16 +42,16 @@ import java.util.concurrent.Future;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
-public class TestProducerConsumerPools {
+public class TestQueuingPattern {
 
-    protected static final Log log = LogFactory.getLog(TestProducerConsumerPools.class);
+    protected static final Log log = LogFactory.getLog(TestQueuingPattern.class);
     private static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
     @Test
-    public void synchronous() throws Exception {
+    public void producersThenConsumers() throws Exception {
         final int NB_QUEUE = 10;
         final int NB_PRODUCERS = 15;
         final int NB_DOCUMENTS = 1 * 1000;
@@ -78,7 +78,7 @@ public class TestProducerConsumerPools {
     }
 
     @Test
-    public void concurrent() throws Exception {
+    public void producersAndConsumers() throws Exception {
         final int NB_QUEUE = 10;
         final int NB_PRODUCERS = 15;
         final int NB_DOCUMENTS = 1000;
@@ -108,17 +108,21 @@ public class TestProducerConsumerPools {
     }
 
     @Test
-    public void buggyConsumer() throws Exception {
-        final int NB_QUEUE = 10;
-        final int NB_PRODUCERS = 15;
-        final int NB_DOCUMENTS = 1000;
+    public void producerAndBuggyConsumers() throws Exception {
+        final int NB_QUEUE = 23;
+        // ordered message producer requires nb_producer <= nb consumer
+        final int NB_PRODUCERS = NB_QUEUE;
+        final int NB_DOCUMENTS = 10151;
+        // final int NB_DOCUMENTS = 499999;
+        final int BATCH_SIZE = 13;
         final File basePath = folder.newFolder("cq");
         List<ProducerStatus> pret;
         List<ConsumerStatus> cret;
 
         try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
-                    new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
+                    new RandomIdMessageProducerFactory(NB_DOCUMENTS, RandomIdMessageProducerFactory.ProducerType.ORDERED),
+                    NB_PRODUCERS);
             pret = producers.call();
         }
         assertEquals(NB_PRODUCERS, pret.stream().count());
@@ -127,14 +131,14 @@ public class TestProducerConsumerPools {
         // 2. Use the mq and run the consumers
         try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath)) {
             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.BUGGY), BatchPolicy.DEFAULT,
+                    new IdMessageFactory(IdMessageFactory.ConsumerType.BUGGY),
+                    new BatchPolicy().capacity(BATCH_SIZE),
                     new RetryPolicy().withMaxRetries(1000));
             cret = consumers.call();
         }
         assertEquals(NB_QUEUE, cret.stream().count());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
         assertTrue(NB_PRODUCERS * NB_DOCUMENTS < cret.stream().mapToLong(r -> r.accepted).sum());
-
     }
 
 

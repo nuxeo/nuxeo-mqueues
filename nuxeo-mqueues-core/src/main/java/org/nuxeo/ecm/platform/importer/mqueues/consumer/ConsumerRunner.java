@@ -37,18 +37,18 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.Thread.currentThread;
 
 /**
- * Callable that run a consumer according to the batch and retry policy.
+ * Run a consumer according to the batch and retry policy until there is no more message.
  *
  * @since 9.1
  */
-public class ConsumerCallable<M extends Message> implements Callable<ConsumerStatus> {
-    private static final Log log = LogFactory.getLog(ConsumerCallable.class);
+public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatus> {
+    private static final Log log = LogFactory.getLog(ConsumerRunner.class);
 
     private final Consumer<M> consumer;
-    private final MQueues.Tailer<M> tailer;
+    private final MQueues<M> mq;
     private final RetryPolicy retryPolicy;
     private final BatchPolicy batchPolicy;
-    private BatchState currentBatch;
+    private final int queue;
     private BatchPolicy currentBatchPolicy;
     private String threadName;
 
@@ -58,20 +58,21 @@ public class ConsumerCallable<M extends Message> implements Callable<ConsumerSta
     protected final Timer batchCommitTimer;
     protected final Counter batchFailureCount;
     protected final Counter consumersCount;
+    private MQueues.Tailer<M> tailer;
 
-
-    public ConsumerCallable(ConsumerFactory<M> factory, MQueues.Tailer<M> tailer, BatchPolicy batchPolicy, RetryPolicy retryPolicy) {
-        this.consumer = factory.createConsumer(tailer.getQueue());
-        this.tailer = tailer;
+    public ConsumerRunner(ConsumerFactory<M> factory, MQueues<M> mq, int queue, BatchPolicy batchPolicy, RetryPolicy retryPolicy) {
+        this.consumer = factory.createConsumer(queue);
+        this.mq = mq;
+        this.queue = queue;
         this.currentBatchPolicy = this.batchPolicy = batchPolicy;
         this.retryPolicy = retryPolicy;
 
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
-        acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", String.valueOf(tailer.getQueue())));
-        committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", String.valueOf(tailer.getQueue())));
-        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", String.valueOf(tailer.getQueue())));
-        batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", String.valueOf(tailer.getQueue())));
-        log.debug("Consumer thread created tailing on queue: " + tailer.getQueue());
+        acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", String.valueOf(queue)));
+        committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", String.valueOf(queue)));
+        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", String.valueOf(queue)));
+        batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", String.valueOf(queue)));
+        log.debug("Consumer thread created tailing on queue: " + queue);
     }
 
     private Counter newCounter(String name) {
@@ -89,13 +90,14 @@ public class ConsumerCallable<M extends Message> implements Callable<ConsumerSta
         consumersCount.inc();
         threadName = currentThread().getName();
         long start = Time.currentTimeMillis();
+        tailer = mq.createTailer(queue);
         try {
             consumerLoop();
         } finally {
             consumer.close();
             consumersCount.dec();
         }
-        return new ConsumerStatus(tailer.getQueue(), acceptTimer.getCount(), committedCounter.getCount(),
+        return new ConsumerStatus(queue, acceptTimer.getCount(), committedCounter.getCount(),
                 batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis());
     }
 
@@ -108,10 +110,9 @@ public class ConsumerCallable<M extends Message> implements Callable<ConsumerSta
                     end = processBatch();
                     execution.complete();
                     tailer.commit();
-                } catch (Throwable e) {
+                } catch (Exception e) {
                     execution.recordFailure(e);
                     setBatchRetryPolicy();
-                    log.warn("Failure on batch processing, try #" + execution.getExecutions() + " " + e.getMessage(), e);
                     tailer.toLastCommitted();
                     batchFailureCount.inc();
                 }
@@ -137,10 +138,20 @@ public class ConsumerCallable<M extends Message> implements Callable<ConsumerSta
         boolean end = false;
         beginBatch();
         try {
-            end = acceptBatch();
-            commitBatch();
+            BatchState state = acceptBatch();
+            commitBatch(state);
+            if (state.getState() == BatchState.State.LAST) {
+                log.info(String.format("No more message on queue %02d", queue));
+                end = true;
+            }
+
         } catch (Exception e) {
-            rollbackBatch();
+            try {
+                rollbackBatch();
+            } catch (Exception rollbackException) {
+                log.error("Exception on rollback invocation", rollbackException);
+                // we propagate the initial error.
+            }
             throw e;
         }
         return end;
@@ -151,10 +162,10 @@ public class ConsumerCallable<M extends Message> implements Callable<ConsumerSta
         consumer.begin();
     }
 
-    private void commitBatch() {
+    private void commitBatch(BatchState state) {
         try (Timer.Context ignore = batchCommitTimer.time()) {
             consumer.commit();
-            committedCounter.inc(currentBatch.getSize());
+            committedCounter.inc(state.getSize());
         }
     }
 
@@ -163,22 +174,21 @@ public class ConsumerCallable<M extends Message> implements Callable<ConsumerSta
         consumer.rollback();
     }
 
-    private boolean acceptBatch() throws InterruptedException {
-        currentBatch = new BatchState(currentBatchPolicy);
-        currentBatch.start();
+    private BatchState acceptBatch() throws InterruptedException {
+        BatchState batch = new BatchState(currentBatchPolicy);
+        batch.start();
         M message;
-        while ((message = tailer.get(1, TimeUnit.SECONDS)) != null) {
+        while ((message = tailer.read(1, TimeUnit.SECONDS)) != null) {
             try (Timer.Context ignore = acceptTimer.time()) {
                 setThreadName(message);
                 consumer.accept(message);
             }
-            currentBatch.inc();
-            if (currentBatch.isFull()) {
-                return false;
+            if (batch.inc() != BatchState.State.FILLING) {
+                return batch;
             }
         }
-        log.info(String.format("No more message on queue %02d", tailer.getQueue()));
-        return true;
+        batch.last();
+        return batch;
     }
 
     private void setThreadName(M message) {

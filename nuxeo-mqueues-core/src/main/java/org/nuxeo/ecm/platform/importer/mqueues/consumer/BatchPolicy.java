@@ -32,7 +32,7 @@ public class BatchPolicy {
     public static final BatchPolicy DEFAULT = new BatchPolicy().capacity(10).timeThreshold(20, TimeUnit.SECONDS);
 
     private int capacity;
-    private long thresholdMs;
+    private long thresholdMs = 10 * 1000;
 
     /**
      * Set the maximum size of the batch.
