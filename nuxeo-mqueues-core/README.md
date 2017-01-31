@@ -14,30 +14,34 @@ This module is under development and still experimental, interfaces and implemen
 A MQueues (Multiple Queues) is a bounded array of queues, each queue is referenced by an index.
 
 A producer is responsible for choosing which message to assign to which queue:
-    - using a round robin algorithm a producer can balance messages between queues
-    - using a shard key (or any custom logic) producers can group messages by queue,
-      the "grouping" semantic is shared with the consumers.
+
+* Using a round robin algorithm a producer can balance messages between queues
+* Using a shard key (or any custom logic) producers can group messages by queue, the "grouping" semantic is shared with the consumers.
 
 Each queue is an ordered immutable sequence of messages that are appended:
-    - the producer will never be blocked when appending a message.
-    - The messages are persisted outside of the JVM
-    - The retention policy is up to the MQueues implementation
+
+* The producer will never be blocked when appending a message.
+* The messages are persisted outside of the JVM
+* The retention policy is up to the MQueues implementation
 
 Consumers read messages using a tailer, the current offset (read position) for a queue can be persisted (commit):
-    - Consumer don't destroy messages while reading from a queue.
-    - Consumer can start reading messages from the last committed message, the beginning or end of a queue.
+
+* Consumer don't destroy messages while reading from a queue.
+* Consumer can start reading messages from the last committed message, the beginning or end of a queue.
 
 Consumers can choose a namespace to persist its offset:
-    - multiple consumers can tail a queue at different speed
+
+* Multiple consumers can tail a queue at different speed
 
 This is enough to implement the two main patterns of producer/consumer:
-1. queuing (aka work queue): a message is delivered to one and only one consumer
-    - producers dispatch messages in queues
-    - there is a single consumer per queue (nb of queues = nb of concurrent consumers)
-2. pub/sub (aka event bus): a message is delivered to multiple consumers interested in a topic
-    - each queue in a mqueues can be seen as a topic
-    - consumer subscribe a topic by getting a tailer to a queue
-    - consumer persists its offset in a private name space
+
+1. Queuing (aka work queue): a message is delivered to one and only one consumer
+  * producers dispatch messages in queues
+  * there is a single consumer per queue (nb of queues = nb of concurrent consumers)
+2. Pub/Sub (aka event bus): a message is delivered to multiple consumers interested in a topic
+  * each queue in a mqueues can be seen as a topic
+  * consumer subscribe a topic by getting a tailer to a queue
+  * consumer persists its offset in a private name space
 
 
 ## Default MQueues implementation
@@ -56,24 +60,26 @@ That being said Chronicle Queue creates a single file per queue and per day, so 
 
 ### Pattern 1: Queuing with a limited amount of messages
 
-Typical usage can be a mass import process where producers extract documents and consumer import documents, the gain is:
-- it decouples producers and consumers: import process can be run multiple time in a deterministic way for debugging and tuning.
-- it brings concurrency in import: the producer need to dispatch messages with a correct semantic and evenly.
+Typical usage can be a mass import process where producers extract documents and consumer import documents:
 
-For efficiency consumer process message per batch.
-For reliability consumer follow a retry policy.
+* it decouples producers and consumers: import process can be run multiple time in a deterministic way for debugging and tuning.
+* it brings concurrency in import: producer need to dispatch messages with a correct semantic and evenly.
+
+For efficiency consumer process message per batch. For reliability consumer follow a retry policy.
 
 This is a one time process:
-- Producers end on error or when all message are send.
-- Consumers stop in error (according to the retry policy) or when all messages are processed.
+
+* Producers end on error or when all message are sent.
+* Consumers stop in error (according to the retry policy) or when all messages are processed.
 
 The proposed solution takes care of:
-- driving producers/consumers thread pools
-- following the consumer the customizable batch policy
-- following the consumer the customizable retry policy
-- saving the consumer's offset when a batch of messages is successfully processed
-- starting consumers from the last successfully processed message
-- exposing metrics for producers and consumers
+
+* Driving producers/consumers thread pools
+* Following the consumer the customizable batch policy
+* Following the consumer the customizable retry policy
+* Saving the consumer's offset when a batch of messages is successfully processed
+* Starting consumers from the last successfully processed message
+* Exposing metrics for producers and consumers
 
 To use this pattern one must implement a [ProducerIterator](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/producer/ProducerIterator.java) and a [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/consumer/Consumer.java) with factories.
 Both the producer and consumer implementation are driven (pulled) by the module.
@@ -86,8 +92,9 @@ Almost the same as pattern as above but producers and consumers are always up pr
 There is no Producer interface, a producer just use a [MQueues](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/mqueues/MQueues.java) to append messages.
 
 The Consumer follow the same interface as in previous pattern but it is driven in a different way:
-- it will wait for ever on message
-- after a failre on the retry policy, the consumer will continue and take the next message
+
+* it will wait for ever on message
+* after a failre on the retry policy, the consumer will continue and take the next message
 
 A producer can wait for a message to be consumed.
 
