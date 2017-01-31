@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.runtime.metrics.MetricsService;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +43,9 @@ import static java.lang.Thread.currentThread;
 public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatus> {
     private static final Log log = LogFactory.getLog(ConsumerRunner.class);
 
+    // This is the registry name used by Nuxeo without adding a dependency nuxeo-runtime
+    public static final String NUXEO_METRICS_REGISTRY_NAME = "org.nuxeo.runtime.metrics.MetricsService";
+
     private final Consumer<M> consumer;
     private final MQueues<M> mq;
     private final RetryPolicy retryPolicy;
@@ -52,7 +54,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     private BatchPolicy currentBatchPolicy;
     private String threadName;
 
-    protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(MetricsService.class.getName());
+    protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(NUXEO_METRICS_REGISTRY_NAME);
     protected final Timer acceptTimer;
     protected final Counter committedCounter;
     protected final Timer batchCommitTimer;

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.ecm.mqueues.automation.contrib" version="1.0">
+
+  <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent" point="operations">
+    <operation class="org.nuxeo.ecm.platform.importer.mqueues.automation.RandomBlobProducers" />
+    <operation class="org.nuxeo.ecm.platform.importer.mqueues.automation.BlobConsumers" />
+    <operation class="org.nuxeo.ecm.platform.importer.mqueues.automation.RandomDocumentProducers" />
+    <operation class="org.nuxeo.ecm.platform.importer.mqueues.automation.DocumentConsumers" />
+  </extension>
+
+</component>

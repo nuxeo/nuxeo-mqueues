@@ -16,7 +16,7 @@
  * Contributors:
  *     Benoit Delbosc
  */
-package org.nuxeo.ecm.automation.importer.mqueues.test;
+package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,13 +24,13 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.automation.AutomationService;
 import org.nuxeo.ecm.automation.OperationContext;
-import org.nuxeo.ecm.automation.importer.mqueues.BlobConsumers;
-import org.nuxeo.ecm.automation.importer.mqueues.DocumentConsumers;
-import org.nuxeo.ecm.automation.importer.mqueues.RandomBlobProducers;
-import org.nuxeo.ecm.automation.importer.mqueues.RandomDocumentProducers;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.test.CoreFeature;
+import org.nuxeo.ecm.platform.importer.mqueues.automation.BlobConsumers;
+import org.nuxeo.ecm.platform.importer.mqueues.automation.DocumentConsumers;
+import org.nuxeo.ecm.platform.importer.mqueues.automation.RandomBlobProducers;
+import org.nuxeo.ecm.platform.importer.mqueues.automation.RandomDocumentProducers;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -54,8 +54,8 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@Deploy({"org.nuxeo.ecm.mqueues.automation", "org.nuxeo.ecm.automation.core", "org.nuxeo.ecm.core.io"})
-public class TestImports {
+@Deploy({"org.nuxeo.ecm.mqueues.importer", "org.nuxeo.ecm.automation.core", "org.nuxeo.ecm.core.io"})
+public class TestAutomation {
 
     @Inject
     CoreSession session;

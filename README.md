@@ -7,8 +7,6 @@ This module implements a generic message queue used to implement different produ
 
 The initial purpose of the mqueues is to perform mass import, this addon comes with some implementations to produce/consume Nuxeo Document and Nuxeo Blob. Visit [nuxeo-mqueues-importer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-importer/README.md) for more information.
 
-These importer implementations are exposed via automation operations. Visit [nuxeo-mqueues-automation](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-automation/README.md) for more information.
-
 
 ## Warning
 

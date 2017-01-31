@@ -16,7 +16,7 @@
  * Contributors:
  *     Benoit Delbosc
  */
-package org.nuxeo.ecm.automation.importer.mqueues;
+package org.nuxeo.ecm.platform.importer.mqueues.automation;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,33 +26,32 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
+import org.nuxeo.ecm.core.api.NuxeoPrincipal;
+import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomDocumentMessageProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomStringBlobMessageProducerFactory;
+import org.nuxeo.runtime.api.Framework;
 
 import java.io.File;
 import java.nio.file.Paths;
 
-import static org.nuxeo.ecm.automation.importer.mqueues.RandomBlobProducers.checkAccess;
-import static org.nuxeo.ecm.automation.importer.mqueues.RandomBlobProducers.getDefaultQueuePath;
-
 /**
  * @since 9.1
  */
-@Operation(id = RandomDocumentProducers.ID, category = Constants.CAT_SERVICES, label = "Produces random blobs", since = "9.1",
+@Operation(id = RandomBlobProducers.ID, category = Constants.CAT_SERVICES, label = "Produces random blobs", since = "9.1",
         description = "Produces random blobs in a mqueues.")
-public class RandomDocumentProducers {
-    private static final Log log = LogFactory.getLog(RandomDocumentProducers.class);
-    public static final String ID = "MQImporter.runRandomDocumentProducers";
-    public static final String DEFAULT_DOC_QUEUE_NAME = "mq-doc";
+public class RandomBlobProducers {
+    private static final Log log = LogFactory.getLog(RandomBlobProducers.class);
+    public static final String ID = "MQImporter.runRandomBlobProducers";
+    public static final String DEFAULT_BLOB_QUEUE_NAME = "mq-blob";
 
     @Context
     protected OperationContext ctx;
 
-    @Param(name = "nbDocuments")
-    protected Integer nbDocuments;
+    @Param(name = "nbBlobs")
+    protected Integer nbBlobs;
 
     @Param(name = "nbThreads", required = false)
     protected Integer nbThreads = 8;
@@ -66,37 +65,40 @@ public class RandomDocumentProducers {
     @Param(name = "queuePath", required = false)
     protected String queuePath;
 
-    @Param(name = "blobInfoPath", required = false)
-    protected String blobInfoPath;
-
     @OperationMethod
     public void run() {
         checkAccess(ctx);
         queuePath = getQueuePath();
-        try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath), nbThreads)) {
-            ProducerPool<DocumentMessage> producers;
-            if (blobInfoPath != null) {
-                producers = new ProducerPool<>(mQueues,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, Paths.get(blobInfoPath)), nbThreads);
-            } else {
-                producers = new ProducerPool<>(mQueues,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads);
-            }
+        try (MQueues<BlobMessage> mQueues = new CQMQueues<>(new File(queuePath), nbThreads)) {
+            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
+                    new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads);
             producers.call();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
     }
 
-    private String getQueuePath() {
+    public String getQueuePath() {
         if (queuePath != null && !queuePath.isEmpty()) {
             return queuePath;
         }
-        return getDefaultDocumentQueuePath();
+        return getDefaultBlobQueuePath();
     }
 
-    public static String getDefaultDocumentQueuePath() {
-        return getDefaultQueuePath(DEFAULT_DOC_QUEUE_NAME);
+    public static String getDefaultBlobQueuePath() {
+        return getDefaultQueuePath(DEFAULT_BLOB_QUEUE_NAME);
     }
+
+    public static String getDefaultQueuePath(String name) {
+        return Paths.get(Framework.getRuntime().getHome().toString(), "tmp", name).toString();
+    }
+
+    public static void checkAccess(OperationContext context) {
+        NuxeoPrincipal principal = (NuxeoPrincipal) context.getPrincipal();
+        if (principal == null || !principal.isAdministrator()) {
+            throw new RuntimeException("Unauthorized access: " + principal);
+        }
+    }
+
 
 }

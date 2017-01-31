@@ -12,11 +12,7 @@
   <description>MultiQueues producers/consumers Core API</description>
 
   <dependencies>
-    <dependency>
-      <groupId>org.nuxeo.runtime</groupId>
-      <artifactId>nuxeo-runtime-metrics</artifactId>
-    </dependency>
-    <dependency>
+   <dependency>
       <groupId>com.codahale.metrics</groupId>
       <artifactId>metrics-core</artifactId>
     </dependency>
@@ -33,16 +29,16 @@
       <artifactId>chronicle-wire</artifactId>
     </dependency>
     <dependency>
+      <groupId>net.openhft</groupId>
+      <artifactId>chronicle-bytes</artifactId>
+    </dependency>
+    <dependency>
       <groupId>net.jodah</groupId>
       <artifactId>failsafe</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.nuxeo.common</groupId>
-      <artifactId>nuxeo-common</artifactId>
     </dependency>
 
   </dependencies>

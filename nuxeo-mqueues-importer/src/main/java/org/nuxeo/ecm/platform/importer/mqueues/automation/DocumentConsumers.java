@@ -16,7 +16,7 @@
  * Contributors:
  *     Benoit Delbosc
  */
-package org.nuxeo.ecm.automation.importer.mqueues;
+package org.nuxeo.ecm.platform.importer.mqueues.automation;
 
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.logging.Log;
@@ -36,9 +36,6 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
-
-import static org.nuxeo.ecm.automation.importer.mqueues.RandomBlobProducers.checkAccess;
-import static org.nuxeo.ecm.automation.importer.mqueues.RandomDocumentProducers.getDefaultDocumentQueuePath;
 
 /**
  * @since 9.1
@@ -75,7 +72,7 @@ public class DocumentConsumers {
 
     @OperationMethod
     public void run() {
-        checkAccess(ctx);
+        RandomBlobProducers.checkAccess(ctx);
         queuePath = getQueuePath();
         repositoryName = getRepositoryName();
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
@@ -100,7 +97,7 @@ public class DocumentConsumers {
         if (queuePath != null && !queuePath.isEmpty()) {
             return queuePath;
         }
-        return getDefaultDocumentQueuePath();
+        return RandomDocumentProducers.getDefaultDocumentQueuePath();
     }
 
 }

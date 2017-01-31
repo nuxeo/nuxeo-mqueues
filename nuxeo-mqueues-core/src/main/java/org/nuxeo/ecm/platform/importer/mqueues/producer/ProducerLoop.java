@@ -26,11 +26,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.runtime.metrics.MetricsService;
 
 import java.util.concurrent.Callable;
 
 import static java.lang.Thread.currentThread;
+import static org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerRunner.NUXEO_METRICS_REGISTRY_NAME;
 
 /**
  * A callable pulling a producer iterator in loop.
@@ -44,7 +44,7 @@ public class ProducerLoop<M extends Message> implements Callable<ProducerStatus>
     private final ProducerIterator<M> producer;
     private String threadName;
 
-    protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(MetricsService.class.getName());
+    protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(NUXEO_METRICS_REGISTRY_NAME);
     protected final Timer producerTimer;
     protected final Counter producersCount;
 

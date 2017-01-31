@@ -31,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.nuxeo.common.utils.ExceptionUtils;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
 
 import java.io.File;
@@ -80,8 +79,8 @@ public class TestCQ implements StoreFileListener {
         try {
             return poll(tailer, 1, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             log.error("poll timeout", e);
-            ExceptionUtils.checkInterrupt(e);
         }
         return null;
     }
