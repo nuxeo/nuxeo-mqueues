@@ -24,11 +24,14 @@ import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestCQMQueues {
@@ -283,7 +286,54 @@ public class TestCQMQueues {
             MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
             assertEquals("id5", tailer.read(0, TimeUnit.MILLISECONDS).getId());
         }
+    }
 
 
+    @Test
+    public void waitForConsumer() throws Exception {
+        final int NB_QUEUE = 1;
+        final File basePath = folder.newFolder("cq");
+
+        Offset offset = null;
+        Offset offset0 = null;
+        Offset offset5 = null;
+        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+            // appends some msg and keep some offsets
+            for (int i = 0; i < 10; i++) {
+                offset = mQueues.append(0, new IdMessage("id" + i));
+                if (i == 0) {
+                    offset0 = offset;
+                } else if (i == 5) {
+                    offset5 = offset;
+                }
+            }
+            // nothing committed
+            assertFalse(mQueues.waitFor(offset, 0, TimeUnit.MILLISECONDS));
+            assertFalse(mQueues.waitFor(offset0, 0, TimeUnit.MILLISECONDS));
+            assertFalse(mQueues.waitFor(offset5, 0, TimeUnit.MILLISECONDS));
+
+            MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
+            tailer.read(0, TimeUnit.MILLISECONDS);
+            tailer.commit();
+
+            // msg 0 is processed and committed
+            assertTrue(mQueues.waitFor(offset0, 0, TimeUnit.MILLISECONDS));
+            // msg 5 and last is processed and committed
+            assertFalse(mQueues.waitFor(offset5, 0, TimeUnit.MILLISECONDS));
+            assertFalse(mQueues.waitFor(offset, 0, TimeUnit.MILLISECONDS));
+
+            // drain
+            while(tailer.read(0, TimeUnit.MILLISECONDS) != null);
+
+            // message is processed but not yet committed
+            assertFalse(mQueues.waitFor(offset, 0, TimeUnit.MILLISECONDS));
+            tailer.commit();
+
+            // message is processed and committed
+            assertTrue(mQueues.waitFor(offset0, 0, TimeUnit.MILLISECONDS));
+            assertTrue(mQueues.waitFor(offset5, 0, TimeUnit.MILLISECONDS));
+            assertTrue(mQueues.waitFor(offset, 0, TimeUnit.MILLISECONDS));
+
+        }
     }
 }

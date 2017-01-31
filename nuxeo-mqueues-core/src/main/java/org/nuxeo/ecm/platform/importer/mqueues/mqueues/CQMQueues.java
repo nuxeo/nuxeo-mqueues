@@ -19,9 +19,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.TailerDirection;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
@@ -49,8 +47,7 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 public class CQMQueues<M extends Message> implements MQueues<M> {
     private static final Log log = LogFactory.getLog(CQMQueues.class);
     private static final String QUEUE_PREFIX = "Q-";
-    private static final String OFFSET_QUEUE_PREFIX = "offset-";
-    private static final long POLL_INTERVAL_MS = 100L;
+    private static final int POLL_INTERVAL_MS = 100;
 
     private final List<ChronicleQueue> queues;
     private final int nbQueues;
@@ -77,19 +74,48 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
     }
 
     @Override
-    public void append(int queue, M message) {
-        queues.get(queue).acquireAppender().writeDocument(w -> w.write("msg").object(message));
+    public CQOffset append(int queue, M message) {
+        ExcerptAppender appender = queues.get(queue).acquireAppender();
+        appender.writeDocument(w -> w.write("msg").object(message));
+        return new CQOffset(queue, appender.lastIndexAppended());
     }
 
     @Override
     public Tailer<M> createTailer(int queue) {
-        return new CQTailer(queue);
+        return new CQTailer(basePath.toString(), queues.get(queue).createTailer(), queue);
     }
 
     @Override
     public Tailer<M> createTailer(int queue, String name) {
-        return new CQTailer(queue, name);
+        return new CQTailer(basePath.toString(), queues.get(queue).createTailer(), queue, name);
     }
+
+    @Override
+    public boolean waitFor(Offset offset, long timeout, TimeUnit unit) throws InterruptedException {
+        boolean ret = false;
+        long offsetPosition = ((CQOffset) offset).getOffset();
+        int queue = ((CQOffset) offset).getQueue();
+
+        CQOffsetTracker offsetTracker = new CQOffsetTracker(basePath.toString(), queue);
+        ret = isProcessed(offsetTracker, offsetPosition);
+        if (ret) {
+            return ret;
+        }
+        final long timeoutMs = TimeUnit.MILLISECONDS.convert(timeout, unit);
+        final long deadline = System.currentTimeMillis() + timeoutMs;
+        final long delay = Math.min(POLL_INTERVAL_MS, timeoutMs);
+        while (!ret && System.currentTimeMillis() < deadline) {
+            Thread.sleep(delay);
+            ret = isProcessed(offsetTracker, offsetPosition);
+        }
+        return ret;
+    }
+
+    private boolean isProcessed(CQOffsetTracker tracker, long offset) {
+        long last = tracker.readLastCommittedOffset();
+        return (last > 0) && (last >= offset);
+    }
+
 
     @Override
     public void close() throws Exception {
@@ -164,118 +190,6 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
             String msg = "Can not remove Chronicle Queues directory: " + basePath + " " + e.getMessage();
             log.error(msg, e);
             throw new IllegalArgumentException(msg, e);
-        }
-    }
-
-
-    public class CQTailer implements Tailer<M> {
-        private final int queueIndex;
-        private final ExcerptTailer tailer;
-        private final File offsetFile;
-        private final SingleChronicleQueue offsetQueue;
-        private long lastCommittedOffset = 0;
-
-        public CQTailer(int queue) {
-            // Use the same offset queue for all tailers
-            this(queue, "all");
-        }
-
-        public CQTailer(int queue, String offsetName) {
-            queueIndex = queue;
-            tailer = queues.get(queueIndex).createTailer();
-            offsetFile = new File(basePath, OFFSET_QUEUE_PREFIX + offsetName);
-            offsetQueue = binary(getOffsetFile()).build();
-            toLastCommitted();
-        }
-
-        @Override
-        public M read(long timeout, TimeUnit unit) throws InterruptedException {
-            M ret = read();
-            if (ret != null) {
-                return ret;
-            }
-            final long timeoutMs = TimeUnit.MILLISECONDS.convert(timeout, unit);
-            final long deadline = System.currentTimeMillis() + timeoutMs;
-            final long delay = Math.min(POLL_INTERVAL_MS, timeoutMs);
-            while (ret == null && System.currentTimeMillis() < deadline) {
-                Thread.sleep(delay);
-                ret = read();
-            }
-            return ret;
-        }
-
-        @SuppressWarnings("unchecked")
-        private M read() {
-            final List<M> ret = new ArrayList<>(1);
-            if (tailer.readDocument(w -> ret.add((M) w.read("msg").object()))) {
-                return ret.get(0);
-            }
-            return null;
-        }
-
-        @Override
-        public void commit() {
-            // we write raw: queue, offset, timestamp
-            long offset = tailer.index();
-            offsetQueue.acquireAppender().writeBytes(b -> b.writeInt(queueIndex).writeLong(offset).writeLong(System.currentTimeMillis()));
-            if (log.isTraceEnabled()) {
-                log.trace(String.format("queue-%02d commit offset: %d", queueIndex, offset));
-            }
-            lastCommittedOffset = offset;
-        }
-
-        @Override
-        public void toEnd() {
-            log.debug(String.format("queue-%02d toEnd", queueIndex));
-            tailer.toEnd();
-        }
-
-        @Override
-        public void toStart() {
-            log.debug(String.format("queue-%02d toStart", queueIndex));
-            tailer.toStart();
-        }
-
-        @Override
-        public void toLastCommitted() {
-            if (lastCommittedOffset > 0) {
-                log.debug(String.format("queue-%02d toLastCommitted: %d", queueIndex, lastCommittedOffset));
-                tailer.moveToIndex(lastCommittedOffset);
-                return;
-            }
-            ExcerptTailer offsetTailer = offsetQueue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
-            final boolean[] found = {false};
-            boolean hasNext;
-            do {
-                hasNext = offsetTailer.readBytes(b -> {
-                    int queue = b.readInt();
-                    long offset = b.readLong();
-                    long stamp = b.readLong();
-                    if (queueIndex == queue) {
-                        log.debug(String.format("queue-%02d toLastCommitted found: %d", queueIndex, offset));
-                        tailer.moveToIndex(offset);
-                        found[0] = true;
-                    }
-                });
-            } while (!found[0] && hasNext);
-            if (!found[0]) {
-                log.debug(String.format("queue-%02d toLastCommitted not found, start from beginning", queueIndex));
-                tailer.toStart();
-            }
-        }
-
-        @Override
-        public int getQueue() {
-            return queueIndex;
-        }
-
-        private File getOffsetFile() {
-            return offsetFile;
-        }
-
-        @Override
-        public void close() throws Exception {
-            offsetQueue.close();
         }
     }
 

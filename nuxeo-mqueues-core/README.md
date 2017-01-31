@@ -15,8 +15,8 @@ A MQueues (Multiple Queues) is a bounded array of queues, each queue is referenc
 
 A producer is responsible for choosing which message to assign to which queue:
 
-* Using a round robin algorithm a producer can balance messages between queues
-* Using a shard key (or any custom logic) producers can group messages by queue, the "grouping" semantic is shared with the consumers.
+* Using a round robin algorithm or a shard key a producer can balance messages between queues.
+* Producer can also group message by queue following a semantic that is used by consumers
 
 Each queue is an ordered immutable sequence of messages that are appended:
 
@@ -32,16 +32,18 @@ Consumers read messages using a tailer, the current offset (read position) for a
 Consumers can choose a namespace to persist its offset:
 
 * Multiple consumers can tail a queue at different speed
+* Each consumer for a queue see the same messages in the same order, but can commit their own offset.
 
 This is enough to implement the two main patterns of producer/consumer:
 
 1. Queuing (aka work queue): a message is delivered to one and only one consumer
   * producers dispatch messages in queues
-  * there is a single consumer per queue (nb of queues = nb of concurrent consumers)
-2. Pub/Sub (aka event bus): a message is delivered to multiple consumers interested in a topic
-  * each queue in a mqueues can be seen as a topic
-  * consumer subscribe a topic by getting a tailer to a queue
-  * consumer persists its offset in a private name space
+  * there is a single consumer per queue
+  * the number of queues is equal to the number of consumers
+2. Pub/Sub (aka event bus): message is publish to a topic, consumers subsrcibe to topics
+  * a publisher append messages to a queue (topic)
+  * a subscriber read messages from a queue
+  * the subscriber persists its offset in a private name space
 
 
 ## Default MQueues implementation
@@ -94,7 +96,7 @@ There is no Producer interface, a producer just use a [MQueues](https://github.c
 The Consumer follow the same interface as in previous pattern but it is driven in a different way:
 
 * it will wait for ever on message
-* after a failre on the retry policy, the consumer will continue and take the next message
+* after a failure on the retry policy, the consumer will continue and take the next message
 
 A producer can wait for a message to be consumed.
 

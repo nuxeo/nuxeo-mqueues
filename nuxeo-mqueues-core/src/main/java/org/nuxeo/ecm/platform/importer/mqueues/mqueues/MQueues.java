@@ -20,6 +20,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,13 +41,13 @@ public interface MQueues<M extends Message> extends AutoCloseable {
     int size();
 
     /**
-     * Append a message into a queue.
+     * Append a message into a queue, returns an {@link Offset}.
      *
      * This method is thread safe, a queue can be shared by multiple producers.
      *
      * @param queue index lower than {@link #size()}
      */
-    void append(int queue, M message);
+    Offset append(int queue, M message);
 
     /**
      * Create a new {@link Tailer} associed with the queue index.
@@ -71,6 +72,15 @@ public interface MQueues<M extends Message> extends AutoCloseable {
      *
      */
     Tailer<M> createTailer(int queue, String name);
+
+    /**
+     * Wait for consumer to process a message up to the offset.
+     *
+     * The message is processed if a consumer commit its offset (or a bigger one) in the default name space.
+     *
+     * Return true if the message has been consumed, false in case of timeout.
+     */
+    boolean waitFor(Offset offset, long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
      * Sequential reader for a queue.
@@ -105,7 +115,7 @@ public interface MQueues<M extends Message> extends AutoCloseable {
         /**
          * Commit the offset of the last message returned by read.
          */
-        void commit();
+        Offset commit();
 
         /**
          * Returns the associated queue index.
