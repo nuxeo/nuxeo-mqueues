@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.consumer;
 
-import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
@@ -26,100 +25,61 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A Callable that run concurrent ConsumerRunner.
+ * Run a pool of ConsumerRunner.
  *
  * @since 9.1
  */
-public class ConsumerPool<M extends Message> implements Callable<List<ConsumerStatus>> {
+public class ConsumerPool<M extends Message> extends AbstractCallablePool<ConsumerStatus> {
     private static final Log log = LogFactory.getLog(ConsumerPool.class);
     private final MQueues<M> qm;
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
-
-    private ExecutorService consumerExecutor;
-    private ExecutorCompletionService<ConsumerStatus> consumerCompletionService;
+    private final List<MQueues.Tailer<M>> tailers;
 
     public ConsumerPool(MQueues<M> qm, ConsumerFactory<M> factory, ConsumerPolicy policy) {
+        super(qm.size());
         this.qm = qm;
         this.factory = factory;
         this.policy = policy;
+        this.tailers = new ArrayList<>(qm.size());
     }
 
     @Override
-    public List<ConsumerStatus> call() throws Exception {
-        // one thread per queue
-        start();
-        return waitForCompletion();
+    protected ConsumerStatus getErrorStatus() {
+        return new ConsumerStatus(0, 0, 0, 0, 0, 0, 0, true);
     }
 
-    public void start() {
-        int nbThreads = qm.size();
-        log.warn("Running consumers with " + factory.getClass().getSimpleName() + " on " + nbThreads + " thread(s).");
-        consumerExecutor = Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory());
-        consumerCompletionService = new ExecutorCompletionService<>(consumerExecutor);
-        for (int i = 0; i < nbThreads; i++) {
-            ConsumerRunner<M> callable = new ConsumerRunner<>(factory, qm, i, policy);
-            consumerCompletionService.submit(callable);
-        }
-        log.info("All consumers are running");
+    @Override
+    protected Callable<ConsumerStatus> getCallable(int i) {
+        MQueues.Tailer<M> tailer = qm.createTailer(i);
+        tailers.add(tailer);
+        return new ConsumerRunner<>(factory, policy, tailer);
     }
 
-    public List<ConsumerStatus> waitForCompletion() {
-        int nbThreads = qm.size();
-        List<ConsumerStatus> ret = new ArrayList<>(nbThreads);
-        for (int i = 0; i < nbThreads; i++) {
+    @Override
+    protected String getThreadPrefix() {
+        return "Nuxeo-Consumer";
+    }
+
+    @Override
+    protected void afterCall(List<ConsumerStatus> ret) {
+        closeTailers();
+        ret.forEach(log::info);
+        log.warn(ConsumerStatus.toString(ret));
+    }
+
+    private void closeTailers() {
+        tailers.stream().filter(Objects::nonNull).forEach(tailer -> {
             try {
-                Future<ConsumerStatus> future = consumerCompletionService.take();
-                ConsumerStatus status = future.get();
-                ret.add(status);
-                logStat(status);
-            } catch (ExecutionException e) {
-                log.error("Exception catch in consumer: " + e.getMessage(), e);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("ConsumerPool interrupted: " + e.getMessage(), e);
+                tailer.close();
+            } catch (Exception e) {
+                log.error("Unable to close tailer: " + tailer.getQueue());
             }
-        }
-        logStat(ret);
-        consumerExecutor.shutdownNow();
-        return ret;
+        });
     }
 
-    private static class NamedThreadFactory implements ThreadFactory {
-        private final AtomicInteger count = new AtomicInteger(0);
-
-        @SuppressWarnings("NullableProblems")
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, String.format("Nuxeo-Consumer-%02d", count.getAndIncrement()));
-        }
-    }
-
-    private void logStat(List<ConsumerStatus> ret) {
-        long startTime = ret.stream().mapToLong(r -> r.startTime).min().orElse(0);
-        long stopTime = ret.stream().mapToLong(r -> r.stopTime).min().orElse(0);
-        double elapsed = (stopTime - startTime) / 1000.;
-        long committed = ret.stream().mapToLong(r -> r.committed).sum();
-        double mps = (elapsed != 0) ? committed / elapsed : 0.0;
-        int consumers = ret.size();
-        log.warn(String.format("All %d consumers terminated: messages committed: %d, elapsed: %.2fs, throughput: %.2f msg/s",
-                consumers, committed, elapsed, mps));
-    }
-
-    private void logStat(ConsumerStatus status) {
-        double elapsed = (status.stopTime - status.startTime) / 1000.;
-        double mps = (elapsed != 0) ? status.committed / elapsed : 0.0;
-        log.warn(String.format("Stat consumer %02d terminated, accepted (include retries): %d, committed: %d, batch: %d, batchFailure: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
-                status.consumer, status.accepted, status.committed, status.batchCommit, status.batchFailure, elapsed, mps));
-    }
 }

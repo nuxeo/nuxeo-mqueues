@@ -21,8 +21,6 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 
@@ -34,7 +32,6 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
  * @since 9.1
  */
 public class CQOffsetTracker implements AutoCloseable {
-    private static final Log log = LogFactory.getLog(CQOffsetTracker.class);
     private final SingleChronicleQueue offsetQueue;
     private final int queueIndex;
     private static final String OFFSET_QUEUE_PREFIX = "offset-";

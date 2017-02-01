@@ -36,6 +36,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -79,10 +80,15 @@ public class DocumentConsumers {
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
-                    new ConsumerPolicy()
-                            .batchPolicy(new BatchPolicy().capacity(batchSize).timeThreshold(batchThresholdS, TimeUnit.SECONDS))
-                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS)));
-            consumers.call();
+                    new ConsumerPolicy.Builder()
+                            .batchPolicy(new BatchPolicy
+                                    .Builder(batchSize)
+                                    .timeThreshold(Duration.ofSeconds(batchThresholdS))
+                                    .build())
+                            .retryPolicy(
+                                    new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                            .build());
+            consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

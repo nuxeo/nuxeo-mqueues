@@ -37,7 +37,7 @@ public class BatchState {
     }
 
     public void start() {
-        endMs = System.currentTimeMillis() + policy.getThresholdMs();
+        endMs = System.currentTimeMillis() + policy.getTimeThreshold().toMillis();
         counter = 0;
         state = State.FILLING;
     }
@@ -48,6 +48,10 @@ public class BatchState {
         }
         counter++;
         return getState();
+    }
+
+    public void force() {
+        state = State.FULL;
     }
 
     public void last() {

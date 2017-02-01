@@ -20,7 +20,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
  * A MQueues (for Multiple Queues) is a set of unbounded persisted queues.
@@ -79,7 +79,7 @@ public interface MQueues<M extends Message> extends AutoCloseable {
      *
      * Return true if the message has been consumed, false in case of timeout.
      */
-    boolean waitFor(Offset offset, long timeout, TimeUnit unit) throws InterruptedException;
+    boolean waitFor(Offset offset, Duration timeout) throws InterruptedException;
 
     /**
      * Sequential reader for a queue.
@@ -94,7 +94,7 @@ public interface MQueues<M extends Message> extends AutoCloseable {
          *
          * @return null if there is no message in the queue after the timeout.
          */
-        M read(long timeout, TimeUnit unit) throws InterruptedException;
+        M read(Duration timeout) throws InterruptedException;
 
         /**
          * Go to the end of the queue.

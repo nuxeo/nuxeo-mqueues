@@ -22,12 +22,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @since 9.1
@@ -80,12 +80,12 @@ public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
     }
 
     @Override
-    public M read(long timeout, TimeUnit unit) throws InterruptedException {
+    public M read(Duration timeout) throws InterruptedException {
         M ret = read();
         if (ret != null) {
             return ret;
         }
-        final long timeoutMs = TimeUnit.MILLISECONDS.convert(timeout, unit);
+        final long timeoutMs = timeout.toMillis();
         final long deadline = System.currentTimeMillis() + timeoutMs;
         final long delay = Math.min(POLL_INTERVAL_MS, timeoutMs);
         while (ret == null && System.currentTimeMillis() < deadline) {
@@ -134,7 +134,7 @@ public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
             log.debug(String.format("queue-%02d toLastCommitted found: %d", queueIndex, offset));
             tailer.moveToIndex(offset);
         } else {
-            log.debug(String.format("queue-%02d toLastCommitted not found, start from beginning", queueIndex));
+            log.debug(String.format("queue-%02d toLastCommitted not found, run from beginning", queueIndex));
             tailer.toStart();
         }
     }

@@ -18,43 +18,56 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.consumer;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
- * Batch policy tells when a batch must be committed.
- *
- * Either it contains the maximum number of messages or the batch is started for too long.
+ * Describe when a batch must be flushed.
  *
  * @since 9.1
  */
 public class BatchPolicy {
-    static final BatchPolicy NO_BATCH = new BatchPolicy().capacity(1);
-    public static final BatchPolicy DEFAULT = new BatchPolicy().capacity(10).timeThreshold(20, TimeUnit.SECONDS);
+    static final BatchPolicy NO_BATCH = new Builder(1).build();
+    public static final BatchPolicy DEFAULT = new Builder(10).build();
 
-    private int capacity;
-    private long thresholdMs = 10 * 1000;
+    private final int capacity;
+    private final Duration threshold;
 
-    /**
-     * Set the maximum size of the batch.
-     */
-    public BatchPolicy capacity(int capacity) {
-        this.capacity = capacity;
-        return this;
-    }
-
-    /**
-     * Set the time threshold to fill a batch.
-     */
-    public BatchPolicy timeThreshold(long threshold, TimeUnit unit) {
-        this.thresholdMs = TimeUnit.MILLISECONDS.convert(threshold, unit);
-        return this;
-    }
-
-    public long getThresholdMs() {
-        return thresholdMs;
+    public BatchPolicy(Builder builder) {
+        capacity = builder.capacity;
+        threshold = builder.threshold;
     }
 
     public int getCapacity() {
         return capacity;
+    }
+
+    public Duration getTimeThreshold() {
+        return threshold;
+    }
+
+    public static class Builder {
+        private static final Duration DEFAULT_THRESHOLD = Duration.ofSeconds(10);
+        private final int capacity;
+        private Duration threshold = DEFAULT_THRESHOLD;
+
+        /**
+         * Set the maximum size of the batch.
+         */
+        public Builder(int capacity) {
+            this.capacity = capacity;
+        }
+
+        /**
+         * Set the time threshold to fill a batch.
+         */
+        public Builder timeThreshold(Duration threshold) {
+            this.threshold = threshold;
+            return this;
+        }
+
+        public BatchPolicy build() {
+            return new BatchPolicy(this);
+        }
+
     }
 }

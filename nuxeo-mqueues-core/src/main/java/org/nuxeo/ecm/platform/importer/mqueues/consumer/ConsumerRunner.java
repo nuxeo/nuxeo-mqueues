@@ -30,12 +30,11 @@ import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.currentThread;
 
 /**
- * Run a consumer according to the batch and retry policy until there is no more message.
+ * Read messages from a tailer and drive a consumer according to its policy.
  *
  * @since 9.1
  */
@@ -45,12 +44,13 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     // This is the registry name used by Nuxeo without adding a dependency nuxeo-runtime
     public static final String NUXEO_METRICS_REGISTRY_NAME = "org.nuxeo.runtime.metrics.MetricsService";
 
-    private final Consumer<M> consumer;
-    private final MQueues<M> mq;
-    private final int queue;
+    private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
+    private final int queue;
+    private final MQueues.Tailer<M> tailer;
     private BatchPolicy currentBatchPolicy;
     private String threadName;
+    private Consumer<M> consumer;
 
     protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(NUXEO_METRICS_REGISTRY_NAME);
     protected final Timer acceptTimer;
@@ -58,15 +58,14 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     protected final Timer batchCommitTimer;
     protected final Counter batchFailureCount;
     protected final Counter consumersCount;
-    private MQueues.Tailer<M> tailer;
 
-    public ConsumerRunner(ConsumerFactory<M> factory, MQueues<M> mq, int queue, ConsumerPolicy policy) {
-        this.consumer = factory.createConsumer(queue);
-        this.mq = mq;
-        this.queue = queue;
+
+    public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQueues.Tailer<M> tailer) {
+        this.factory = factory;
+        this.tailer = tailer;
         this.currentBatchPolicy = policy.getBatchPolicy();
         this.policy = policy;
-
+        queue = tailer.getQueue();
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
         acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", String.valueOf(queue)));
         committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", String.valueOf(queue)));
@@ -87,11 +86,23 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
 
     @Override
     public ConsumerStatus call() throws Exception {
-        consumersCount.inc();
         threadName = currentThread().getName();
+        consumersCount.inc();
         long start = Time.currentTimeMillis();
-        tailer = mq.createTailer(queue);
-        switch(policy.getStartOffset()) {
+        setTailerPosition();
+        consumer = factory.createConsumer(queue);
+        try {
+            consumerLoop();
+        } finally {
+            consumer.close();
+            consumersCount.dec();
+        }
+        return new ConsumerStatus(queue, acceptTimer.getCount(), committedCounter.getCount(),
+                batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis(), false);
+    }
+
+    private void setTailerPosition() {
+        switch (policy.getStartOffset()) {
             case BEGIN:
                 tailer.toStart();
                 break;
@@ -101,33 +112,13 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
             default:
                 tailer.toLastCommitted();
         }
-        try {
-            consumerLoop();
-        } finally {
-            tailer.close();
-            consumer.close();
-            consumersCount.dec();
-        }
-        return new ConsumerStatus(queue, acceptTimer.getCount(), committedCounter.getCount(),
-                batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis());
     }
 
-    private void consumerLoop() {
+    private void consumerLoop() throws InterruptedException {
         boolean end = false;
-        do {
+        while (!end) {
             Execution execution = new Execution(policy.getRetryPolicy());
-            while (!execution.isComplete()) {
-                try {
-                    end = processBatch();
-                    execution.complete();
-                    tailer.commit();
-                } catch (Exception e) {
-                    execution.recordFailure(e);
-                    setBatchRetryPolicy();
-                    tailer.toLastCommitted();
-                    batchFailureCount.inc();
-                }
-            }
+            end = processBatchWithRetry(execution);
             if (execution.getLastFailure() != null) {
                 if (policy.continueOnFailure()) {
                     log.error("Skip message on failure after applying the retry policy: ", execution.getLastFailure());
@@ -136,8 +127,30 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
                     end = true;
                 }
             }
+        }
+    }
+
+    private boolean processBatchWithRetry(Execution execution) throws InterruptedException {
+        boolean end = false;
+        while (!execution.isComplete()) {
+            try {
+                end = processBatch();
+                execution.complete();
+                tailer.commit();
+            } catch (Throwable t) {
+                batchFailureCount.inc();
+                if (!execution.canRetryOn(t)) {
+                    if (t instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
+                    throw t;
+                }
+                setBatchRetryPolicy();
+                tailer.toLastCommitted();
+            }
             restoreBatchPolicy();
-        } while (!end);
+        }
+        return end;
     }
 
     private void setBatchRetryPolicy() {
@@ -147,7 +160,6 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     private void restoreBatchPolicy() {
         currentBatchPolicy = policy.getBatchPolicy();
     }
-
 
     private boolean processBatch() throws InterruptedException {
         boolean end = false;
@@ -159,7 +171,6 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
                 log.info(String.format("No more message on queue %02d", queue));
                 end = true;
             }
-
         } catch (Exception e) {
             try {
                 rollbackBatch();
@@ -171,7 +182,6 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         }
         return end;
     }
-
 
     private void beginBatch() {
         consumer.begin();
@@ -193,12 +203,24 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         BatchState batch = new BatchState(currentBatchPolicy);
         batch.start();
         M message;
-        while ((message = tailer.read(policy.getWaitForMessageMs(), TimeUnit.MILLISECONDS)) != null) {
+        while ((message = tailer.read(policy.getWaitMessageTimeout())) != null) {
             try (Timer.Context ignore = acceptTimer.time()) {
                 setThreadName(message);
                 consumer.accept(message);
             }
-            if (batch.inc() != BatchState.State.FILLING) {
+            batch.inc();
+            if (message.forceBatch()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Force end of batch: " + message);
+                }
+                batch.force();
+            }
+            if (message.poisonPill()) {
+                log.warn("Receivce a poison pill: " + message);
+                batch.force();
+                batch.last();
+            }
+            if (batch.getState() != BatchState.State.FILLING) {
                 return batch;
             }
         }

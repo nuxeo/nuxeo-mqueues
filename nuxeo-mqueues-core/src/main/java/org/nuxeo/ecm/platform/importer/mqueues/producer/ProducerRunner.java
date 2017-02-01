@@ -37,24 +37,23 @@ import static org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerRunner.NU
  *
  * @since 9.1
  */
-public class ProducerLoop<M extends Message> implements Callable<ProducerStatus> {
-    private static final Log log = LogFactory.getLog(ProducerLoop.class);
+public class ProducerRunner<M extends Message> implements Callable<ProducerStatus> {
+    private static final Log log = LogFactory.getLog(ProducerRunner.class);
     private final int producerId;
     private final MQueues<M> mq;
-    private final ProducerIterator<M> producer;
+    private final ProducerFactory<M> factory;
     private String threadName;
 
     protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(NUXEO_METRICS_REGISTRY_NAME);
     protected final Timer producerTimer;
     protected final Counter producersCount;
 
-    public ProducerLoop(ProducerFactory<M> factory, MQueues<M> mQueues, int producerId) {
-        this.producer = factory.createProducer(producerId);
+    public ProducerRunner(ProducerFactory<M> factory, MQueues<M> mQueues, int producerId) {
+        this.factory = factory;
         this.producerId = producerId;
         this.mq = mQueues;
         producerTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "producer", String.valueOf(producerId)));
         producersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "producers"));
-
         log.debug("ProducerIterator thread created: " + producerId);
     }
 
@@ -70,19 +69,18 @@ public class ProducerLoop<M extends Message> implements Callable<ProducerStatus>
 
     @Override
     public ProducerStatus call() throws Exception {
-        producersCount.inc();
         threadName = currentThread().getName();
         long start = System.currentTimeMillis();
-        try {
-            producerLoop();
+        producersCount.inc();
+        try (ProducerIterator<M> producer = factory.createProducer(producerId)) {
+            producerLoop(producer);
         } finally {
-            producer.close();
             producersCount.dec();
         }
-        return new ProducerStatus(producerId, producerTimer.getCount(), start, System.currentTimeMillis());
+        return new ProducerStatus(producerId, producerTimer.getCount(), start, System.currentTimeMillis(), false);
     }
 
-    private void producerLoop() {
+    private void producerLoop(ProducerIterator<M> producer) {
         M message;
         while (producer.hasNext()) {
             try (Timer.Context ignored = producerTimer.time()) {

@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
-import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Rule;
@@ -66,7 +65,7 @@ public class TestBlobImport {
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
             ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
                     new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 1), NB_PRODUCERS);
-            List<ProducerStatus> ret = producers.call();
+            List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
         }
@@ -75,8 +74,8 @@ public class TestBlobImport {
             String blobProviderName = "test";
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
                     new BlobMessageConsumerFactory(blobProviderName, output),
-                    new ConsumerPolicy().batchPolicy(new BatchPolicy().capacity(1)));
-            List<ConsumerStatus> ret = consumers.call();
+                    new ConsumerPolicy.Builder().batchPolicy(new BatchPolicy.Builder(1).build()).build());
+            List<ConsumerStatus> ret = consumers.start().get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.committed).sum());
         }

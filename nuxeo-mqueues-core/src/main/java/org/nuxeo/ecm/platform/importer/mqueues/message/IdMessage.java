@@ -29,9 +29,17 @@ import java.io.ObjectOutput;
  */
 public class IdMessage implements Message {
     private String id;
+    private boolean poisonPill = false;
+    private boolean forceBatch = false;
 
     public IdMessage(String id) {
         this.id = id;
+    }
+
+    public IdMessage(String id, boolean poisonPill, boolean forceBatch) {
+        this.id = id;
+        this.poisonPill = poisonPill;
+        this.forceBatch = forceBatch;
     }
 
     @Override
@@ -40,34 +48,52 @@ public class IdMessage implements Message {
     }
 
     @Override
+    public boolean poisonPill() {
+        return poisonPill;
+    }
+
+    @Override
+    public boolean forceBatch() {
+        return forceBatch;
+    }
+
+    @Override
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeObject(id);
+        out.writeBoolean(poisonPill);
+        out.writeBoolean(forceBatch);
     }
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.id = (String) in.readObject();
+        this.poisonPill = in.readBoolean();
+        this.forceBatch = in.readBoolean();
     }
 
     @Override
-    public String toString() {
-        return "IdMessage(" + id + ")";
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        IdMessage idMessage = (IdMessage) o;
+
+        if (poisonPill != idMessage.poisonPill) return false;
+        if (forceBatch != idMessage.forceBatch) return false;
+        return id != null ? id.equals(idMessage.id) : idMessage.id == null;
+
     }
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 31 * hash + (null == id ? 0 : id.hashCode());
-        return hash;
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (poisonPill ? 1 : 0);
+        result = 31 * result + (forceBatch ? 1 : 0);
+        return result;
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if ((obj == null) || (obj.getClass() != this.getClass()))
-            return false;
-        IdMessage other = (IdMessage) obj;
-        return id == other.id || (id != null && id.equals(other.id));
+    public String toString() {
+        return String.format("IdMessage(%s, %b, %b", id, poisonPill, forceBatch);
     }
 }

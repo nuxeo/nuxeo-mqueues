@@ -79,7 +79,7 @@ public class RandomDocumentProducers {
                 producers = new ProducerPool<>(mQueues,
                         new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads);
             }
-            producers.call();
+            producers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

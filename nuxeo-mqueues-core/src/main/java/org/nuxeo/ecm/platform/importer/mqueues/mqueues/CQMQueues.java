@@ -28,10 +28,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
@@ -92,7 +92,7 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
     }
 
     @Override
-    public boolean waitFor(Offset offset, long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean waitFor(Offset offset, Duration timeout) throws InterruptedException {
         boolean ret;
         long offsetPosition = ((CQOffset) offset).getOffset();
         int queue = ((CQOffset) offset).getQueue();
@@ -101,7 +101,7 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
             if (ret) {
                 return true;
             }
-            final long timeoutMs = TimeUnit.MILLISECONDS.convert(timeout, unit);
+            final long timeoutMs = timeout.toMillis();
             final long deadline = System.currentTimeMillis() + timeoutMs;
             final long delay = Math.min(POLL_INTERVAL_MS, timeoutMs);
             while (!ret && System.currentTimeMillis() < deadline) {

@@ -43,12 +43,13 @@ import static org.nuxeo.runtime.transaction.TransactionHelper.commitOrRollbackTr
 public class DocumentMessageConsumer extends AbstractConsumer<DocumentMessage> {
     private static final Log log = LogFactory.getLog(DocumentMessageConsumer.class);
     private final String rootPath;
-    private final CoreSession session;
+    private final String repositoryName;
+    private CoreSession session;
 
     public DocumentMessageConsumer(int consumerId, String repositoryName, String rootPath) {
         super(consumerId);
         this.rootPath = rootPath;
-        this.session = CoreInstance.openCoreSessionSystem(repositoryName);
+        this.repositoryName = repositoryName;
     }
 
     @Override
@@ -56,12 +57,16 @@ public class DocumentMessageConsumer extends AbstractConsumer<DocumentMessage> {
         super.close();
         if (session != null) {
             session.close();
+            TransactionHelper.commitOrRollbackTransaction();
         }
     }
 
     @Override
     public void begin() {
         TransactionHelper.startTransaction();
+        if (session == null) {
+            this.session = CoreInstance.openCoreSessionSystem(repositoryName);
+        }
     }
 
     @Override

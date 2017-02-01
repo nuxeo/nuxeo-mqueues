@@ -72,7 +72,7 @@ public class RandomBlobProducers {
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(new File(queuePath), nbThreads)) {
             ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
                     new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads);
-            producers.call();
+            producers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

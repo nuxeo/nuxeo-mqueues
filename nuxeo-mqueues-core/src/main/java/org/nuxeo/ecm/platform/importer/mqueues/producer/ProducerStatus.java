@@ -18,8 +18,10 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.producer;
 
+import java.util.List;
+
 /**
- * The return status of a {@link ProducerLoop}
+ * The return status of a {@link ProducerRunner}
  *
  * @since 9.1
  */
@@ -28,11 +30,37 @@ public class ProducerStatus {
     public final long stopTime;
     public final long nbProcessed;
     public final int producer;
+    private final boolean fail;
 
-    public ProducerStatus(int producer, long nbProcessed, long startTime, long stopTime) {
+    public ProducerStatus(int producer, long nbProcessed, long startTime, long stopTime, boolean fail) {
         this.producer = producer;
         this.nbProcessed = nbProcessed;
         this.startTime = startTime;
         this.stopTime = stopTime;
+        this.fail = fail;
+    }
+
+    @Override
+    public String toString() {
+        if (fail) {
+            return "Producer status FAILURE";
+        }
+        double elapsed = (stopTime - startTime) / 1000.;
+        double mps = (elapsed != 0) ? nbProcessed / elapsed : 0.0;
+        return String.format("Producer %02d status: messages: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
+                producer, nbProcessed, elapsed, mps);
+    }
+
+    static String toString(List<ProducerStatus> stats) {
+        long startTime = stats.stream().mapToLong(r -> r.startTime).min().orElse(0);
+        long stopTime = stats.stream().mapToLong(r -> r.stopTime).min().orElse(0);
+        double elapsed = (stopTime - startTime) / 1000.;
+        long messages = stats.stream().mapToLong(r -> r.nbProcessed).sum();
+        double mps = (elapsed != 0) ? messages / elapsed : 0.0;
+        int producers = stats.size();
+        long failures = stats.stream().filter(s -> s.fail).count();
+        return String.format("Producers status: threads: %d, failures: %d, messages: %d, elapsed: %.2fs, throughput: %.2f msg/s",
+                producers, failures, messages, elapsed, mps);
+
     }
 }

@@ -20,66 +20,108 @@ package org.nuxeo.ecm.platform.importer.mqueues.consumer;
 
 import net.jodah.failsafe.RetryPolicy;
 
+import java.time.Duration;
+
 /**
  * The consumer policy drive the consumer pool and runner.
  *
  * @since 9.1
  */
 public class ConsumerPolicy {
-    public enum StartOffset {BEGIN, END, LAST_COMMITTED};
+    public enum StartOffset {BEGIN, END, LAST_COMMITTED}
+
     public static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
+    public static final ConsumerPolicy DEFAULT = new Builder().build();
 
-    private BatchPolicy batchPolicy = BatchPolicy.DEFAULT;
-    private RetryPolicy retryPolicy = NO_RETRY;
-    private boolean skipFailure = false;
-    private long waitForMessageMs = 1000;
-    private StartOffset startOffset = StartOffset.LAST_COMMITTED;
+    private final BatchPolicy batchPolicy;
+    private final RetryPolicy retryPolicy;
+    private final boolean skipFailure;
+    private final Duration waitMessageTimeout;
+    private final StartOffset startOffset;
 
-    public ConsumerPolicy() {
+    public ConsumerPolicy(Builder builder) {
+        batchPolicy = builder.batchPolicy;
+        retryPolicy = builder.retryPolicy;
+        skipFailure = builder.skipFailure;
+        waitMessageTimeout = builder.waitMessageTimeout;
+        startOffset = builder.startOffset;
     }
 
     public BatchPolicy getBatchPolicy() {
         return batchPolicy;
     }
 
-    public ConsumerPolicy batchPolicy(BatchPolicy batchPolicy) {
-        this.batchPolicy = batchPolicy;
-        return this;
-    }
-
     public RetryPolicy getRetryPolicy() {
         return retryPolicy;
-    }
-
-    public ConsumerPolicy retryPolicy(RetryPolicy retryPolicy) {
-        this.retryPolicy = retryPolicy;
-        return this;
     }
 
     public boolean continueOnFailure() {
         return skipFailure;
     }
 
-    public ConsumerPolicy continueOnFailure(boolean continueOnFailure) {
-        this.skipFailure = continueOnFailure;
-        return this;
-    }
-
-    public long getWaitForMessageMs() {
-        return waitForMessageMs;
-    }
-
-    public ConsumerPolicy waitForMessageMs(long waitForMessageMs) {
-        this.waitForMessageMs = waitForMessageMs;
-        return this;
+    public Duration getWaitMessageTimeout() {
+        return waitMessageTimeout;
     }
 
     public StartOffset getStartOffset() {
         return startOffset;
     }
 
-    public ConsumerPolicy startOffset(StartOffset startOffset) {
-        this.startOffset = startOffset;
-        return this;
+    public static class Builder {
+        private BatchPolicy batchPolicy = BatchPolicy.DEFAULT;
+        private RetryPolicy retryPolicy = NO_RETRY;
+        private boolean skipFailure = false;
+        private Duration waitMessageTimeout = Duration.ofSeconds(2);
+        private StartOffset startOffset = StartOffset.LAST_COMMITTED;
+
+        public Builder() {
+
+        }
+
+        public Builder batchPolicy(BatchPolicy policy) {
+            batchPolicy = policy;
+            return this;
+        }
+
+        public Builder retryPolicy(RetryPolicy policy) {
+            retryPolicy = policy;
+            return this;
+        }
+
+        /**
+         * Continue on next message even if the retry policy has failed.
+         */
+        public Builder continueOnFailure(boolean value) {
+            skipFailure = value;
+            return this;
+        }
+
+        /**
+         * Consumer will stop if there is no more message after this timeout.
+         */
+        public Builder waitMessageTimeout(Duration duration) {
+            waitMessageTimeout = duration;
+            return this;
+        }
+
+        /**
+         * Consumer will wait for ever message.
+         */
+        public Builder waitMessageForEver() {
+            waitMessageTimeout = Duration.ofSeconds(Integer.MAX_VALUE);
+            return this;
+        }
+
+        /**
+         * Where to read the first message.
+         */
+        public Builder startOffset(StartOffset startOffset) {
+            this.startOffset = startOffset;
+            return this;
+        }
+
+        public ConsumerPolicy build() {
+            return new ConsumerPolicy(this);
+        }
     }
 }
