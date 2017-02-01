@@ -23,7 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -32,24 +35,48 @@ import java.util.concurrent.TimeUnit;
 public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
     private static final Log log = LogFactory.getLog(CQTailer.class);
     private static final long POLL_INTERVAL_MS = 100L;
+    public static final String DEFAULT_OFFSET_NAMESPACE = "default";
 
-    private final int queueIndex;
+    private final String basePath;
     private final ExcerptTailer tailer;
+    private final String nameSpace;
+    private final int queueIndex;
     private final CQOffsetTracker offsetTracker;
+
+    private static final Set<String> indexNamespace = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     public CQTailer(String basePath, ExcerptTailer tailer, int queue) {
         this(basePath, tailer, queue, null);
     }
 
     public CQTailer(String basePath, ExcerptTailer tailer, int queue, String nameSpace) {
+        this.basePath = basePath;
         this.tailer = tailer;
         this.queueIndex = queue;
         if (nameSpace == null) {
-            this.offsetTracker = new CQOffsetTracker(basePath, queue);
+            this.nameSpace = DEFAULT_OFFSET_NAMESPACE;
         } else {
-            this.offsetTracker = new CQOffsetTracker(basePath, queue, nameSpace);
+            this.nameSpace = nameSpace;
         }
+        registerTailer();
+        this.offsetTracker = new CQOffsetTracker(basePath, queue, this.nameSpace);
         toLastCommitted();
+    }
+
+    private void registerTailer() {
+        String key = getTailerKey();
+        if (!indexNamespace.add(key)) {
+            throw new IllegalArgumentException("A tailer for this queue and namespace already exists: " + key);
+        }
+    }
+
+    private void unregisterTailer() {
+        String key = getTailerKey();
+        indexNamespace.remove(key);
+    }
+
+    private String getTailerKey() {
+        return basePath + " " + queueIndex + " " + nameSpace;
     }
 
     @Override
@@ -120,5 +147,6 @@ public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
     @Override
     public void close() throws Exception {
         offsetTracker.close();
+        unregisterTailer();
     }
 }

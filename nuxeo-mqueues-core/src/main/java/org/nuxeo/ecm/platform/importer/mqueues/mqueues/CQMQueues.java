@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
+import static org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQTailer.DEFAULT_OFFSET_NAMESPACE;
 
 /**
  * Chronicle Queue implementation of MQueues.
@@ -82,31 +83,31 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
 
     @Override
     public Tailer<M> createTailer(int queue) {
-        return new CQTailer(basePath.toString(), queues.get(queue).createTailer(), queue);
+        return new CQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue);
     }
 
     @Override
     public Tailer<M> createTailer(int queue, String name) {
-        return new CQTailer(basePath.toString(), queues.get(queue).createTailer(), queue, name);
+        return new CQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue, name);
     }
 
     @Override
     public boolean waitFor(Offset offset, long timeout, TimeUnit unit) throws InterruptedException {
-        boolean ret = false;
+        boolean ret;
         long offsetPosition = ((CQOffset) offset).getOffset();
         int queue = ((CQOffset) offset).getQueue();
-
-        CQOffsetTracker offsetTracker = new CQOffsetTracker(basePath.toString(), queue);
-        ret = isProcessed(offsetTracker, offsetPosition);
-        if (ret) {
-            return ret;
-        }
-        final long timeoutMs = TimeUnit.MILLISECONDS.convert(timeout, unit);
-        final long deadline = System.currentTimeMillis() + timeoutMs;
-        final long delay = Math.min(POLL_INTERVAL_MS, timeoutMs);
-        while (!ret && System.currentTimeMillis() < deadline) {
-            Thread.sleep(delay);
+        try (CQOffsetTracker offsetTracker = new CQOffsetTracker(basePath.toString(), queue, DEFAULT_OFFSET_NAMESPACE)) {
             ret = isProcessed(offsetTracker, offsetPosition);
+            if (ret) {
+                return true;
+            }
+            final long timeoutMs = TimeUnit.MILLISECONDS.convert(timeout, unit);
+            final long deadline = System.currentTimeMillis() + timeoutMs;
+            final long delay = Math.min(POLL_INTERVAL_MS, timeoutMs);
+            while (!ret && System.currentTimeMillis() < deadline) {
+                Thread.sleep(delay);
+                ret = isProcessed(offsetTracker, offsetPosition);
+            }
         }
         return ret;
     }

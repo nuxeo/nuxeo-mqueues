@@ -35,25 +35,20 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
  */
 public class CQOffsetTracker implements AutoCloseable {
     private static final Log log = LogFactory.getLog(CQOffsetTracker.class);
-    private final File offsetFile;
     private final SingleChronicleQueue offsetQueue;
     private final int queueIndex;
     private static final String OFFSET_QUEUE_PREFIX = "offset-";
-    private static final String COMMON_OFFSET_SPACE = "all";
     private long lastCommittedOffset;
-
-    public CQOffsetTracker(String basePath, int queue) {
-        this(basePath, queue, COMMON_OFFSET_SPACE);
-    }
 
     public CQOffsetTracker(String basePath, int queue, String nameSpace) {
         queueIndex = queue;
-        offsetFile = new File(basePath, OFFSET_QUEUE_PREFIX + nameSpace);
+        File offsetFile = new File(basePath, OFFSET_QUEUE_PREFIX + nameSpace);
         offsetQueue = binary(offsetFile).build();
     }
 
     /**
-     * Use a cache to return the last committed offset, this will not be update by other consumers
+     * Use a cache to return the last committed offset, concurrent consumer is not taken in account
+     * use {@link #readLastCommittedOffset()} in concurrency.
      */
     public long getLastCommittedOffset() {
         if (lastCommittedOffset > 0) {
@@ -82,13 +77,14 @@ public class CQOffsetTracker implements AutoCloseable {
         return offset[0];
     }
 
-    @Override
-    public void close() throws Exception {
-        offsetQueue.close();
-    }
-
     public void commit(long offset) {
         offsetQueue.acquireAppender().writeBytes(b -> b.writeInt(queueIndex).writeLong(offset).writeLong(System.currentTimeMillis()));
         lastCommittedOffset = offset;
     }
+
+    @Override
+    public void close() {
+        offsetQueue.close();
+    }
+
 }

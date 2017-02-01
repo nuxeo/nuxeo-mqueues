@@ -60,4 +60,17 @@ public class CQOffset implements Offset {
         result = 31 * result + queue;
         return result;
     }
+
+    @Override
+    public int compareTo(Offset o) {
+        if (this == o) return 0;
+        if (o == null || getClass() != o.getClass()) {
+            throw new IllegalArgumentException("Can not compare offsets with different classes");
+        }
+        CQOffset cqOffset = (CQOffset) o;
+        if (queue != cqOffset.queue) {
+            throw new IllegalArgumentException("Can not compare offsets from different queues");
+        }
+        return (int) (offset - cqOffset.offset);
+    }
 }

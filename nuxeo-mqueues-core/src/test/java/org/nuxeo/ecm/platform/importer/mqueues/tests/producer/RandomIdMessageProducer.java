@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RandomIdMessageProducer extends AbstractProducer<IdMessage> {
 
     private final long nbMessage;
-    private AtomicLong totalCount = new AtomicLong(0);
+    private final AtomicLong totalCount = new AtomicLong(0);
     private long count = 0;
 
     public RandomIdMessageProducer(int producerId, long nbMessage) {

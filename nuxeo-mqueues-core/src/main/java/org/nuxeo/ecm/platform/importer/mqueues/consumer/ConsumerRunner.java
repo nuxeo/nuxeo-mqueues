@@ -96,6 +96,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         try {
             consumerLoop();
         } finally {
+            tailer.close();
             consumer.close();
             consumersCount.dec();
         }

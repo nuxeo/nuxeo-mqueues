@@ -20,7 +20,6 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -52,9 +51,9 @@ public interface MQueues<M extends Message> extends AutoCloseable {
     /**
      * Create a new {@link Tailer} associed with the queue index.
      *
-     * The default position is the last committed one.
+     * The committed offset is presisted in the default namespace.
      *
-     * The committed offset is shared by all tailers of the same queue.
+     * There can be one and only one consumer for queue in a namespace.
      *
      * A tailer is not thread safe.
      *
@@ -64,9 +63,9 @@ public interface MQueues<M extends Message> extends AutoCloseable {
     /**
      * Create a new {@link Tailer} associed to a queue index, using a specified offset name space.
      *
-     * The default position is the last committed one on the name space.
-     *
      * The committed offset position is shared by all tailers of the same queue with the same name.
+     *
+     * There can be one and only one consumer for queue in a namespace
      *
      * A tailer is not thread safe.
      *

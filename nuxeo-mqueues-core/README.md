@@ -16,7 +16,7 @@ A MQueues (Multiple Queues) is a bounded array of queues, each queue is referenc
 A producer is responsible for choosing which message to assign to which queue:
 
 * Using a round robin algorithm or a shard key a producer can balance messages between queues.
-* Producer can also group message by queue following a semantic that is used by consumers
+* Producer can also group message by queue following a semantic that can be used by consumers
 
 Each queue is an ordered immutable sequence of messages that are appended:
 
@@ -32,7 +32,8 @@ Consumers read messages using a tailer, the current offset (read position) for a
 Consumers can choose a namespace to persist its offset:
 
 * Multiple consumers can tail a queue at different speed
-* Each consumer for a queue see the same messages in the same order, but can commit their own offset.
+* Each consumer for a queue see the same messages in the same order, but can persist their offset in different namespace
+* There is only one tailer for queue in namespace to prevent conflict in commit.
 
 This is enough to implement the two main patterns of producer/consumer:
 

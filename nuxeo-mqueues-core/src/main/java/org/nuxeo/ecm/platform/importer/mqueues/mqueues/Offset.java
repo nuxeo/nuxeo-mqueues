@@ -23,6 +23,6 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
  *
  * @since 9.1
  */
-public interface Offset {
+public interface Offset extends Comparable<Offset> {
 
 }
