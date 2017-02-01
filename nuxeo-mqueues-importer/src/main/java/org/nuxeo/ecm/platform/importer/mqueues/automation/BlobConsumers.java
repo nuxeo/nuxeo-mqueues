@@ -29,6 +29,7 @@ import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BlobMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
@@ -78,8 +79,9 @@ public class BlobConsumers {
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
-                    new BatchPolicy().capacity(batchSize).timeThreshold(batchThresholdS, TimeUnit.SECONDS),
-                    new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS));
+                    new ConsumerPolicy()
+                            .batchPolicy(new BatchPolicy().capacity(batchSize).timeThreshold(batchThresholdS, TimeUnit.SECONDS))
+                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS)));
             consumers.call();
         } catch (Exception e) {
             log.error(e.getMessage(), e);

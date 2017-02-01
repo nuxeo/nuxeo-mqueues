@@ -28,6 +28,7 @@ import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
@@ -78,8 +79,9 @@ public class DocumentConsumers {
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
-                    new BatchPolicy().capacity(batchSize).timeThreshold(batchThresholdS, TimeUnit.SECONDS),
-                    new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS));
+                    new ConsumerPolicy()
+                            .batchPolicy(new BatchPolicy().capacity(batchSize).timeThreshold(batchThresholdS, TimeUnit.SECONDS))
+                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS)));
             consumers.call();
         } catch (Exception e) {
             log.error(e.getMessage(), e);

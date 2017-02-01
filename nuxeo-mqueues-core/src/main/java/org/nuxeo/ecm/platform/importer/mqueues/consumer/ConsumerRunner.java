@@ -23,7 +23,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.Timer;
 import net.jodah.failsafe.Execution;
-import net.jodah.failsafe.RetryPolicy;
 import net.openhft.chronicle.core.util.Time;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,9 +47,8 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
 
     private final Consumer<M> consumer;
     private final MQueues<M> mq;
-    private final RetryPolicy retryPolicy;
-    private final BatchPolicy batchPolicy;
     private final int queue;
+    private final ConsumerPolicy policy;
     private BatchPolicy currentBatchPolicy;
     private String threadName;
 
@@ -62,12 +60,12 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     protected final Counter consumersCount;
     private MQueues.Tailer<M> tailer;
 
-    public ConsumerRunner(ConsumerFactory<M> factory, MQueues<M> mq, int queue, BatchPolicy batchPolicy, RetryPolicy retryPolicy) {
+    public ConsumerRunner(ConsumerFactory<M> factory, MQueues<M> mq, int queue, ConsumerPolicy policy) {
         this.consumer = factory.createConsumer(queue);
         this.mq = mq;
         this.queue = queue;
-        this.currentBatchPolicy = this.batchPolicy = batchPolicy;
-        this.retryPolicy = retryPolicy;
+        this.currentBatchPolicy = policy.getBatchPolicy();
+        this.policy = policy;
 
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
         acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", String.valueOf(queue)));
@@ -93,6 +91,16 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         threadName = currentThread().getName();
         long start = Time.currentTimeMillis();
         tailer = mq.createTailer(queue);
+        switch(policy.getStartOffset()) {
+            case BEGIN:
+                tailer.toStart();
+                break;
+            case END:
+                tailer.toEnd();
+                break;
+            default:
+                tailer.toLastCommitted();
+        }
         try {
             consumerLoop();
         } finally {
@@ -107,7 +115,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     private void consumerLoop() {
         boolean end = false;
         do {
-            Execution execution = new Execution(retryPolicy);
+            Execution execution = new Execution(policy.getRetryPolicy());
             while (!execution.isComplete()) {
                 try {
                     end = processBatch();
@@ -121,8 +129,12 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
                 }
             }
             if (execution.getLastFailure() != null) {
-                log.error("Abort on batchFailure of batch processing: ", execution.getLastFailure());
-                end = true;
+                if (policy.continueOnFailure()) {
+                    log.error("Skip message on failure after applying the retry policy: ", execution.getLastFailure());
+                } else {
+                    log.error("Abort on Failure after applying the retry policy: ", execution.getLastFailure());
+                    end = true;
+                }
             }
             restoreBatchPolicy();
         } while (!end);
@@ -133,7 +145,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     }
 
     private void restoreBatchPolicy() {
-        currentBatchPolicy = batchPolicy;
+        currentBatchPolicy = policy.getBatchPolicy();
     }
 
 
@@ -181,7 +193,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         BatchState batch = new BatchState(currentBatchPolicy);
         batch.start();
         M message;
-        while ((message = tailer.read(1, TimeUnit.SECONDS)) != null) {
+        while ((message = tailer.read(policy.getWaitForMessageMs(), TimeUnit.MILLISECONDS)) != null) {
             try (Timer.Context ignore = acceptTimer.time()) {
                 setThreadName(message);
                 consumer.accept(message);

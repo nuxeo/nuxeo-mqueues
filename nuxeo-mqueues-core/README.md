@@ -89,17 +89,18 @@ Both the producer and consumer implementation are driven (pulled) by the module.
 
 See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/TestQueuingPattern.java) for basic examples.
 
-### Pattern 2: TODO Queuing
+### Pattern 2: Queuing
 
 Almost the same as pattern as above but producers and consumers are always up processing an infinite flow of messages.
 There is no Producer interface, a producer just use a [MQueues](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/mqueues/MQueues.java) to append messages.
 
-The Consumer follow the same interface as in previous pattern but it is driven in a different way:
+The Consumer is driven the same way but the policy differ:
 
-* it will wait for ever on message
+* a consumer will wait forever on new message
 * after a failure on the retry policy, the consumer will continue and take the next message
 
-A producer can wait for a message to be consumed.
+A producer can wait for a message to be consumed, this can simulate an async call.
+
 
 ### Pattern 3: TODO Publish subscribe (Event bus)
 

@@ -44,17 +44,15 @@ public class ConsumerPool<M extends Message> implements Callable<List<ConsumerSt
     private static final Log log = LogFactory.getLog(ConsumerPool.class);
     private final MQueues<M> qm;
     private final ConsumerFactory<M> factory;
-    private final BatchPolicy batchPolicy;
-    private final RetryPolicy retryPolicy;
+    private final ConsumerPolicy policy;
 
     private ExecutorService consumerExecutor;
     private ExecutorCompletionService<ConsumerStatus> consumerCompletionService;
 
-    public ConsumerPool(MQueues<M> qm, ConsumerFactory<M> factory, BatchPolicy batchPolicy, RetryPolicy retryPolicy) {
+    public ConsumerPool(MQueues<M> qm, ConsumerFactory<M> factory, ConsumerPolicy policy) {
         this.qm = qm;
         this.factory = factory;
-        this.batchPolicy = batchPolicy;
-        this.retryPolicy = retryPolicy;
+        this.policy = policy;
     }
 
     @Override
@@ -70,7 +68,7 @@ public class ConsumerPool<M extends Message> implements Callable<List<ConsumerSt
         consumerExecutor = Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory());
         consumerCompletionService = new ExecutorCompletionService<>(consumerExecutor);
         for (int i = 0; i < nbThreads; i++) {
-            ConsumerRunner<M> callable = new ConsumerRunner<>(factory, qm, i, batchPolicy, retryPolicy);
+            ConsumerRunner<M> callable = new ConsumerRunner<>(factory, qm, i, policy);
             consumerCompletionService.submit(callable);
         }
         log.info("All consumers are running");

@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
-import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Rule;
@@ -28,9 +27,9 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentMessageConsumerFactory;
@@ -50,7 +49,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
@@ -76,8 +74,6 @@ public class TestDocumentImport {
         final int NB_PRODUCERS = 5;
         final int NB_DOCUMENTS = 2 * 100;
         final File basePath = folder.newFolder("cq");
-        final RetryPolicy retryPolicy = new RetryPolicy().withMaxRetries(0);
-        final BatchPolicy batchPolicy = new BatchPolicy().capacity(10).timeThreshold(10, TimeUnit.SECONDS);
 
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
             ProducerPool<DocumentMessage> producers = new ProducerPool<>(mQueues,
@@ -90,7 +86,8 @@ public class TestDocumentImport {
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath)) {
             DocumentModel root = session.getRootDocument();
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
-                    new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString()), batchPolicy, retryPolicy);
+                    new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString()),
+                    new ConsumerPolicy());
             List<ConsumerStatus> ret = consumers.call();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.committed).sum());
@@ -105,8 +102,6 @@ public class TestDocumentImport {
         final long NB_BLOBS = 100;
         final long NB_DOCUMENTS = 2 * 100;
         final File basePath = folder.newFolder("cq");
-        final RetryPolicy retryPolicy = new RetryPolicy().withMaxRetries(0);
-        final BatchPolicy batchPolicy = new BatchPolicy().capacity(10).timeThreshold(10, TimeUnit.SECONDS);
 
         // generate blobs
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
@@ -122,7 +117,7 @@ public class TestDocumentImport {
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath)) {
             String blobProviderName = "test";
             ConsumerFactory<BlobMessage> factory = new BlobMessageConsumerFactory(blobProviderName, blobInfoPath);
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues, factory, batchPolicy, retryPolicy);
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues, factory, new ConsumerPolicy());
             List<ConsumerStatus> ret = consumers.call();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.committed).sum());
@@ -140,7 +135,7 @@ public class TestDocumentImport {
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath)) {
             DocumentModel root = session.getRootDocument();
             ConsumerFactory<DocumentMessage> factory = new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString());
-            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues, factory, batchPolicy, retryPolicy);
+            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues, factory, new ConsumerPolicy());
             List<ConsumerStatus> ret = consumers.call();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.committed).sum());

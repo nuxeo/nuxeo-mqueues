@@ -28,6 +28,7 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BlobMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
@@ -61,8 +62,6 @@ public class TestBlobImport {
         final int NB_PRODUCERS = 10;
         final int NB_BLOBS = 2 * 1000;
         final File basePath = folder.newFolder("cq");
-        final RetryPolicy retryPolicy = new RetryPolicy().withMaxRetries(0);
-        final BatchPolicy batchPolicy = new BatchPolicy().capacity(1);
 
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
             ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
@@ -75,7 +74,8 @@ public class TestBlobImport {
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath)) {
             String blobProviderName = "test";
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
-                    new BlobMessageConsumerFactory(blobProviderName, output), batchPolicy, retryPolicy);
+                    new BlobMessageConsumerFactory(blobProviderName, output),
+                    new ConsumerPolicy().batchPolicy(new BatchPolicy().capacity(1)));
             List<ConsumerStatus> ret = consumers.call();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.committed).sum());

@@ -23,6 +23,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
@@ -70,7 +71,7 @@ public class TestQueuingPattern {
         // 2. Use the mq and run the consumers
         try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath)) {
             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP), BatchPolicy.DEFAULT, NO_RETRY);
+                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP), new ConsumerPolicy());
             cret = consumers.call();
         }
         assertEquals(NB_QUEUE, cret.stream().count());
@@ -78,7 +79,7 @@ public class TestQueuingPattern {
     }
 
     @Test
-    public void producersAndConsumers() throws Exception {
+    public void producersAndConsumersConcurrently() throws Exception {
         final int NB_QUEUE = 10;
         final int NB_PRODUCERS = 15;
         final int NB_DOCUMENTS = 1000;
@@ -92,7 +93,7 @@ public class TestQueuingPattern {
             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
                     new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP), BatchPolicy.DEFAULT, NO_RETRY);
+                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP), new ConsumerPolicy());
             Future<List<ProducerStatus>> producersFuture = es.submit(producers);
             Future<List<ConsumerStatus>> consumersFuture = es.submit(consumers);
             // wait for the completion
@@ -132,8 +133,8 @@ public class TestQueuingPattern {
         try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath)) {
             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
                     new IdMessageFactory(IdMessageFactory.ConsumerType.BUGGY),
-                    new BatchPolicy().capacity(BATCH_SIZE),
-                    new RetryPolicy().withMaxRetries(1000));
+                    new ConsumerPolicy().batchPolicy(new BatchPolicy().capacity(BATCH_SIZE))
+                        .retryPolicy(new RetryPolicy().withMaxRetries(1000)));
             cret = consumers.call();
         }
         assertEquals(NB_QUEUE, cret.stream().count());
