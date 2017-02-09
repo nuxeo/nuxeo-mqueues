@@ -3,7 +3,7 @@ nuxeo-mqueues-core
 
 ## About
 
-This module implements a generic message queue (MQueues) used to implement different producers/consumers patterns.
+This module implements a generic message queue (MQueues) used to implement different producer/consumer patterns.
 
 ## Warning
 
@@ -30,20 +30,17 @@ Consumers read messages from a queue using a tailer, the current read position (
 
 Consumers can choose a namespace to persist its offset:
 
-* Multiple consumers can tail a queue at different speed
-* Each consumer for a queue see the same messages in the same order, but can persist their offset in different namespace
+* Each consumer for a queue see the same messages in the same order
 * There is only one tailer per queue in a namespace to prevent conflict in commit.
 
-This is enough to implement the two main patterns of producer/consumer:
+This is enough to implement two main patterns of producer/consumer:
 
 1. Queuing (aka work queue): a message is delivered to one and only one consumer
   * producers dispatch messages in queues
-  * there is a single consumer per queue
-  * the number of queues is equal to the number of consumers
-2. Pub/Sub (aka event bus): message is publish to a topic, consumers subsrcibe to topics
-  * a publisher append messages to a queue (topic)
-  * a subscriber read messages from a queue
-  * the subscriber persists its offset in a private name space
+  * there is a single consumer per queue: the number of consumers is equal to the number of queues
+2. Pub/Sub (aka event bus): an event is publish on a channel, multiple listeners can subscribe to a channel
+  * a publisher append messages to a queue (channel)
+  * subscribers read messages from a queue, each subscriber has its own offset namespace
 
 
 ## Default MQueues implementation
@@ -65,7 +62,7 @@ That being said Chronicle Queue creates a single file per queue and per day, so 
 Typical usage can be a mass import process where producers extract documents and consumer import documents:
 
 * it decouples producers and consumers: import process can be run multiple time in a deterministic way for debugging and tuning.
-* it brings concurrency in import: producer need to dispatch messages with a correct semantic and evenly.
+* it brings concurrency in import when producer dispatch messages with a correct semantic and evenly.
 
 For efficiency consumer process message per batch. For reliability consumer follow a retry policy.
 
@@ -77,8 +74,10 @@ This is a one time process:
 The proposed solution takes care of:
 
 * Driving producers/consumers thread pools
-* Following the consumer the customizable batch policy
-* Following the consumer the customizable retry policy
+* Following a [consumer policy](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/consumer/ConsumerPolicy.java) that defines:
+    - the batch policy: capacity and timeout
+    - the retry policy: which exceptions to catch, number of retry, backoff and much more see [failsafe](https://github.com/jhalterman/failsafe) library for more info
+    - when to stop and what to do in case of failure
 * Saving the consumer's offset when a batch of messages is successfully processed
 * Starting consumers from the last successfully processed message
 * Exposing metrics for producers and consumers

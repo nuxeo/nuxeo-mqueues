@@ -29,9 +29,19 @@ import java.time.Duration;
  */
 public class ConsumerPolicy {
     public enum StartOffset {BEGIN, END, LAST_COMMITTED}
-
     public static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
-    public static final ConsumerPolicy DEFAULT = new Builder().build();
+    /**
+     * Consumer policy that stop on starvation and failure.
+     */
+    public static final ConsumerPolicy BOUNDED = builder()
+            .waitMessageTimeout(Duration.ofSeconds(5))
+            .continueOnFailure(false).build();
+    /**
+     * Consumer policy that wait for ever for new message and skip failure.
+     */
+    public static final ConsumerPolicy UNBOUNDED = builder()
+            .continueOnFailure(true)
+            .waitMessageForEver().build();
 
     private final BatchPolicy batchPolicy;
     private final RetryPolicy retryPolicy;
@@ -67,6 +77,10 @@ public class ConsumerPolicy {
         return startOffset;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public static class Builder {
         private BatchPolicy batchPolicy = BatchPolicy.DEFAULT;
         private RetryPolicy retryPolicy = NO_RETRY;
@@ -74,7 +88,7 @@ public class ConsumerPolicy {
         private Duration waitMessageTimeout = Duration.ofSeconds(2);
         private StartOffset startOffset = StartOffset.LAST_COMMITTED;
 
-        public Builder() {
+        protected Builder() {
 
         }
 

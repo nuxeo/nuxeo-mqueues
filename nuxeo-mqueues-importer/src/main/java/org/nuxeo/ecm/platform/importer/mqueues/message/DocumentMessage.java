@@ -42,7 +42,7 @@ public class DocumentMessage implements Message {
     private Blob blob;
     private BlobManager.BlobInfo blobInfo;
 
-    private DocumentMessage(DocumentMessageBuilder builder) {
+    private DocumentMessage(Builder builder) {
         type = builder.type;
         parentPath = builder.parentPath;
         name = builder.name;
@@ -84,7 +84,18 @@ public class DocumentMessage implements Message {
         return blobInfo;
     }
 
-    public static class DocumentMessageBuilder {
+    /**
+     * Helper to build a document message.
+     *
+     * @param type the type of document
+     * @param parentPath the container path where the document should be created
+     * @param name the name of the document
+     */
+    public static Builder builder(String type, String parentPath, String name) {
+        return new Builder(type, parentPath, name);
+    }
+
+    public static class Builder {
         private final String name;
         private final String parentPath;
         private final String type;
@@ -92,31 +103,24 @@ public class DocumentMessage implements Message {
         private Blob blob;
         private BlobManager.BlobInfo blobInfo;
 
-        /**
-         * Helper to build a document message.
-         *
-         * @param type the type of document
-         * @param parentPath the container path where the document should be created
-         * @param name the name of the document
-         */
-        public DocumentMessageBuilder(String type, String parentPath, String name) {
+        protected Builder(String type, String parentPath, String name) {
             this.type = type;
             this.parentPath = parentPath;
             this.name = name;
         }
 
         @SuppressWarnings("unchecked")
-        public DocumentMessageBuilder setProperties(HashMap<String, Serializable> properties) {
+        public Builder setProperties(HashMap<String, Serializable> properties) {
             this.properties = (Map) properties.clone();
             return this;
         }
 
-        public DocumentMessageBuilder setBlob(Blob blob) {
+        public Builder setBlob(Blob blob) {
             this.blob = blob;
             return this;
         }
 
-        public DocumentMessageBuilder setBlobInfo(BlobManager.BlobInfo blobInfo) {
+        public Builder setBlobInfo(BlobManager.BlobInfo blobInfo) {
             this.blobInfo = new BlobManager.BlobInfo(blobInfo);
             return this;
         }

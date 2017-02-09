@@ -58,9 +58,9 @@ public class TestBoundedQueuingPattern {
 
         // 1. Create a mq and run the producers
         List<ProducerStatus> pret;
-        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
-            ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
-                    new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
+        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE);
+             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
+                     new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS)) {
             pret = producers.start().get();
         }
         assertEquals(NB_PRODUCERS, pret.stream().count());
@@ -68,9 +68,9 @@ public class TestBoundedQueuingPattern {
 
         // 2. Use the mq and run the consumers
         List<ConsumerStatus> cret;
-        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath)) {
-            ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP), ConsumerPolicy.DEFAULT);
+        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath);
+             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
+                     IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED)) {
             cret = consumers.start().get();
         }
         assertEquals(NB_QUEUE, cret.stream().count());
@@ -85,13 +85,12 @@ public class TestBoundedQueuingPattern {
         final File basePath = folder.newFolder("cq");
         List<ProducerStatus> pret;
         List<ConsumerStatus> cret;
-        // Create a mq
-        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
-            ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
-                    new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
-            ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP), ConsumerPolicy.DEFAULT);
-
+        // Create a mq, producer and consumer pool
+        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE);
+             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
+                     new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
+             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
+                     IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED)) {
             CompletableFuture<List<ProducerStatus>> pfuture = producers.start();
             CompletableFuture<List<ConsumerStatus>> cfuture = consumers.start();
             // wait for the completion
@@ -118,22 +117,23 @@ public class TestBoundedQueuingPattern {
         List<ProducerStatus> pret;
         List<ConsumerStatus> cret;
 
-        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
-            ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
-                    new RandomIdMessageProducerFactory(NB_DOCUMENTS, RandomIdMessageProducerFactory.ProducerType.ORDERED),
-                    NB_PRODUCERS);
+        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE);
+             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueues,
+                     new RandomIdMessageProducerFactory(NB_DOCUMENTS,
+                             RandomIdMessageProducerFactory.ProducerType.ORDERED),
+                     NB_PRODUCERS)) {
             pret = producers.start().get();
         }
         assertEquals(NB_PRODUCERS, pret.stream().count());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
         // 2. Use the mq and run the consumers
-        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath)) {
-            ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.BUGGY),
-                    new ConsumerPolicy.Builder()
-                            .batchPolicy(new BatchPolicy.Builder(BATCH_SIZE).build())
-                            .retryPolicy(new RetryPolicy().withMaxRetries(1000)).build());
+        try (MQueues<IdMessage> mQueues = new CQMQueues<>(basePath);
+             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueues,
+                     IdMessageFactory.BUGGY,
+                     ConsumerPolicy.builder()
+                             .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
+                             .retryPolicy(new RetryPolicy().withMaxRetries(1000)).build())) {
             cret = consumers.start().get();
         }
         assertEquals(NB_QUEUE, cret.stream().count());

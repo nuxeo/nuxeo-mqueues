@@ -80,9 +80,8 @@ public class DocumentConsumers {
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
-                    new ConsumerPolicy.Builder()
-                            .batchPolicy(new BatchPolicy
-                                    .Builder(batchSize)
+                    ConsumerPolicy.builder()
+                            .batchPolicy(BatchPolicy.builder().capacity(batchSize)
                                     .timeThreshold(Duration.ofSeconds(batchThresholdS))
                                     .build())
                             .retryPolicy(

@@ -80,8 +80,8 @@ public class BlobConsumers {
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
-                    new ConsumerPolicy.Builder()
-                            .batchPolicy(new BatchPolicy.Builder(batchSize)
+                    ConsumerPolicy.builder()
+                            .batchPolicy(BatchPolicy.builder().capacity(batchSize)
                                     .timeThreshold(Duration.ofSeconds(batchThresholdS)).build())
                             .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS)).build());
             consumers.start().get();

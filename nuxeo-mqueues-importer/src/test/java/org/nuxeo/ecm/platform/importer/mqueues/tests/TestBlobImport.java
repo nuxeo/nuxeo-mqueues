@@ -74,7 +74,7 @@ public class TestBlobImport {
             String blobProviderName = "test";
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
                     new BlobMessageConsumerFactory(blobProviderName, output),
-                    new ConsumerPolicy.Builder().batchPolicy(new BatchPolicy.Builder(1).build()).build());
+                    ConsumerPolicy.builder().batchPolicy(BatchPolicy.NO_BATCH).build());
             List<ConsumerStatus> ret = consumers.start().get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.committed).sum());

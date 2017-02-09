@@ -25,12 +25,19 @@ import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
  * @since 9.1
  */
 public class IdMessageFactory implements ConsumerFactory<IdMessage> {
+    /**
+     * Factory for consumer that do nothing no op
+     */
+    public static IdMessageFactory NOOP = new IdMessageFactory(ConsumerType.NOOP);
+    /**
+     * Factory for consumer that raise error randomly
+     */
+    public static IdMessageFactory BUGGY = new IdMessageFactory(ConsumerType.BUGGY);
 
-    public enum ConsumerType {NOOP, BUGGY}
-
+    protected enum ConsumerType {NOOP, BUGGY}
     private final ConsumerType type;
 
-    public IdMessageFactory(ConsumerType type) {
+    protected IdMessageFactory(ConsumerType type) {
         this.type = type;
     }
 

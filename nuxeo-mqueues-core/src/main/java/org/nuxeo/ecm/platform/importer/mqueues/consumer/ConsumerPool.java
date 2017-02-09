@@ -82,4 +82,9 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
         });
     }
 
+    @Override
+    public void close() throws Exception {
+        super.close();
+        closeTailers();
+    }
 }

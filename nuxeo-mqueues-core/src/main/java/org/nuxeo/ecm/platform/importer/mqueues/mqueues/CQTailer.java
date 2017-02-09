@@ -42,7 +42,9 @@ public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
     private final String nameSpace;
     private final int queueIndex;
     private final CQOffsetTracker offsetTracker;
+    private boolean closed = false;
 
+    // keep track of all tailers on the same namespace index even from different mq
     private static final Set<String> indexNamespace = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     public CQTailer(String basePath, ExcerptTailer tailer, int queue) {
@@ -97,6 +99,9 @@ public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
 
     @SuppressWarnings("unchecked")
     private M read() {
+        if (closed) {
+            throw new IllegalStateException("The tailer has been closed.");
+        }
         final List<M> ret = new ArrayList<>(1);
         if (tailer.readDocument(w -> ret.add((M) w.read("msg").object()))) {
             return ret.get(0);
@@ -148,5 +153,6 @@ public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
     public void close() throws Exception {
         offsetTracker.close();
         unregisterTailer();
+        closed = true;
     }
 }

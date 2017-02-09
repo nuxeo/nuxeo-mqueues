@@ -26,8 +26,8 @@ import java.time.Duration;
  * @since 9.1
  */
 public class BatchPolicy {
-    static final BatchPolicy NO_BATCH = new Builder(1).build();
-    public static final BatchPolicy DEFAULT = new Builder(10).build();
+    public static final BatchPolicy NO_BATCH = builder().capacity(1).build();
+    public static final BatchPolicy DEFAULT = builder().build();
 
     private final int capacity;
     private final Duration threshold;
@@ -45,16 +45,24 @@ public class BatchPolicy {
         return threshold;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public static class Builder {
-        private static final Duration DEFAULT_THRESHOLD = Duration.ofSeconds(10);
-        private final int capacity;
-        private Duration threshold = DEFAULT_THRESHOLD;
+        private int capacity = 10;
+        private Duration threshold = Duration.ofSeconds(10);
+
+        protected Builder() {
+
+        }
 
         /**
-         * Set the maximum size of the batch.
+         * Set the capacity of the batch.
          */
-        public Builder(int capacity) {
+        public Builder capacity(int capacity) {
             this.capacity = capacity;
+            return this;
         }
 
         /**

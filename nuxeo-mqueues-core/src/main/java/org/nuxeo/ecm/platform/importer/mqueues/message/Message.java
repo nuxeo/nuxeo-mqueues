@@ -31,16 +31,18 @@ public interface Message extends Externalizable {
     String getId();
 
     /**
-     * This message is a poinson pill, a consumer reading this will stop.
+     * A consumer reading this message must not wait for new message to process the batch.
+     */
+    default boolean forceBatch() {
+        return false;
+    }
+
+    /**
+     * This message is a poison pill it contains no other data,
+     * a consumer reading this message will process the batch and stop.
      */
     default boolean poisonPill() {
         return false;
     }
 
-    /**
-     * This consumer reading this message must not wait for new message to process the batch.
-     */
-    default boolean forceBatch() {
-        return false;
-    }
 }

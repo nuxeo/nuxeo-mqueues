@@ -41,7 +41,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 public class TestQueuingPattern {
-
     protected static final Log log = LogFactory.getLog(TestQueuingPattern.class);
     private static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
 
@@ -53,29 +52,52 @@ public class TestQueuingPattern {
         final int NB_QUEUE = 2;
         final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE);
+             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
+                     IdMessageFactory.NOOP,
+                     ConsumerPolicy.UNBOUNDED)) {
             // run the consumers pool
-            ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP),
-                    new ConsumerPolicy.Builder().continueOnFailure(true).waitMessageForEver().build());
-
             CompletableFuture<List<ConsumerStatus>> consumersFuture = consumers.start();
 
             // submit messages
-            Offset offset1 = mq.append(0, new IdMessage("id1"));
+            Offset offset1 = mq.append(0, IdMessage.of("id1"));
             // may be processed but not commited because batch is not full
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
-            mq.append(0, new IdMessage("batch now", false, true));
+            mq.append(0, IdMessage.ofForceBatch("batch now"));
             assertTrue(mq.waitFor(offset1, Duration.ofSeconds(1)));
 
             // terminate consumers
-            mq.append(0, new IdMessage("poison pill", true, false));
-            mq.append(1, new IdMessage("poison pill", true, false));
+            mq.append(0, IdMessage.POISON_PILL);
+            mq.append(1, IdMessage.POISON_PILL);
 
             List<ConsumerStatus> ret = consumersFuture.get();
             assertEquals(NB_QUEUE, ret.stream().count());
-            assertEquals(4, ret.stream().mapToLong(r -> r.committed).sum());
+            assertEquals(2, ret.stream().mapToLong(r -> r.committed).sum());
+        }
+    }
+
+    @Test
+    public void endWithPoisonPillCommitTheBatch() throws Exception {
+        final int NB_QUEUE = 1;
+        final File basePath = folder.newFolder("cq");
+
+        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE);
+             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
+                     IdMessageFactory.NOOP,
+                     ConsumerPolicy.UNBOUNDED)) {
+            // run the consumers pool
+            CompletableFuture<List<ConsumerStatus>> consumersFuture = consumers.start();
+
+            // submit messages
+            mq.append(0, IdMessage.of("id1"));
+            // terminate consumers
+            mq.append(0, IdMessage.POISON_PILL);
+            mq.append(0, IdMessage.of("no consumer to read this one"));
+            List<ConsumerStatus> ret = consumersFuture.get();
+            assertEquals(NB_QUEUE, ret.stream().count());
+            assertEquals(1, ret.stream().mapToLong(r -> r.batchCommit).sum());
+            assertEquals(1, ret.stream().mapToLong(r -> r.committed).sum());
         }
     }
 
@@ -84,48 +106,101 @@ public class TestQueuingPattern {
         final int NB_QUEUE = 2;
         final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE);
+             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
+                     IdMessageFactory.NOOP,
+                     ConsumerPolicy.UNBOUNDED)) {
             // run the consumers pool
-            ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP),
-                    new ConsumerPolicy.Builder().continueOnFailure(true).waitMessageForEver().build());
             CompletableFuture<List<ConsumerStatus>> future = consumers.start();
 
             // submit messages
-            Offset offset1 = mq.append(0, new IdMessage("id1"));
+            Offset offset1 = mq.append(0, IdMessage.of("id1"));
             // may be processed but not commited because batch is not full
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
-            mq.append(0, new IdMessage("batch now", false, true));
+            mq.append(0, IdMessage.ofForceBatch("batch now"));
             assertTrue(mq.waitFor(offset1, Duration.ofSeconds(1)));
 
             // send 2 more messages
-            mq.append(0, new IdMessage("foo"));
-            mq.append(0, new IdMessage("foo"));
+            mq.append(0, IdMessage.of("foo"));
+            mq.append(0, IdMessage.of("foo"));
 
-            // terminate consumers by shuting down the thread pool
-            consumers.shutdownNow();
+            // terminate consumers abruptly without committing the last message
+            consumers.close();
 
             List<ConsumerStatus> ret = future.get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(2, ret.stream().filter(s -> s.fail).count());
         }
 
+        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath);
+             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
+                     IdMessageFactory.NOOP,
+                     ConsumerPolicy.UNBOUNDED)) {
+            // run the consumers pool again
+            CompletableFuture<List<ConsumerStatus>> future = consumers.start();
+            // terminate the consumers with pills
+            mq.append(0, IdMessage.POISON_PILL);
+            mq.append(1, IdMessage.POISON_PILL);
+
+            List<ConsumerStatus> ret = future.get();
+            // 2 messages from the previous run, poison pill are not counted
+            assertEquals(2, ret.stream().mapToLong(r -> r.committed).sum());
+        }
+
+    }
+
+    @Test
+    public void killMQueues() throws Exception {
+        final int NB_QUEUE = 2;
+        final File basePath = folder.newFolder("cq");
+
+        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE)) {
+            ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
+                    IdMessageFactory.NOOP,
+                    ConsumerPolicy.UNBOUNDED);
+            // run the consumers pool
+            CompletableFuture<List<ConsumerStatus>> future = consumers.start();
+
+            // submit messages
+            Offset offset1 = mq.append(0, IdMessage.of("id1"));
+            // may be processed but not commited because batch is not full
+            assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
+            // send a force batch
+            mq.append(0, IdMessage.ofForceBatch("batch now"));
+            assertTrue(mq.waitFor(offset1, Duration.ofSeconds(1)));
+
+            // send 2 more messages
+            mq.append(0, IdMessage.of("foo"));
+            mq.append(0, IdMessage.of("foo"));
+            // close the mq
+            mq.close();
+
+            // open a new mq
+            try (MQueues<IdMessage> mqBis = new CQMQueues<>(basePath)) {
+                mqBis.append(0, IdMessage.ofForceBatch("force batch"));
+            }
+            // the consumers should be in error because their tailer are associated to a closed mqueues
+            List<ConsumerStatus> ret = future.get();
+            // 2 failures
+            assertEquals(2, ret.stream().filter(r -> r.fail).count());
+        }
+
+        // restart the mq and consumers
         try (MQueues<IdMessage> mq = new CQMQueues<>(basePath)) {
             // run the consumers pool again
             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
-                    new IdMessageFactory(IdMessageFactory.ConsumerType.NOOP),
-                    new ConsumerPolicy.Builder().continueOnFailure(true).waitMessageForEver().build());
+                    IdMessageFactory.NOOP,
+                    ConsumerPolicy.builder().continueOnFailure(true).waitMessageForEver().build());
             CompletableFuture<List<ConsumerStatus>> future = consumers.start();
             // terminate the consumers with pills
-            mq.append(0, new IdMessage("poison pills", true, true));
-            mq.append(1, new IdMessage("poison pills", true, true));
+            mq.append(0, IdMessage.POISON_PILL);
+            mq.append(1, IdMessage.POISON_PILL);
 
             List<ConsumerStatus> ret = future.get();
-            // 2 messages from the previous run + 2 poison pills
-            assertEquals(4, ret.stream().mapToLong(r -> r.committed).sum());
+            // 3 messages from the previous run + 2 poison pills
+            assertEquals(3, ret.stream().mapToLong(r -> r.committed).sum());
         }
-
 
     }
 }

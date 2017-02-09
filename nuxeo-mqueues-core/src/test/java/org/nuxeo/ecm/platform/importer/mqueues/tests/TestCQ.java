@@ -117,7 +117,7 @@ public class TestCQ implements StoreFileListener {
             ExcerptTailer tailer = queue.createTailer().toEnd();
             assertEquals(TailerState.UNINTIALISED, tailer.state());
 
-            IdMessage srcNode = new IdMessage("test");
+            IdMessage srcNode = IdMessage.of("test");
             put(app, srcNode);
 
             IdMessage receiveNode = poll(tailer);
@@ -129,8 +129,8 @@ public class TestCQ implements StoreFileListener {
     @Test
     public void testReopenQueue() throws Exception {
         File path;
-        IdMessage srcNode = new IdMessage("node1");
-        IdMessage srcNode2 = new IdMessage("node2");
+        IdMessage srcNode = IdMessage.of("node1");
+        IdMessage srcNode2 = IdMessage.of("node2");
         ExcerptAppender app;
         ExcerptTailer tailer;
         long index = 0;
@@ -167,8 +167,8 @@ public class TestCQ implements StoreFileListener {
     @Test
     public void testRollingQueue() throws Exception {
         File path;
-        IdMessage srcNode = new IdMessage("node1");
-        IdMessage srcNode2 = new IdMessage("node2");
+        IdMessage srcNode = IdMessage.of("node1");
+        IdMessage srcNode2 = IdMessage.of("node2");
         ExcerptAppender app;
         ExcerptTailer tailer;
         long index = 0;
@@ -200,8 +200,8 @@ public class TestCQ implements StoreFileListener {
 
     @Test
     public void testPollOnClosedQueue() throws Exception {
-        IdMessage srcNode = new IdMessage("node1");
-        IdMessage srcNode2 = new IdMessage("node2");
+        IdMessage srcNode = IdMessage.of("node1");
+        IdMessage srcNode2 = IdMessage.of("node2");
         ExcerptAppender app;
         ExcerptTailer tailer;
         try (ChronicleQueue queue = createQueue()) {

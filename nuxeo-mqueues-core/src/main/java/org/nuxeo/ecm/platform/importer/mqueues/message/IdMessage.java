@@ -21,6 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.message;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Objects;
 
 /**
  * Simple message that contains just an identifier.
@@ -28,18 +29,26 @@ import java.io.ObjectOutput;
  * @since 9.1
  */
 public class IdMessage implements Message {
+    public static IdMessage POISON_PILL = new IdMessage("poison pill", true, false);
     private String id;
     private boolean poisonPill = false;
     private boolean forceBatch = false;
 
-    public IdMessage(String id) {
-        this.id = id;
-    }
-
-    public IdMessage(String id, boolean poisonPill, boolean forceBatch) {
-        this.id = id;
+    protected IdMessage(String id, boolean poisonPill, boolean forceBatch) {
+        this.id = Objects.requireNonNull(id);
         this.poisonPill = poisonPill;
         this.forceBatch = forceBatch;
+    }
+
+    static public IdMessage of(String id) {
+        return new IdMessage(id, false, false);
+    }
+
+    /**
+     * An id message that force the batch.
+     */
+    static public IdMessage ofForceBatch(String id) {
+        return new IdMessage(id, false, true);
     }
 
     @Override

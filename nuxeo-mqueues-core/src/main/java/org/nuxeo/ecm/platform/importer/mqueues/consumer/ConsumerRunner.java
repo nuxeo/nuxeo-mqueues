@@ -204,21 +204,21 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         batch.start();
         M message;
         while ((message = tailer.read(policy.getWaitMessageTimeout())) != null) {
-            try (Timer.Context ignore = acceptTimer.time()) {
-                setThreadName(message);
-                consumer.accept(message);
-            }
-            batch.inc();
-            if (message.forceBatch()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Force end of batch: " + message);
-                }
-                batch.force();
-            }
             if (message.poisonPill()) {
                 log.warn("Receivce a poison pill: " + message);
-                batch.force();
                 batch.last();
+            } else {
+                try (Timer.Context ignore = acceptTimer.time()) {
+                    setThreadName(message);
+                    consumer.accept(message);
+                }
+                batch.inc();
+                if (message.forceBatch()) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Force end of batch: " + message);
+                    }
+                    batch.force();
+                }
             }
             if (batch.getState() != BatchState.State.FILLING) {
                 return batch;

@@ -31,6 +31,7 @@ import java.time.Duration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -88,8 +89,8 @@ public class TestCQMQueues {
     @Test
     public void basicAppendAndTail() throws Exception {
         final int NB_QUEUE = 10;
-        IdMessage msg1 = new IdMessage("id1");
-        IdMessage msg2 = new IdMessage("id2");
+        IdMessage msg1 = IdMessage.of("id1");
+        IdMessage msg2 = IdMessage.of("id2");
         File basePath = folder.newFolder("cq");
 
         try (MQueues<IdMessage> mq = createMQ(basePath, NB_QUEUE)) {
@@ -135,12 +136,12 @@ public class TestCQMQueues {
 
         // Create a queue
         try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
-            mQueues.append(1, new IdMessage("id1"));
-            mQueues.append(1, new IdMessage("id2"));
-            mQueues.append(1, new IdMessage("id3"));
+            mQueues.append(1, IdMessage.of("id1"));
+            mQueues.append(1, IdMessage.of("id2"));
+            mQueues.append(1, IdMessage.of("id3"));
 
-            mQueues.append(2, new IdMessage("id4"));
-            mQueues.append(2, new IdMessage("id5"));
+            mQueues.append(2, IdMessage.of("id4"));
+            mQueues.append(2, IdMessage.of("id5"));
 
             // process 2 messages and commit
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(1)) {
@@ -185,10 +186,10 @@ public class TestCQMQueues {
         final int NB_QUEUE = 10;
         final File basePath = folder.newFolder("cq");
         try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
-            mQueues.append(1, new IdMessage("id1"));
-            mQueues.append(1, new IdMessage("id2"));
-            mQueues.append(1, new IdMessage("id3"));
-            mQueues.append(1, new IdMessage("id4"));
+            mQueues.append(1, IdMessage.of("id1"));
+            mQueues.append(1, IdMessage.of("id2"));
+            mQueues.append(1, IdMessage.of("id3"));
+            mQueues.append(1, IdMessage.of("id4"));
 
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(1)) {
                 assertEquals("id1", tailer.read(Duration.ofMillis(1)).getId());
@@ -215,7 +216,23 @@ public class TestCQMQueues {
     }
 
     @Test
-    public void tryToOpenTwiceATailers() throws Exception {
+    public void canNotAppendOnClosedMQueues() throws Exception {
+        final int NB_QUEUE = 1;
+        final File basePath = folder.newFolder("cq");
+
+        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+            mQueues.close();
+            try {
+                mQueues.append(0, IdMessage.of("foo"));
+                fail("Can not append on closed mqueues");
+            } catch (IndexOutOfBoundsException e) {
+                // expected
+            }
+        }
+    }
+
+    @Test
+    public void canNotOpeningTwiceTheSameTailer() throws Exception {
         final int NB_QUEUE = 1;
         final File basePath = folder.newFolder("cq");
 
@@ -223,7 +240,7 @@ public class TestCQMQueues {
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0)) {
                 try {
                     MQueues.Tailer<IdMessage> tailerBis = mQueues.createTailer(0);
-                    fail("Opening twicec a tailer is not allowed");
+                    fail("Opening twice a tailer is not allowed");
                 } catch (IllegalArgumentException e) {
                     // expected
                 }
@@ -237,15 +254,99 @@ public class TestCQMQueues {
     }
 
     @Test
+    public void canNotOpeningTwiceTheSameTailerEvenOnDifferentMQueues() throws Exception {
+        final int NB_QUEUE = 1;
+        final File basePath = folder.newFolder("cq");
+
+        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE);
+             MQueues<IdMessage> mQueuesBis = openMQ(basePath)) {
+
+            MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
+            try {
+                MQueues.Tailer<IdMessage> tailerBis = mQueuesBis.createTailer(0);
+                fail("Opening twice a tailer is not allowed");
+            } catch (IllegalArgumentException e) {
+                // expected
+            }
+
+            MQueues.Tailer<IdMessage> tailerBis = mQueuesBis.createTailer(0, "another name space");
+            try {
+                MQueues.Tailer<IdMessage> tailerBisBis = mQueues.createTailer(0, "another name space");
+                fail("Opening twice a tailer is not allowed");
+            } catch (IllegalArgumentException e) {
+                // expected
+            }
+        }
+    }
+
+    @Test
+    public void closingMQueuesShouldCloseItsTailers() throws Exception {
+        final int NB_QUEUE = 1;
+        final File basePath = folder.newFolder("cq");
+
+        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+            mQueues.append(0, IdMessage.of("foo"));
+            MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
+            assertNotNull(tailer.read(Duration.ofMillis(1)));
+            // here we close the mq not the tailer
+        }
+
+        try (MQueues<IdMessage> mQueues = openMQ(basePath)) {
+            MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
+            assertNotNull(tailer.read(Duration.ofMillis(1)));
+        }
+    }
+
+
+    @Test
+    public void canNotReuseAClosedMQueues() throws Exception {
+        final int NB_QUEUE = 1;
+        final File basePath = folder.newFolder("cq");
+
+        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+            mQueues.append(0, IdMessage.of("foo"));
+            mQueues.close();
+            try {
+                mQueues.append(0, IdMessage.of("bar"));
+                fail("Should raise an exception");
+            } catch (IndexOutOfBoundsException e) {
+                // expected
+            }
+        }
+    }
+
+    @Test
+    public void canNotReuseAClosedTailer() throws Exception {
+        final int NB_QUEUE = 1;
+        final File basePath = folder.newFolder("cq");
+
+        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+            mQueues.append(0, IdMessage.of("foo"));
+            MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
+            assertNotNull(tailer.read(Duration.ofMillis(0)));
+            tailer.close();
+            tailer.toStart();
+            try {
+                tailer.read(Duration.ofMillis(0));
+                fail("It is not possible to read on a closed tailer");
+            } catch (IllegalStateException e) {
+                // expected
+            }
+
+        }
+    }
+
+
+    @Test
     public void commitOffsetNameSpace() throws Exception {
         final int NB_QUEUE = 1;
         final File basePath = folder.newFolder("cq");
-        final IdMessage msg1 = new IdMessage("id1");
-        final IdMessage msg2 = new IdMessage("id2");
+        final IdMessage msg1 = IdMessage.of("id1");
+        final IdMessage msg2 = IdMessage.of("id2");
 
         try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
             for (int i = 0; i < 10; i++) {
-                mQueues.append(0, new IdMessage("id" + i));
+                mQueues.append(0, IdMessage.of("id" + i));
             }
             // each tailers have distincts commit offsets
             try (MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0, "a");
@@ -295,7 +396,7 @@ public class TestCQMQueues {
 
         try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
             for (int i = 0; i < 10; i++) {
-                mQueues.append(0, new IdMessage("id" + i));
+                mQueues.append(0, IdMessage.of("id" + i));
             }
             MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0);
             MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "foo");
@@ -339,7 +440,7 @@ public class TestCQMQueues {
         try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
             // appends some msg and keep some offsets
             for (int i = 0; i < 10; i++) {
-                offset = mQueues.append(0, new IdMessage("id" + i));
+                offset = mQueues.append(0, IdMessage.of("id" + i));
                 if (i == 0) {
                     offset0 = offset;
                 } else if (i == 5) {

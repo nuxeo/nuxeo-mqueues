@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
@@ -53,6 +54,9 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
     private final List<ChronicleQueue> queues;
     private final int nbQueues;
     private final File basePath;
+
+    // keep track of created tailers to make sure they are closed before the mq
+    private final ConcurrentLinkedQueue<CQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
 
     /**
      * Create a new mqueues. Warning this will ERASE the basePath if not empty.
@@ -83,12 +87,17 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
 
     @Override
     public Tailer<M> createTailer(int queue) {
-        return new CQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue);
+        return addTailer(new CQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue));
     }
 
     @Override
     public Tailer<M> createTailer(int queue, String name) {
-        return new CQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue, name);
+        return addTailer(new CQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue, name));
+    }
+
+    private Tailer<M> addTailer(CQTailer<M> tailer) {
+        tailers.add(tailer);
+        return tailer;
     }
 
     @Override
@@ -121,6 +130,14 @@ public class CQMQueues<M extends Message> implements MQueues<M> {
     @Override
     public void close() throws Exception {
         log.debug("Closing queue");
+        tailers.stream().filter(Objects::nonNull).forEach(tailer -> {
+            try {
+                tailer.close();
+            } catch (Exception e) {
+                log.error("Failed to close tailer: " + tailer);
+            }
+        });
+        tailers.clear();
         queues.stream().filter(Objects::nonNull).forEach(ChronicleQueue::close);
         queues.clear();
     }

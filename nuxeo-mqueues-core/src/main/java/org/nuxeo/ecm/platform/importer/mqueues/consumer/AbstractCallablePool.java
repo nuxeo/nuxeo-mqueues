@@ -38,7 +38,7 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
  *
  * @since 9.1
  */
-public abstract class AbstractCallablePool<T> {
+public abstract class AbstractCallablePool<T> implements AutoCloseable {
     private static final Log log = LogFactory.getLog(AbstractCallablePool.class);
     private final int nbThreads;
     private ExecutorService threadPool;
@@ -111,7 +111,8 @@ public abstract class AbstractCallablePool<T> {
         return ret;
     }
 
-    public void shutdownNow() {
+    @Override
+    public void close() throws Exception {
         threadPool.shutdownNow();
     }
 

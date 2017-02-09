@@ -87,7 +87,7 @@ public class TestDocumentImport {
             DocumentModel root = session.getRootDocument();
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
                     new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString()),
-                    ConsumerPolicy.DEFAULT);
+                    ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret = consumers.start().get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.committed).sum());
@@ -117,7 +117,7 @@ public class TestDocumentImport {
         try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath)) {
             String blobProviderName = "test";
             ConsumerFactory<BlobMessage> factory = new BlobMessageConsumerFactory(blobProviderName, blobInfoPath);
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.DEFAULT);
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret = consumers.start().get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.committed).sum());
@@ -135,7 +135,7 @@ public class TestDocumentImport {
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath)) {
             DocumentModel root = session.getRootDocument();
             ConsumerFactory<DocumentMessage> factory = new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString());
-            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.DEFAULT);
+            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret = consumers.start().get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.committed).sum());

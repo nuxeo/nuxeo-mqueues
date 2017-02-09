@@ -69,7 +69,7 @@ public class RandomBlobInfoProvider implements AutoCloseable {
         return ret;
     }
 
-    public BlobManager.BlobInfo getBlobInfo(DocumentMessage.DocumentMessageBuilder builder) {
+    public BlobManager.BlobInfo getBlobInfo(DocumentMessage.Builder builder) {
         String line = getNextLine();
         String[] tokens = line.split(",");
         if (tokens.length < 6) {

@@ -51,7 +51,7 @@ public class RandomIdMessageProducer extends AbstractProducer<IdMessage> {
 
     @Override
     public IdMessage next() {
-        IdMessage ret = new IdMessage("Random message " + totalCount.getAndIncrement());
+        IdMessage ret = IdMessage.of("Random message " + totalCount.getAndIncrement());
         count += 1;
         return ret;
     }
