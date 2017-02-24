@@ -29,6 +29,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -63,8 +64,12 @@ public class RandomBlobInfoProvider implements AutoCloseable {
         final List<Path> ret;
         try (Stream<Path> paths = Files.walk(basePath)) {
             ret = paths.filter(path -> (Files.isRegularFile(path) && path.toString().endsWith("csv"))).collect(Collectors.toList());
+            Collections.sort(ret, (p1, p2) -> p1.getFileName().compareTo(p2.getFileName()));
         } catch (IOException e) {
             throw new IllegalArgumentException("Invalid blobInfo directory: " + basePath, e);
+        }
+        if (ret.isEmpty()) {
+            throw new IllegalArgumentException("Invalid blobInfo directory no csv file found: " + basePath);
         }
         return ret;
     }
@@ -86,8 +91,8 @@ public class RandomBlobInfoProvider implements AutoCloseable {
     }
 
     private void getNextBufferedReader() {
+        currentFile = fileList.get(currentFileIndex % fileList.size()).toFile();
         currentFileIndex += 1;
-        currentFile = fileList.get((fileList.size() - 1) % currentFileIndex).toFile();
         try {
             currentFileReader = new FileReader(currentFile);
             currentReader = new BufferedReader(new FileReader(currentFile));

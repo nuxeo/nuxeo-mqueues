@@ -40,6 +40,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -157,6 +158,7 @@ public class TestAutomation {
         List<Path> files;
         try (Stream<Path> paths = Files.walk(blobInfo.toPath())) {
             files = paths.filter(path -> (Files.isRegularFile(path) && path.toString().endsWith("csv"))).collect(Collectors.toList());
+            Collections.sort(files, (p1, p2) -> p1.getFileName().compareTo(p2.getFileName()));
         }
         BufferedReader reader = new BufferedReader(new FileReader(files.get(0).toFile()));
         reader.readLine(); // skip the csv header
