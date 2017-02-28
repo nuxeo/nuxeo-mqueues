@@ -29,7 +29,7 @@ import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
@@ -78,7 +78,7 @@ public class DocumentConsumers {
         queuePath = getQueuePath();
         repositoryName = getRepositoryName();
         try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
-            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
+            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mQueues,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
                     ConsumerPolicy.builder()
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)
