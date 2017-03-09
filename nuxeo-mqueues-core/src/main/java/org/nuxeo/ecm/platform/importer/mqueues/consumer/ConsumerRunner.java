@@ -30,6 +30,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static java.lang.Thread.currentThread;
 
@@ -43,6 +44,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
 
     // This is the registry name used by Nuxeo without adding a dependency nuxeo-runtime
     public static final String NUXEO_METRICS_REGISTRY_NAME = "org.nuxeo.runtime.metrics.MetricsService";
+    protected static final int SALT_MAX_DELAY_MS = 5000;
 
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
@@ -92,6 +94,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         setTailerPosition();
         consumer = factory.createConsumer(queue);
         try {
+            addSalt();
             consumerLoop();
         } finally {
             consumer.close();
@@ -99,6 +102,13 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         }
         return new ConsumerStatus(queue, acceptTimer.getCount(), committedCounter.getCount(),
                 batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis(), false);
+    }
+
+    private void addSalt() throws InterruptedException {
+        long randomDelay = ThreadLocalRandom.current().nextLong(Math.min(policy.getBatchPolicy().getTimeThreshold().toMillis(), SALT_MAX_DELAY_MS));
+        if (policy.isSalted()) {
+            Thread.sleep(randomDelay);
+        }
     }
 
     private void setTailerPosition() {

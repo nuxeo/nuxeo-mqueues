@@ -31,10 +31,12 @@ import org.nuxeo.runtime.api.Framework;
 public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
 
     protected static final String NOTIF_LISTENER = "notificationListener";
-
     protected static final String MIME_LISTENER = "mimetypeIconUpdater";
-
     protected static final String INDEXING_LISTENER = "elasticSearchInlineListener";
+    protected static final String DUBLICORE_LISTENER = "dclistener";
+    protected static final String TPL_LISTENER = "templateCreator";
+    protected static final String BINARY_LISTENER = "binaryMetadataSyncListener";
+    protected static final String UID_LISTENER = "uidlistener";
 
     public DocumentConsumerPool(MQueues<M> qm, ConsumerFactory<M> factory, ConsumerPolicy policy) {
         super(qm, factory, policy);
@@ -42,13 +44,17 @@ public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
         if (eventAdmin == null) {
             return;
         }
-        // TODO: make this configurable
+        // TODO: make this configurable and save/restore proper state
         eventAdmin.setBulkModeEnabled(true);
         eventAdmin.setBlockAsyncHandlers(true);
         eventAdmin.setBlockSyncPostCommitHandlers(true);
-        eventAdmin.setListenerEnabledFlag(MIME_LISTENER, false);
         eventAdmin.setListenerEnabledFlag(NOTIF_LISTENER, false);
+        eventAdmin.setListenerEnabledFlag(MIME_LISTENER, false);
         eventAdmin.setListenerEnabledFlag(INDEXING_LISTENER, false);
+        eventAdmin.setListenerEnabledFlag(DUBLICORE_LISTENER, false);
+        eventAdmin.setListenerEnabledFlag(TPL_LISTENER, false);
+        eventAdmin.setListenerEnabledFlag(BINARY_LISTENER, false);
+        eventAdmin.setListenerEnabledFlag(UID_LISTENER, false);
     }
 
 
@@ -57,15 +63,19 @@ public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
         super.close();
 
         EventServiceAdmin eventAdmin = Framework.getLocalService(EventServiceAdmin.class);
-        if (eventAdmin != null) {
-            eventAdmin.setBulkModeEnabled(false);
-            eventAdmin.setBlockAsyncHandlers(false);
-            eventAdmin.setBlockSyncPostCommitHandlers(false);
-            eventAdmin.setListenerEnabledFlag(NOTIF_LISTENER, true);
-            eventAdmin.setListenerEnabledFlag(MIME_LISTENER, true);
-            eventAdmin.setListenerEnabledFlag(INDEXING_LISTENER, true);
+        if (eventAdmin == null) {
+            return;
         }
-
+        eventAdmin.setBulkModeEnabled(false);
+        eventAdmin.setBlockAsyncHandlers(false);
+        eventAdmin.setBlockSyncPostCommitHandlers(false);
+        eventAdmin.setListenerEnabledFlag(NOTIF_LISTENER, true);
+        eventAdmin.setListenerEnabledFlag(MIME_LISTENER, true);
+        eventAdmin.setListenerEnabledFlag(INDEXING_LISTENER, true);
+        eventAdmin.setListenerEnabledFlag(DUBLICORE_LISTENER, true);
+        eventAdmin.setListenerEnabledFlag(TPL_LISTENER, true);
+        eventAdmin.setListenerEnabledFlag(BINARY_LISTENER, true);
+        eventAdmin.setListenerEnabledFlag(UID_LISTENER, true);
     }
 
 

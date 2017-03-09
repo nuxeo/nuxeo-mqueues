@@ -86,6 +86,7 @@ public class DocumentConsumers {
                                     .build())
                             .retryPolicy(
                                     new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                            .salted()
                             .build());
             consumers.start().get();
         } catch (Exception e) {

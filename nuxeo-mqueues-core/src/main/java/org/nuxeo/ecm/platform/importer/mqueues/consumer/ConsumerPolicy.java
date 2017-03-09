@@ -48,6 +48,7 @@ public class ConsumerPolicy {
     private final boolean skipFailure;
     private final Duration waitMessageTimeout;
     private final StartOffset startOffset;
+    private final boolean salted;
 
     public ConsumerPolicy(Builder builder) {
         batchPolicy = builder.batchPolicy;
@@ -55,6 +56,7 @@ public class ConsumerPolicy {
         skipFailure = builder.skipFailure;
         waitMessageTimeout = builder.waitMessageTimeout;
         startOffset = builder.startOffset;
+        salted = builder.salted;
     }
 
     public BatchPolicy getBatchPolicy() {
@@ -77,6 +79,11 @@ public class ConsumerPolicy {
         return startOffset;
     }
 
+    public boolean isSalted() {
+        return salted;
+    }
+
+
     public static Builder builder() {
         return new Builder();
     }
@@ -87,6 +94,7 @@ public class ConsumerPolicy {
         private boolean skipFailure = false;
         private Duration waitMessageTimeout = Duration.ofSeconds(2);
         private StartOffset startOffset = StartOffset.LAST_COMMITTED;
+        private boolean salted = false;
 
         protected Builder() {
 
@@ -131,6 +139,14 @@ public class ConsumerPolicy {
          */
         public Builder startOffset(StartOffset startOffset) {
             this.startOffset = startOffset;
+            return this;
+        }
+
+        /**
+         * Consumer will wait some random time before start, to prevent wave of concurency in batch processing.
+         */
+        public Builder salted() {
+            salted = true;
             return this;
         }
 
