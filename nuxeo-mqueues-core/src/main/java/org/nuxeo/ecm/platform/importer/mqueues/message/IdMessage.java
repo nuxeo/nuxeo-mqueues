@@ -21,34 +21,49 @@ package org.nuxeo.ecm.platform.importer.mqueues.message;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Simple message that contains just an identifier.
+ * Simple message with an Id and data payload.
  *
  * @since 9.1
  */
 public class IdMessage implements Message {
-    public static IdMessage POISON_PILL = new IdMessage("poison pill", true, false);
+    public static IdMessage POISON_PILL = new IdMessage("_POISON_PILL_", null, true, false);
     private String id;
+    private byte[] data;
     private boolean poisonPill = false;
     private boolean forceBatch = false;
 
-    protected IdMessage(String id, boolean poisonPill, boolean forceBatch) {
+    protected IdMessage(String id, byte[] data, boolean poisonPill, boolean forceBatch) {
         this.id = Objects.requireNonNull(id);
+        this.data = data;
         this.poisonPill = poisonPill;
         this.forceBatch = forceBatch;
     }
 
+    static public IdMessage of(String id, byte[] data) {
+        return new IdMessage(id, data, false, false);
+    }
+
     static public IdMessage of(String id) {
-        return new IdMessage(id, false, false);
+        return new IdMessage(id, null, false, false);
     }
 
     /**
-     * An id message that force the batch.
+     * A message that force the batch.
      */
+    static public IdMessage ofForceBatch(String id, byte[] data) {
+        return new IdMessage(id, data, false, true);
+    }
+
     static public IdMessage ofForceBatch(String id) {
-        return new IdMessage(id, false, true);
+        return new IdMessage(id, null, false, true);
+    }
+
+    public byte[] getData() {
+        return data;
     }
 
     @Override
@@ -71,6 +86,12 @@ public class IdMessage implements Message {
         out.writeObject(id);
         out.writeBoolean(poisonPill);
         out.writeBoolean(forceBatch);
+        if (data == null || data.length == 0) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(data.length);
+            out.write(data);
+        }
     }
 
     @Override
@@ -78,6 +99,13 @@ public class IdMessage implements Message {
         this.id = (String) in.readObject();
         this.poisonPill = in.readBoolean();
         this.forceBatch = in.readBoolean();
+        int dataLength = in.readInt();
+        if (dataLength == 0) {
+            this.data = null;
+        } else {
+            int read = in.read(this.data, 0, dataLength);
+            assert(read == dataLength);
+        }
     }
 
     @Override
@@ -95,7 +123,8 @@ public class IdMessage implements Message {
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
+        int result = id.hashCode();
+        result = 31 * result + Arrays.hashCode(data);
         result = 31 * result + (poisonPill ? 1 : 0);
         result = 31 * result + (forceBatch ? 1 : 0);
         return result;
@@ -103,6 +132,6 @@ public class IdMessage implements Message {
 
     @Override
     public String toString() {
-        return String.format("IdMessage(%s, %b, %b", id, poisonPill, forceBatch);
+        return String.format("IdMessage(%s, %d, %b, %b", id, (data != null) ? data.length : 0, poisonPill, forceBatch);
     }
 }
