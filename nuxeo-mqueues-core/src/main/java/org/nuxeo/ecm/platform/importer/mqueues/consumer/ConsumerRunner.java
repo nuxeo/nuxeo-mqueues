@@ -44,7 +44,6 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
 
     // This is the registry name used by Nuxeo without adding a dependency nuxeo-runtime
     public static final String NUXEO_METRICS_REGISTRY_NAME = "org.nuxeo.runtime.metrics.MetricsService";
-    protected static final int SALT_MAX_DELAY_MS = 5000;
 
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
@@ -105,7 +104,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     }
 
     private void addSalt() throws InterruptedException {
-        long randomDelay = ThreadLocalRandom.current().nextLong(Math.min(policy.getBatchPolicy().getTimeThreshold().toMillis(), SALT_MAX_DELAY_MS));
+        long randomDelay = ThreadLocalRandom.current().nextLong(policy.getBatchPolicy().getTimeThreshold().toMillis());
         if (policy.isSalted()) {
             Thread.sleep(randomDelay);
         }
