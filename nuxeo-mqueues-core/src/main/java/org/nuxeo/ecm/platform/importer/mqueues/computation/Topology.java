@@ -1,0 +1,212 @@
+/*
+ * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Contributors:
+ *     bdelbosc
+ */
+package org.nuxeo.ecm.platform.importer.mqueues.computation;
+
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import org.jgrapht.graph.DefaultEdge;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+
+/**
+ * @since 9.1
+ */
+public class Topology {
+
+    private final Set<ComputationMetadataMapping> metadataSet;
+    private final Map<String, ComputationMetadataMapping> metadataMap = new HashMap<>();
+    private final Map<String, ComputationSupplier> supplierMap = new HashMap<>();
+    private final DirectedAcyclicGraph<Vertex, DefaultEdge> dag = new DirectedAcyclicGraph<>(DefaultEdge.class);
+
+
+    public Topology(Builder builder) {
+        this.metadataSet = builder.metadataSet;
+        this.supplierMap.putAll(builder.suppliersMap);
+
+        metadataSet.forEach(meta -> metadataMap.put(meta.name, meta));
+        try {
+            generateDag();
+        } catch (DirectedAcyclicGraph.CycleFoundException e) {
+            throw new IllegalStateException("Cycle found in topology: " + e.getMessage(), e);
+        }
+        System.out.println(dag.toString());
+    }
+
+    private void generateDag() throws DirectedAcyclicGraph.CycleFoundException {
+        for (ComputationMetadata metadata : this.metadataSet) {
+            Vertex computationVertex = new Vertex(VertexType.COMPUTATION, metadata.name);
+            dag.addVertex(computationVertex);
+            if (metadata.ostreams != null) {
+                for (String stream : metadata.ostreams) {
+                    Vertex streamVertext = new Vertex(VertexType.STREAM, stream);
+                    dag.addVertex(streamVertext);
+                    dag.addDagEdge(computationVertex, streamVertext);
+                }
+            }
+            if (metadata.istreams != null) {
+                for (String streamName : metadata.istreams) {
+                    Vertex streamVertext = new Vertex(VertexType.STREAM, streamName);
+                    dag.addVertex(streamVertext);
+                    dag.addDagEdge(streamVertext, computationVertex);
+                }
+            }
+        }
+    }
+
+    public ComputationMetadataMapping getMetada(String name) {
+        return metadataMap.get(name);
+    }
+
+    public ComputationSupplier getSupplier(String name) {
+        return supplierMap.get(name);
+    }
+
+
+    public boolean isSource(String name) {
+        return metadataMap.get(name).istreams.isEmpty();
+    }
+
+    public boolean isSink(String name) {
+        return metadataMap.get(name).ostreams.isEmpty();
+    }
+
+    public Set<String> streamsSet() {
+        Set<String> ret = new HashSet<>();
+        for (ComputationMetadata metadata : this.metadataSet) {
+            ret.addAll(metadata.istreams);
+            ret.addAll(metadata.ostreams);
+        }
+        return ret;
+    }
+
+    public Set<ComputationMetadataMapping> metadataSet() {
+        return metadataSet;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private Vertex getVertex(String name) {
+        Vertex ret;
+        if (metadataMap.containsKey(name)) {
+            ret = new Vertex(VertexType.COMPUTATION, name);
+        } else if (streamsSet().contains(name)) {
+            ret = new Vertex(VertexType.STREAM, name);
+        } else {
+            throw new IllegalArgumentException("Unknown vertex name: " + name + " for dag: " + dag);
+        }
+        return ret;
+    }
+
+    public Set<String> getDescendants(String name) {
+        Vertex start = getVertex(name);
+        return dag.getDescendants(dag, start).stream().map(Vertex::getName).collect(Collectors.toSet());
+    }
+
+    public Set<String> getChildren(String name) {
+        Vertex start = getVertex(name);
+        return dag.outgoingEdgesOf(start).stream().map(edge -> dag.getEdgeTarget(edge).getName()).collect(Collectors.toSet());
+    }
+
+    public Set<String> getParents(String name) {
+        Vertex start = getVertex(name);
+        return dag.incomingEdgesOf(start).stream().map(edge -> dag.getEdgeSource(edge).getName()).collect(Collectors.toSet());
+    }
+
+    public Set<String> getAncestorComputationNames(String name) {
+        Set<Vertex> ancestors = dag.getAncestors(dag, new Vertex(VertexType.COMPUTATION, name));
+        return ancestors.stream().filter(vertex -> vertex.type == VertexType.COMPUTATION).map(vertex -> vertex.name).collect(Collectors.toSet());
+    }
+
+    public Set<String> getAncestors(String name) {
+        Vertex start = getVertex(name);
+        return dag.getAncestors(dag, start).stream().map(Vertex::getName).collect(Collectors.toSet());
+    }
+
+
+    public static class Builder {
+        Set<ComputationMetadataMapping> metadataSet = new HashSet<>();
+        Map<String, ComputationSupplier> suppliersMap = new HashMap<>();
+
+        public Builder addComputation(ComputationSupplier supplier, List<String> mapping) {
+            Map<String, String> map = new HashMap<>(mapping.size());
+            mapping.stream().filter(m -> m.contains(":")).forEach(m -> map.put(m.split(":")[0], m.split(":")[1]));
+            ComputationMetadataMapping meta = new ComputationMetadataMapping(supplier.get().metadata(), map);
+            metadataSet.add(meta);
+            suppliersMap.put(meta.name, supplier);
+            return this;
+        }
+
+        public Topology build() {
+            return new Topology(this);
+        }
+    }
+
+    private class Vertex {
+        private final String name;
+        private final VertexType type;
+
+        public Vertex(VertexType type, String name) {
+            this.type = type;
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public VertexType getType() {
+            return type;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Vertex myVertex = (Vertex) o;
+
+            if (!name.equals(myVertex.name)) return false;
+            return type == myVertex.type;
+
+        }
+
+        @Override
+        public String toString() {
+            return "Vertex{" +
+                    "name='" + name + '\'' +
+                    ", type=" + type +
+                    '}';
+        }
+
+        @Override
+        public int hashCode() {
+            int result = name.hashCode();
+            result = 31 * result + type.hashCode();
+            return result;
+        }
+    }
+}
+

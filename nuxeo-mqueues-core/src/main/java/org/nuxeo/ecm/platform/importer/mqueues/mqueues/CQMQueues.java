@@ -22,8 +22,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 
+import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,7 +46,7 @@ import static org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQTailer.DEFAULT_O
  *
  * @since 9.1
  */
-public class CQMQueues<M extends Message> implements MQueues<M> {
+public class CQMQueues<M extends Externalizable> implements MQueues<M> {
     private static final Log log = LogFactory.getLog(CQMQueues.class);
     private static final String QUEUE_PREFIX = "Q-";
     private static final int POLL_INTERVAL_MS = 100;

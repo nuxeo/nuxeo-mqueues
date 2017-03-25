@@ -20,8 +20,8 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;/*
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 
+import java.io.Externalizable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @since 9.1
  */
-public class CQTailer<M extends Message> implements MQueues.Tailer<M> {
+public class CQTailer<M extends Externalizable> implements MQueues.Tailer<M> {
     private static final Log log = LogFactory.getLog(CQTailer.class);
     private static final long POLL_INTERVAL_MS = 100L;
     public static final String DEFAULT_OFFSET_NAMESPACE = "default";

@@ -18,20 +18,19 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
-import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
-
+import java.io.Externalizable;
 import java.time.Duration;
 
 /**
  * A MQueues (for Multiple Queues) is a set of unbounded persisted queues.
  *
- * Producers can dispatch {@link Message} on different queues.
+ * Producers can dispatch message (any Externalizable object) on different queues.
  *
- * Consumer read {@link Message} using a {@link Tailer}, the position of the tailer can be persisted.
+ * Consumer read message using a {@link Tailer}, the position of the tailer can be persisted.
  *
  * @since 9.1
  */
-public interface MQueues<M extends Message> extends AutoCloseable {
+public interface MQueues<M extends Externalizable> extends AutoCloseable {
 
     /**
      * Returns the size of the mqueues: the number of queues.
