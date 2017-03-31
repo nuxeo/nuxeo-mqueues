@@ -59,7 +59,7 @@ public class ComputationMetadata {
         return "ComputationMetadata{" +
                 "name='" + name + '\'' +
                 ", istreams=" + istreams.stream().collect(Collectors.joining(",")) +
-                ", ostreams=" + ostreams.stream().collect(Collectors.joining(","))  +
+                ", ostreams=" + ostreams.stream().collect(Collectors.joining(",")) +
                 '}';
     }
 

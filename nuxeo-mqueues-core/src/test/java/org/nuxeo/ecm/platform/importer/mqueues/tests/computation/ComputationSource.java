@@ -25,13 +25,14 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
  * Computation that procduce records.
- * Produce messages when receiving an input record
  *
  * @since 9.1
  */
@@ -43,24 +44,29 @@ public class ComputationSource implements Computation {
     private int generated = 0;
     private long targetTimestamp;
 
-    public ComputationSource(String name, int outputs) {
-        this(name, outputs, 10, 3);
+    public ComputationSource(String name) {
+        this(name, 1, 10, 3, 0);
     }
 
-    public ComputationSource(String name, int outputs, int records, int batchSize) {
+    /**
+     * The targetTimestamp will be used for the last batch of record
+     */
+    public ComputationSource(String name, int outputs, int records, int batchSize, long targetTimestamp) {
         if (outputs <= 0) {
             throw new IllegalArgumentException("Can produce records without outputs");
         }
         this.records = records;
         this.batchSize = batchSize;
+        this.targetTimestamp = targetTimestamp;
         this.metadata = new ComputationMetadata(
                 name,
-                new HashSet<>(Arrays.asList("i1")),
+                Collections.emptySet(),
                 IntStream.range(1, outputs + 1).boxed().map(i -> "o" + i).collect(Collectors.toSet()));
     }
 
     @Override
     public void init(ComputationContext context) {
+        context.setTimer("generate", System.currentTimeMillis());
     }
 
     @Override
@@ -69,10 +75,6 @@ public class ComputationSource implements Computation {
 
     @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-        // for each record receive produce records
-        this.targetTimestamp = Watermark.ofValue(record.watermark).getTimestamp();
-        context.setTimer("generate", System.currentTimeMillis());
-        context.setCommit(true);
     }
 
     @Override
@@ -83,13 +85,16 @@ public class ComputationSource implements Computation {
                 Record record = getRandomRecord(++generated);
                 lastWatermark = record.watermark = getWatermark();
                 metadata.ostreams.forEach(o -> context.produceRecord(o, record));
-                System.out.println("Generate record: " + generated + " wm " + lastWatermark);
+                if (generated % 100 == 0) {
+                    System.out.println("Generate record: " + generated + " wm " + lastWatermark);
+                }
             }
             context.setCommit(true);
             if (generated < records) {
                 context.setTimer("generate", System.currentTimeMillis());
             } else {
-                context.setSourceLowWatermark(getWatermark());
+                // set computation low watermark to the target computation;
+                context.setSourceLowWatermark(Watermark.completedOf(Watermark.ofTimestamp(targetTimestamp)).getValue());
             }
         }
     }

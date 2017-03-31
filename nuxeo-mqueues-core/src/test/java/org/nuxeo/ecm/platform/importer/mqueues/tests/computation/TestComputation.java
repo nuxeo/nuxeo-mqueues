@@ -26,15 +26,14 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMa
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationContextImpl;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkInterval;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @since 9.1
@@ -45,7 +44,7 @@ public class TestComputation {
 
 
     @Test
-    public void testForwardComputation() throws Exception {
+    public void testForward() throws Exception {
         // create a computation with 2 inputs streams and 4 output streams
         Computation comp = new ComputationForward("foo", 2, 4);
 
@@ -67,14 +66,21 @@ public class TestComputation {
         // ask to process a record
         comp.processRecord(context, "i1", Record.of("foo", "bar".getBytes()));
 
-        // the record is forwarded to all output stream
+        // the record is forwarded to one output stream
         assertEquals(1, context.getRecords("o1").size());
-        assertEquals(1, context.getRecords("o2").size());
-        assertEquals(1, context.getRecords("o3").size());
-        assertEquals(1, context.getRecords("o4").size());
+        assertEquals(0, context.getRecords("o2").size());
+        assertEquals(0, context.getRecords("o3").size());
+        assertEquals(0, context.getRecords("o4").size());
 
-        assertEquals("foo", context.getRecords("o2").get(0).key);
+        assertEquals("foo", context.getRecords("o1").get(0).key);
         assertEquals("bar", new String(context.getRecords("o1").get(0).data, StandardCharsets.UTF_8));
+
+        // ask to process another record
+        comp.processRecord(context, "i1", Record.of("foo", "bar".getBytes()));
+        // the record is forwarded to the second output stream
+        assertEquals(1, context.getRecords("o2").size());
+        assertEquals(0, context.getRecords("o3").size());
+        assertEquals(0, context.getRecords("o4").size());
 
         comp.destroy();
     }
@@ -85,8 +91,9 @@ public class TestComputation {
         int nbRecordsToGenerate = 7;
         int batchSize = 3;
         int outputStreams = 2;
+        long t0 = System.currentTimeMillis();
 
-        Computation comp = new ComputationSource("foo", outputStreams, nbRecordsToGenerate, batchSize);
+        Computation comp = new ComputationSource("foo", outputStreams, nbRecordsToGenerate, batchSize, t0);
         assertEquals("foo", comp.metadata().name);
         assertEquals(new HashSet(Arrays.asList("i1")), comp.metadata().istreams);
         assertEquals(new HashSet(Arrays.asList("o1", "o2")), comp.metadata().ostreams);
@@ -95,17 +102,10 @@ public class TestComputation {
                 Collections.emptyMap()));
         comp.init(context);
 
-        // there is no timer
-        assertEquals(0, context.getTimers().size());
-
-        // send a record so it starts to generates records
-        long t0 = System.currentTimeMillis();
-        long w0 = Watermark.ofTimestamp(t0).getValue();
-        comp.processRecord(context, "i1", new Record("start", null, w0, null));
-
-        // there is now a timer
+        // there is a timer
         assertEquals(1, context.getTimers().size());
         String timerKey = (String) context.getTimers().keySet().toArray()[0];
+
         // execute the timer 3 times
         comp.processTimer(context, timerKey, 0);
         comp.processTimer(context, timerKey, 0);
@@ -123,32 +123,41 @@ public class TestComputation {
     }
 
     @Test
-    public void testSink() throws Exception {
-        Computation comp = new ComputationSinkRecordCounter("foo");
+    public void testRecordCounter() throws Exception {
+        Duration interval = Duration.ofMillis(20);
+        Computation comp = new ComputationRecordCounter("foo", interval);
         assertEquals("foo", comp.metadata().name);
-        assertEquals(new HashSet(Arrays.asList("i1", "i2")), comp.metadata().istreams);
+        assertEquals(new HashSet(Arrays.asList("i1")), comp.metadata().istreams);
         assertEquals(new HashSet(Arrays.asList("o1")), comp.metadata().ostreams);
 
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),
                 Collections.emptyMap()));
         comp.init(context);
+        // a timer is set
+        assertEquals(1, context.getTimers().size());
 
-        for (int i=0; i<42; i++) {
+        for (int i = 0; i < 42; i++) {
             comp.processRecord(context, "i1", Record.of("foo", "bar".getBytes()));
         }
+        // nothing on output because the output is done by the timer
         assertEquals(0, context.getRecords("o1").size());
-
-        // ask for the total by sending any record to i2
-        comp.processRecord(context, "i2", Record.of("foo", "bar".getBytes()));
+        // call the timer
+        comp.processTimer(context, "sum", 0);
+        // we have a response
         assertEquals(1, context.getRecords("o1").size());
 
         // the key contains the total
         assertEquals("42", context.getRecords("o1").get(0).key);
 
-        // the counter is reset
-        comp.processRecord(context, "i2", Record.of("foo", "bar".getBytes()));
+        // Add a new record
+        comp.processRecord(context, "i2", Record.of("foo", null));
+
+        // call the timer
+        comp.processTimer(context, "sum", 0);
+        // we now have 2 counter results
         assertEquals(2, context.getRecords("o1").size());
-        assertEquals("0", context.getRecords("o1").get(1).key);
+        // the counter has been reseted
+        assertEquals("1", context.getRecords("o1").get(1).key);
 
     }
 

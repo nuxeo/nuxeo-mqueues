@@ -34,7 +34,7 @@ public interface ComputationContext {
     /**
      * Get local state for a given key
      *
-     * @param key: Key to recrieve from local store.
+     * @param key: Key to receive from local store.
      * @return the state executed upon data retrieval.
      */
     byte[] getState(final String key);

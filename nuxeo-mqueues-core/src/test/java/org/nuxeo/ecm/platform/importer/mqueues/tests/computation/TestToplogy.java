@@ -29,6 +29,7 @@ import java.util.HashSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @since 9.1
@@ -42,7 +43,7 @@ public class TestToplogy {
     public void testTopology() throws Exception {
 
         Topology topology = Topology.builder()
-                .addComputation(() -> new ComputationSource("C1", 1), Arrays.asList("i1:input", "o1:s1"))
+                .addComputation(() -> new ComputationSource("C1"), Arrays.asList("i1:input", "o1:s1"))
                 .addComputation(() -> new ComputationForward("C2", 1, 2), Arrays.asList("i1:s1", "o1:s2", "o2:s3"))
                 .addComputation(() -> new ComputationForward("C3", 2, 1), Arrays.asList("i1:s1", "i2:s4", "o1:output"))
                 .addComputation(() -> new ComputationForward("C4", 1, 2), Arrays.asList("i1:s2", "o1:output", "o2:s4"))
@@ -51,7 +52,7 @@ public class TestToplogy {
 
         assertNotNull(topology);
         assertEquals(6, topology.streamsSet().size());
-        assertEquals(5, topology.metadataSet().size());
+        assertEquals(5, topology.metadataList().size());
 
         assertEquals(new HashSet<>(), topology.getAncestorComputationNames("C1"));
         assertEquals(new HashSet<>(Arrays.asList("C1")), topology.getAncestorComputationNames("C2"));
@@ -76,6 +77,9 @@ public class TestToplogy {
         assertEquals(new HashSet<>(Arrays.asList("C1", "C2", "C3", "C4", "C5", "s1", "s2", "s3", "s4", "output")),
                 topology.getDescendants("input"));
 
+        // check plantuml representation
+        assertTrue(topology.toPlantuml().startsWith("@startuml"));
+        assertTrue(topology.toPlantuml().endsWith("@enduml\n"));
 
     }
 

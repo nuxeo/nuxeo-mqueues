@@ -27,7 +27,6 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.StreamFactoryImpl;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -127,7 +126,6 @@ public class TestStream {
         }
 
     }
-
 
 
 }

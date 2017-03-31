@@ -26,19 +26,19 @@ import java.util.Map;
  */
 public class Settings {
     private final int defaultConcurrency;
-    private final Map<String, Integer> concurrencies = new HashMap<>();
+    private final Map<String, Integer> concurrences = new HashMap<>();
 
     public Settings(int defaultConcurrency) {
         this.defaultConcurrency = defaultConcurrency;
     }
 
     public Settings setConcurrency(String computationName, int concurrency) {
-        concurrencies.put(computationName, concurrency);
+        concurrences.put(computationName, concurrency);
         return this;
     }
 
     public int getConcurrency(String computationName) {
-        return concurrencies.getOrDefault(computationName, defaultConcurrency);
+        return concurrences.getOrDefault(computationName, defaultConcurrency);
     }
 
 }

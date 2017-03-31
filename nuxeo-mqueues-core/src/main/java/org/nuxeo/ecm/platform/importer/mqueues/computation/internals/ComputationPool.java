@@ -18,17 +18,20 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
 
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationSupplier;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
@@ -41,11 +44,11 @@ public class ComputationPool {
     private final ComputationMetadataMapping metadata;
     private final int threads;
     private final Streams streams;
-    private final ComputationSupplier supplier;
+    private final Supplier<Computation> supplier;
     private ExecutorService threadPool;
-    private List<ComputationRunner> runners;
+    private final List<ComputationRunner> runners;
 
-    public ComputationPool(ComputationSupplier supplier, ComputationMetadataMapping metadata, int defaultThreads, Streams streams) {
+    public ComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, int defaultThreads, Streams streams) {
         this.supplier = supplier;
         this.streams = streams;
         this.metadata = metadata;
@@ -69,7 +72,7 @@ public class ComputationPool {
             Stream stream = streams.getStream(streamName);
             return stream.getPartitions();
         }
-        throw new IllegalArgumentException("No imput stream");
+        throw new IllegalArgumentException("No input stream");
     }
 
     public void start() {
@@ -84,15 +87,51 @@ public class ComputationPool {
         System.out.println(metadata.name + " pool started with " + threads + " threads");
     }
 
-    public void stop() {
+    public boolean drainAndStop(Duration timeout) {
+        if (threadPool == null || threadPool.isTerminated()) {
+            return true;
+        }
+        runners.forEach(ComputationRunner::drain);
+        boolean ret = awaitPoolTermination(timeout);
+        if (!ret) {
+            System.out.println("Fail to drain");
+        }
+        stop(Duration.ofSeconds(1));
+        return ret;
+    }
+
+    public boolean stop(Duration timeout) {
+        if (threadPool == null || threadPool.isTerminated()) {
+            return true;
+        }
+        runners.forEach(ComputationRunner::stop);
+        boolean ret = awaitPoolTermination(timeout);
+        shutdown();
+        return ret;
+    }
+
+    public void shutdown() {
         if (threadPool != null && !threadPool.isTerminated()) {
             threadPool.shutdownNow();
         }
         runners.clear();
+        threadPool = null;
+    }
+
+    private boolean awaitPoolTermination(Duration timeout) {
+        try {
+            if (!threadPool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                System.out.println("Timeout on wait for pool termination for: " + metadata.name);
+                return false;
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return true;
     }
 
     public long getLowWatermark() {
-        // 1. low value of uncompleted job that are not 0
+        // 1. low value of uncompleted watermark that are not 0
         long low = runners.stream().map(ComputationRunner::getLowWatermarkUncompleted).filter(wm -> wm > 0).min(Comparator.naturalOrder()).orElse(0L);
         if (low > 0) {
             return low;

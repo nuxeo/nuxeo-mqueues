@@ -21,6 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 import org.junit.Test;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkInterval;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkMonotonicInterval;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -271,6 +272,30 @@ public class TestWatermark {
         wmi.checkpoint();
         assertTrue(wmi.getLow().isCompleted());
         assertEquals(low, wmi.getLow().getValue());
+    }
+
+    // test monotonic wmi
+    @Test
+    public void testWmmi() {
+        WatermarkMonotonicInterval wmi = new WatermarkMonotonicInterval();
+        long t0 = System.currentTimeMillis();
+        long t1 = t0 + 1;
+        long w0 = Watermark.ofTimestamp(t0).getValue();
+        long w1 = Watermark.ofTimestamp(t0, (short) 1).getValue();
+        long w2 = Watermark.ofTimestamp(t0, (short) 2).getValue();
+        long w3 = Watermark.ofTimestamp(t0, (short) 3).getValue();
+
+        wmi.mark(w1);
+        wmi.mark(w0);
+        wmi.mark(w2);
+        assertEquals(w0, wmi.getLow().getValue());
+        wmi.checkpoint();
+        wmi.mark(w3);
+        wmi.mark(w1);
+        assertEquals(w2, wmi.getLow().getValue());
+        wmi.checkpoint();
+        assertTrue(w3 < wmi.getLow().getValue());
+
     }
 
 }

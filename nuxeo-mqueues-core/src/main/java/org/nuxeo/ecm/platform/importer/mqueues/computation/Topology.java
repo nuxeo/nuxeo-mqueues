@@ -21,11 +21,14 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
@@ -34,27 +37,54 @@ import java.util.stream.Collectors;
  */
 public class Topology {
 
-    private final Set<ComputationMetadataMapping> metadataSet;
+    private final List<ComputationMetadataMapping> metadataList; // use a list because computation are ordered using dag
     private final Map<String, ComputationMetadataMapping> metadataMap = new HashMap<>();
-    private final Map<String, ComputationSupplier> supplierMap = new HashMap<>();
+    private final Map<String, Supplier<Computation>> supplierMap = new HashMap<>();
     private final DirectedAcyclicGraph<Vertex, DefaultEdge> dag = new DirectedAcyclicGraph<>(DefaultEdge.class);
 
 
-    public Topology(Builder builder) {
-        this.metadataSet = builder.metadataSet;
+    private Topology(Builder builder) {
         this.supplierMap.putAll(builder.suppliersMap);
-
-        metadataSet.forEach(meta -> metadataMap.put(meta.name, meta));
+        builder.metadataSet.forEach(meta -> metadataMap.put(meta.name, meta));
+        this.metadataList = new ArrayList<>(builder.metadataSet.size());
         try {
-            generateDag();
+            generateDag(builder.metadataSet);
         } catch (DirectedAcyclicGraph.CycleFoundException e) {
             throw new IllegalStateException("Cycle found in topology: " + e.getMessage(), e);
         }
         System.out.println(dag.toString());
     }
 
-    private void generateDag() throws DirectedAcyclicGraph.CycleFoundException {
-        for (ComputationMetadata metadata : this.metadataSet) {
+    /**
+     * A plantuml representation of the topology.
+     */
+    public String toPlantuml() {
+        return toPlantuml(new Settings(0));
+    }
+
+    public String toPlantuml(Settings settings) {
+        StringBuilder ret = new StringBuilder();
+        ret.append("@startuml\n");
+        for (Vertex vertex : dag) {
+            if (VertexType.COMPUTATION.equals(vertex.getType())) {
+                ret.append("node " + vertex.getName() + "\n");
+                int concurrency = settings.getConcurrency(vertex.getName());
+                if (concurrency > 0) {
+                    ret.append("note right: x" + concurrency + "\n");
+                }
+            } else if (VertexType.STREAM.equals(vertex.getType())) {
+                ret.append("database " + vertex.getName() + "\n");
+            }
+        }
+        for (DefaultEdge edge : dag.edgeSet()) {
+            ret.append(dag.getEdgeSource(edge).getName() + "==>" + dag.getEdgeTarget(edge).getName() + "\n");
+        }
+        ret.append("@enduml\n");
+        return ret.toString();
+    }
+
+    private void generateDag(Set<ComputationMetadataMapping> metadataSet) throws DirectedAcyclicGraph.CycleFoundException {
+        for (ComputationMetadata metadata : metadataSet) {
             Vertex computationVertex = new Vertex(VertexType.COMPUTATION, metadata.name);
             dag.addVertex(computationVertex);
             if (metadata.ostreams != null) {
@@ -72,13 +102,23 @@ public class Topology {
                 }
             }
         }
+        for (Vertex vertex : dag) {
+            if (VertexType.COMPUTATION.equals(vertex.getType())) {
+                for (ComputationMetadataMapping metadata : metadataSet) {
+                    if (vertex.getName().equals(metadata.name)) {
+                        metadataList.add(metadata);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     public ComputationMetadataMapping getMetada(String name) {
         return metadataMap.get(name);
     }
 
-    public ComputationSupplier getSupplier(String name) {
+    public Supplier<Computation> getSupplier(String name) {
         return supplierMap.get(name);
     }
 
@@ -93,15 +133,15 @@ public class Topology {
 
     public Set<String> streamsSet() {
         Set<String> ret = new HashSet<>();
-        for (ComputationMetadata metadata : this.metadataSet) {
+        for (ComputationMetadata metadata : this.metadataList) {
             ret.addAll(metadata.istreams);
             ret.addAll(metadata.ostreams);
         }
         return ret;
     }
 
-    public Set<ComputationMetadataMapping> metadataSet() {
-        return metadataSet;
+    public List<ComputationMetadataMapping> metadataList() {
+        return metadataList;
     }
 
     public static Builder builder() {
@@ -147,10 +187,10 @@ public class Topology {
 
 
     public static class Builder {
-        Set<ComputationMetadataMapping> metadataSet = new HashSet<>();
-        Map<String, ComputationSupplier> suppliersMap = new HashMap<>();
+        final Set<ComputationMetadataMapping> metadataSet = new HashSet<>();
+        final Map<String, Supplier<Computation>> suppliersMap = new HashMap<>();
 
-        public Builder addComputation(ComputationSupplier supplier, List<String> mapping) {
+        public Builder addComputation(Supplier<Computation> supplier, List<String> mapping) {
             Map<String, String> map = new HashMap<>(mapping.size());
             mapping.stream().filter(m -> m.contains(":")).forEach(m -> map.put(m.split(":")[0], m.split(":")[1]));
             ComputationMetadataMapping meta = new ComputationMetadataMapping(supplier.get().metadata(), map);
@@ -164,7 +204,7 @@ public class Topology {
         }
     }
 
-    private class Vertex {
+    public class Vertex {
         private final String name;
         private final VertexType type;
 
@@ -207,6 +247,10 @@ public class Topology {
             result = 31 * result + type.hashCode();
             return result;
         }
+    }
+
+    public DirectedAcyclicGraph<Vertex, DefaultEdge> getDag() {
+        return dag;
     }
 }
 

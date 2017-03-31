@@ -19,7 +19,6 @@
 package org.nuxeo.ecm.platform.importer.mqueues.computation;
 
 
-
 /**
  * @since 9.1
  */

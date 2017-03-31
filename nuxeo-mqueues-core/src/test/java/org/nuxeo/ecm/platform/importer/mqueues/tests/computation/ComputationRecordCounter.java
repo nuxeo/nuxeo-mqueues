@@ -22,33 +22,36 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
-import org.w3c.dom.css.Counter;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Computation that count record.
- * Produce a message with the total when receiving an input record
  *
  * @since 9.1
  */
-public class ComputationSinkRecordCounter implements Computation {
+public class ComputationRecordCounter implements Computation {
 
     private final ComputationMetadata metadata;
+    private final long intervalMs;
     private int count;
 
-    public ComputationSinkRecordCounter(String name) {
+    /**
+     * Output record counter every interval.
+     */
+    public ComputationRecordCounter(String name, Duration interval) {
         this.metadata = new ComputationMetadata(
                 name,
-                new HashSet<>(Arrays.asList("i1", "i2")),
+                new HashSet<>(Arrays.asList("i1")),
                 new HashSet<>(Arrays.asList("o1")));
+        this.intervalMs = interval.toMillis();
     }
 
     @Override
     public void init(ComputationContext context) {
+        context.setTimer("sum", System.currentTimeMillis() + intervalMs);
     }
 
     @Override
@@ -57,20 +60,15 @@ public class ComputationSinkRecordCounter implements Computation {
 
     @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-        if ("i1".equals(inputStreamName)) {
-            count += 1;
-            if (count == 40) {
-                System.out.println("XXXXXXXXX  WIN");
-            }
-        } else {
-            context.produceRecord("o1", Integer.toString(count), null);
-            count = 0;
-        }
-        context.setCommit(true);
+        count += 1;
     }
 
     @Override
     public void processTimer(ComputationContext context, String key, long time) {
+        context.produceRecord("o1", Integer.toString(count), null);
+        count = 0;
+        context.setCommit(true);
+        context.setTimer("sum", System.currentTimeMillis() + intervalMs);
     }
 
     @Override

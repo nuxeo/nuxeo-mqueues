@@ -33,7 +33,7 @@ public class ComputationMetadataMapping extends ComputationMetadata {
                 metadata.ostreams.stream().map(s -> mapping.getOrDefault(s, s)).collect(Collectors.toSet()));
         this.mapping = mapping;
         reverseMapping = new HashMap<>(mapping.size());
-        mapping.entrySet().forEach(entry -> reverseMapping.put(entry.getValue(), entry.getKey()));
+        mapping.forEach((key, value) -> reverseMapping.put(value, key));
     }
 
     public String map(String name) {

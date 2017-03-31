@@ -23,17 +23,21 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Computation that read from multiple inputs and propagates records to all outputs.
+ * Computation that read from multiple inputs and round robin records on outputs.
  *
  * @since 9.1
  */
 public class ComputationForward implements Computation {
 
     private final ComputationMetadata metadata;
+    private final List<String> ostreamList;
+    private int counter = 0;
 
     public ComputationForward(String name, int inputs, int outputs) {
         if (inputs <= 0) {
@@ -43,6 +47,7 @@ public class ComputationForward implements Computation {
                 name,
                 IntStream.range(1, inputs + 1).boxed().map(i -> "i" + i).collect(Collectors.toSet()),
                 IntStream.range(1, outputs + 1).boxed().map(i -> "o" + i).collect(Collectors.toSet()));
+        ostreamList = new ArrayList<>(metadata.ostreams);
     }
 
     @Override
@@ -55,9 +60,10 @@ public class ComputationForward implements Computation {
 
     @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-        // forward all records to output
         // System.out.println(metadata.name + " processRecord: " + record);
-        metadata.ostreams.forEach(o -> context.produceRecord(o, record));
+        // dispatch record to output stream
+        String outputStream = ostreamList.get(counter++ % ostreamList.size());
+        context.produceRecord(outputStream, record);
         context.setCommit(true);
     }
 

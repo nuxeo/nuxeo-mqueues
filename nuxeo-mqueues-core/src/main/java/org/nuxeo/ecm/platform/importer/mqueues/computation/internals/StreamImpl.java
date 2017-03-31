@@ -65,7 +65,8 @@ public class StreamImpl implements Stream {
 
     @Override
     public void appendRecord(Record record) {
-        mQueues.append(record.key.hashCode() % partitions, record);
+        // yes hash code can be negative
+        mQueues.append((record.key.hashCode() & 0x7fffffff) % partitions, record);
     }
 
     @Override

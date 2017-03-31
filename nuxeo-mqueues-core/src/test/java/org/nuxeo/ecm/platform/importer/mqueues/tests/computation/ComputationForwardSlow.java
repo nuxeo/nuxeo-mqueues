@@ -18,16 +18,11 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 /**
-*
+ *
  * @since 9.1
  */
 public class ComputationForwardSlow extends ComputationForward {
