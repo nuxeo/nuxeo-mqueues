@@ -46,6 +46,13 @@ public class StreamImpl implements Stream {
         this.mQueues = new CQMQueues<>(new File(basePath.toFile(), name), partitions);
     }
 
+    public StreamImpl(Path basePath, String name) {
+        this.basePath = basePath;
+        this.name = name;
+        this.mQueues = new CQMQueues<>(new File(basePath.toFile(), name));
+        this.partitions = mQueues.size();
+    }
+
     @Override
     public String getName() {
         return name;
@@ -74,4 +81,10 @@ public class StreamImpl implements Stream {
         return new StreamTailerImpl(name, mQueues.createTailer(i, group));
     }
 
+    @Override
+    public void close() throws Exception {
+        if (this.mQueues != null) {
+            this.mQueues.close();
+        }
+    }
 }

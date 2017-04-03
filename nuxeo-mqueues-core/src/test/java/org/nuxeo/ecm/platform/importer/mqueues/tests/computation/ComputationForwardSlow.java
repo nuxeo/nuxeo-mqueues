@@ -35,6 +35,10 @@ public class ComputationForwardSlow extends ComputationForward {
         this.averageDelayMs = averageDelayMs;
     }
 
+    public ComputationForwardSlow(String name, int inputs, int outputs) {
+        this(name, inputs, outputs, 10);
+    }
+
     @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
         try {

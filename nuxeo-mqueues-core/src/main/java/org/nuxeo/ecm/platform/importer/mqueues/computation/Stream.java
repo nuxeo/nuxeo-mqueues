@@ -31,7 +31,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation;
  *
  * @since 9.1
  */
-public interface Stream {
+public interface Stream extends AutoCloseable {
 
     String getName();
 

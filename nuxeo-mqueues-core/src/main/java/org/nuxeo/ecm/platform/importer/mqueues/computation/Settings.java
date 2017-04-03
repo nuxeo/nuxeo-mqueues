@@ -27,6 +27,7 @@ import java.util.Map;
 public class Settings {
     private final int defaultConcurrency;
     private final Map<String, Integer> concurrences = new HashMap<>();
+    private final Map<String, Integer> partitions = new HashMap<>();
 
     public Settings(int defaultConcurrency) {
         this.defaultConcurrency = defaultConcurrency;
@@ -40,6 +41,16 @@ public class Settings {
     public int getConcurrency(String computationName) {
         return concurrences.getOrDefault(computationName, defaultConcurrency);
     }
+
+    public Settings setExternalStreamPartitions(String streamName, int partitions) {
+        this.partitions.put(streamName, partitions);
+        return this;
+    }
+
+    public int getExternalStreamPartitions(String streamName) {
+        return partitions.getOrDefault(streamName, defaultConcurrency);
+    }
+
 
 }
 

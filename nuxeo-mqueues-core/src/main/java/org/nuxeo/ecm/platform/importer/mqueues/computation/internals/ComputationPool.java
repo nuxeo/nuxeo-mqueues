@@ -113,6 +113,12 @@ public class ComputationPool {
     public void shutdown() {
         if (threadPool != null && !threadPool.isTerminated()) {
             threadPool.shutdownNow();
+            // give a chance to end threads with valid tailers when shutdown is followed by streams.close()
+            try {
+                threadPool.awaitTermination(1, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         runners.clear();
         threadPool = null;
@@ -126,6 +132,7 @@ public class ComputationPool {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            System.out.println(getComputationName() + " pool INTERRUPTED");
         }
         return true;
     }

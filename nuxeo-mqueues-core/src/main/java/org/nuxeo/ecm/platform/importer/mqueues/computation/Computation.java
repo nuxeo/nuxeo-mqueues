@@ -42,11 +42,11 @@ public interface Computation {
     void destroy();
 
     /**
-     * Process incoming records on one of the computation's input streams.
+     * Process an incoming record on one of the computation's input streams.
      *
      * @param context: The computation context object provided by the system.
      * @param inputStreamName: Name of the input stream that provides the record.
-     * @param record: The {@link Record} to emit downstream.
+     * @param record: The record.
      */
     void processRecord(ComputationContext context, String inputStreamName, Record record);
 
@@ -55,14 +55,14 @@ public interface Computation {
      *
      * @param context: The computation context object provided by the system.
      * @param key: The name of the timer.
-     * @param time: The time (in ms) for which the callback was scheduled.
+     * @param timestamp: The timestamp (in ms) for which the callback was scheduled.
      */
-    void processTimer(ComputationContext context, String key, long time);
+    void processTimer(ComputationContext context, String key, long timestamp);
 
     /**
      * Identify the computation.
      *
-     * @return {@link ComputationMetadata} object representing the computation.
+     * @return computation's metadata.
      */
     ComputationMetadata metadata();
 }

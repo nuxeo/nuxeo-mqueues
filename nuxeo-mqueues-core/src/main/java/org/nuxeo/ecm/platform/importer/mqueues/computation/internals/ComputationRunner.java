@@ -52,9 +52,10 @@ public class ComputationRunner implements Runnable {
     private volatile boolean stop = false;
     private volatile boolean drain = false;
     private long counter = 0;
+    private long counterRecord = 0;
     // private final WatermarkInterval lowWatermark = new WatermarkInterval();
     private final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
-    private long lastReadTime = 0;
+    private long lastReadTime = System.currentTimeMillis();
     private long lastTimerExecution = 0;
 
     public ComputationRunner(Supplier<Computation> supplier, ComputationMetadataMapping metadata, int partition, Streams streams) {
@@ -88,10 +89,10 @@ public class ComputationRunner implements Runnable {
         try {
             processLoop();
         } catch (InterruptedException e) {
-            // TODO: check
+            System.out.println(metadata.name + " INTERRUPTED");
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            System.out.println("FAILURE: " + e.getClass() + " " + e.getMessage());
+            System.out.println(metadata.name + " FAILURE: " + e.getClass() + " " + e.getMessage());
             e.printStackTrace();
             throw e;
         } finally {
@@ -114,13 +115,14 @@ public class ComputationRunner implements Runnable {
             long now = System.currentTimeMillis();
             // for a source we take lastTimerExecution starvation
             if (metadata.istreams.isEmpty()) {
-                if ((now - lastTimerExecution) > STARVING_TIMEOUT_MS) {
-                    System.out.println(metadata.name + " end of source drain, last write " + STARVING_TIMEOUT_MS + " ms ago");
+                if (lastTimerExecution > 0 && (now - lastTimerExecution) > STARVING_TIMEOUT_MS) {
+                    System.out.println(metadata.name + " end of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
                     return false;
                 }
             } else {
                 if ((now - lastReadTime) > STARVING_TIMEOUT_MS) {
-                    System.out.println(metadata.name + " end of drain, no more input after " + STARVING_TIMEOUT_MS + " ms");
+                    System.out.println(metadata.name + " end of drain, no more input after " + (now - lastReadTime) +
+                            " ms after " + counterRecord + " record readed, in " + counter + " read attempt");
                     return false;
                 }
             }
@@ -159,14 +161,12 @@ public class ComputationRunner implements Runnable {
         }
         // round robin on input stream tailers
         StreamTailer tailer = tailers[(int) (counter++ % tailers.length)];
-        // Adapt the duration so we are not throttling when one of the input stream is empty
-        Duration timeoutRead = Duration.ofMillis(Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime));
+
+        Duration timeoutRead = getTimeoutDuration();
         Record record = tailer.read(timeoutRead);
         if (record != null) {
-//            if( metadata.name.equals("C2")) {
-//                System.out.println(" get " + record.key);
-//            }
             lastReadTime = System.currentTimeMillis();
+            counterRecord++;
             lowWatermark.mark(record.watermark);
             String from = metadata.reverseMap(tailer.getStreamName());
             // System.out.println(metadata.name + " receive from " + from + " record: " + record);
@@ -175,6 +175,12 @@ public class ComputationRunner implements Runnable {
             checkSourceLowWatermark();
             commitIfNecessary();
         }
+    }
+
+    private Duration getTimeoutDuration() {
+        // Adapt the duration so we are not throttling when one of the input stream is empty
+        // TODO may remove the default min to 1ms, 0 should be ok
+        return Duration.ofMillis(Math.max(1, Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime)));
     }
 
     private void checkSourceLowWatermark() {
@@ -198,13 +204,21 @@ public class ComputationRunner implements Runnable {
 
     private void commitIfNecessary() {
         if (context.isCommit()) {
-            sendRecords();
-            saveOffsets();
-            saveTimers();
-            saveState();
-            lowWatermark.checkpoint();
-            // System.out.println("checkpoint " + metadata.name + " " + lowWatermark);
-            context.setCommit(false);
+            boolean completed = false;
+            try {
+                sendRecords();
+                saveOffsets();
+                saveTimers();
+                saveState();
+                lowWatermark.checkpoint();
+                // System.out.println("checkpoint " + metadata.name + " " + lowWatermark);
+                context.setCommit(false);
+                completed = true;
+            } finally {
+                if (!completed) {
+                    System.out.println("COMMIT FAILURE: commit failure on " + metadata.name);
+                }
+            }
         }
     }
 

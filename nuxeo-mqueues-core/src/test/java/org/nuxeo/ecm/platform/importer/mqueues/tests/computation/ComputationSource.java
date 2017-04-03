@@ -24,10 +24,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -85,6 +82,7 @@ public class ComputationSource implements Computation {
                 Record record = getRandomRecord(++generated);
                 lastWatermark = record.watermark = getWatermark();
                 metadata.ostreams.forEach(o -> context.produceRecord(o, record));
+                // System.out.println("Generate record: " + generated + " wm " + lastWatermark);
                 if (generated % 100 == 0) {
                     System.out.println("Generate record: " + generated + " wm " + lastWatermark);
                 }

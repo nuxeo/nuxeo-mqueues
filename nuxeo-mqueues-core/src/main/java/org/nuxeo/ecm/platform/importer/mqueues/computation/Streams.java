@@ -27,13 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @since 9.1
  */
-public class Streams {
-    private final StreamFactory factory;
+public abstract class Streams implements AutoCloseable {
     private final Map<String, Stream> streams = new ConcurrentHashMap<>();
-
-    public Streams(StreamFactory factory) {
-        this.factory = factory;
-    }
 
     public Stream getStream(String streamName) {
         return streams.get(streamName);
@@ -41,8 +36,25 @@ public class Streams {
 
     public synchronized Stream getOrCreateStream(String name, int partitions) {
         if (!streams.containsKey(name)) {
-            streams.put(name, factory.createStream(name, partitions));
+            if (exists(name)) {
+                streams.put(name, open(name));
+            } else {
+                streams.put(name, create(name, partitions));
+            }
         }
         return getStream(name);
+    }
+
+    public abstract boolean exists(String name);
+
+    public abstract Stream open(String name);
+
+    public abstract Stream create(String name, int partitions);
+
+    @Override
+    public void close() throws Exception {
+        for (Stream stream : streams.values()) {
+            stream.close();
+        }
     }
 }

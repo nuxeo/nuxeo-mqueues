@@ -95,7 +95,7 @@ public class TestComputation {
 
         Computation comp = new ComputationSource("foo", outputStreams, nbRecordsToGenerate, batchSize, t0);
         assertEquals("foo", comp.metadata().name);
-        assertEquals(new HashSet(Arrays.asList("i1")), comp.metadata().istreams);
+        assertEquals(Collections.emptySet(), comp.metadata().istreams);
         assertEquals(new HashSet(Arrays.asList("o1", "o2")), comp.metadata().ostreams);
 
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),

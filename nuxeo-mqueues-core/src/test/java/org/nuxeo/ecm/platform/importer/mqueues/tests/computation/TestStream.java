@@ -25,8 +25,9 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.StreamFactoryImpl;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.StreamsImpl;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -48,7 +49,7 @@ public class TestStream {
 
     @Test
     public void testStreams() throws Exception {
-        Streams streams = new Streams(new StreamFactoryImpl(folder.newFolder().toPath()));
+        Streams streams = new StreamsImpl(folder.newFolder().toPath());
         Stream stream = streams.getOrCreateStream("foo", 10);
         assertEquals(stream.getName(), "foo");
         assertEquals(stream.getPartitions(), 10);
@@ -64,7 +65,7 @@ public class TestStream {
 
     @Test
     public void testStream() throws Exception {
-        Streams streams = new Streams(new StreamFactoryImpl(folder.newFolder().toPath()));
+        Streams streams = new StreamsImpl(folder.newFolder().toPath());
         Stream stream = streams.getOrCreateStream("foo", 1);
         assertEquals(stream.getName(), "foo");
 
@@ -104,7 +105,7 @@ public class TestStream {
 
     @Test
     public void testNullRecord() throws Exception {
-        Streams streams = new Streams(new StreamFactoryImpl(folder.newFolder().toPath()));
+        Streams streams = new StreamsImpl(folder.newFolder().toPath());
         Stream stream = streams.getOrCreateStream("foo", 1);
 
         stream.appendRecord("foo", null);
@@ -127,5 +128,25 @@ public class TestStream {
 
     }
 
-
+    @Test
+    public void testCreateAndOpen() throws Exception {
+        final int partitions = 1;
+        final String name = "foo";
+        Path base = folder.newFolder().toPath();
+        try (Streams streams = new StreamsImpl(base)) {
+            Stream stream = streams.getOrCreateStream(name, partitions);
+            assertEquals(name, stream.getName());
+            assertEquals(partitions, stream.getPartitions());
+            stream.appendRecord(Record.of("key", "value".getBytes()));
+        }
+        try (Streams streams = new StreamsImpl(base)) {
+            Stream stream = streams.getOrCreateStream(name, 2 * partitions);
+            assertEquals(name, stream.getName());
+            assertEquals(partitions, stream.getPartitions());
+            StreamTailer tailer = stream.createTailerForPartition("test", 0);
+            Record record = tailer.read(Duration.ofSeconds(1));
+            assertNotNull(record);
+            assertEquals("key", record.key);
+        }
+    }
 }

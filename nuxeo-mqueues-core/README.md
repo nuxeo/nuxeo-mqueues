@@ -5,6 +5,7 @@ nuxeo-mqueues-core
 
 This module implements a generic message queue (MQueues) used to implement different producer/consumer patterns.
 
+
 ## Warning
 
 This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
@@ -52,7 +53,8 @@ There is an additional Chronicle Queue created for each consumer offset namespac
 
 The only limitation is the available disk storage, there is no retention policy so everything is kept for ever.
 
-That being said Chronicle Queue creates a single file per queue and per day, so it is possible to script some retention policy like keep message queues for the last D days.
+That being said Chronicle Queue by default creates a single file per queue and per day, so it is possible to script some retention policy like keeping messages for the last D days.
+(It is also possible to change the cycle to create a file every hours).
 
 ## Patterns
 
@@ -103,12 +105,31 @@ A producer can wait for a message to be consumed, this can simulate an async cal
 See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/TestQueuingPattern.java) for basic examples.
 
 
-### Pattern 3: TODO Publish subscribe (Event bus)
+### Pattern 3: Publish subscribe (Event bus)
 
-No producer interface.
+Publishing is done by appending message to mqueues.
 
-Multiple Consumer with different offset namespace.
+Multiple Consumers using different offset namespace can tail on the mqueues.
 
+### Pattern 4: Stream and Computations
+ 
+This pattern is taken from [Google MillWheel](https://research.google.com/pubs/pub41378.html) and is implemented in [Concord.io](http://concord.io/docs/guides/architecture.html
+) or [Kafka Stream Processor](https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/Processor.java).
+
+Instead of message we have record that hold some specific fields like the key and a watermark in addition to the payload.
+
+The key is used to route the record. Records with the same key are always routed to the same computation instance.
+
+The computation is defined almost like in [concord][http://concord.io/docs/guides/concepts.html].
+ 
+The Topology represent a DAG of computations, that can be executed using a ComputationManager.
+Computation read from 0 to n streams and write from 0 to n streams.
+
+Here is an example of the DAG used in UT:
+
+![dag](dag1.png)  
+  
+TODO: more 
 
 ## Building
 

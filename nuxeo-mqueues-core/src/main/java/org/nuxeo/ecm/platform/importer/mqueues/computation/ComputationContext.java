@@ -14,8 +14,9 @@
  * limitations under the License.
  *
  * Contributors:
- *     Taken from https://github.com/concord/concord-jvm
-  */
+ *     Adapted from from https://github.com/concord/concord-jvm
+ *     bdelbosc
+ */
 package org.nuxeo.ecm.platform.importer.mqueues.computation;
 
 /**
@@ -24,9 +25,9 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation;
 public interface ComputationContext {
 
     /**
-     * Set local state for a given key
+     * Set local state for a given key.
      *
-     * @param key:         Key to set in local store.
+     * @param key: Key to set in local store.
      * @param binaryValue: Value to store at key.
      */
     void setState(final String key, final byte[] binaryValue);
@@ -51,7 +52,7 @@ public interface ComputationContext {
     void removeTimer(String key);
 
     /**
-     * Emit a record downstream
+     * Emit a record downstream. Records are send effectively when the commit flag is set, {@link #setCommit(boolean)}.
      *
      * @param streamName: The name of the stream on which the record should
      *                    be emitted.
@@ -64,12 +65,12 @@ public interface ComputationContext {
     void produceRecord(final String streamName, final Record record);
 
     /**
-     * Source computation must set a low watermark timestamp, that is propagated
+     * Set the low watermark, useful for source computation.
      */
     void setSourceLowWatermark(long watermark);
 
     /**
-     * Send records and save offsets.
+     * When true the records are send and offset saved.
      */
     void setCommit(boolean commit);
 }

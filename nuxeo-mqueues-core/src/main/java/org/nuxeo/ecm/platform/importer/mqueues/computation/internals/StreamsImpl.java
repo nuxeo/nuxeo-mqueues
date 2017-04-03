@@ -18,25 +18,34 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
 
-
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
 
+import java.io.File;
 import java.nio.file.Path;
 
 /**
  * @since 9.1
  */
-public class StreamFactoryImpl implements StreamFactory {
-
+public class StreamsImpl extends Streams {
     private final Path basePath;
 
-    public StreamFactoryImpl(Path basePath) {
+    public StreamsImpl(Path basePath) {
         this.basePath = basePath;
     }
 
     @Override
-    public Stream createStream(String name, int partitions) {
+    public boolean exists(String name) {
+        return new File(basePath.toFile(), name).exists();
+    }
+
+    @Override
+    public Stream open(String name) {
+        return new StreamImpl(basePath, name);
+    }
+
+    @Override
+    public Stream create(String name, int partitions) {
         return new StreamImpl(basePath, name, partitions);
     }
 }
