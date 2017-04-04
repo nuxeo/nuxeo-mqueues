@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
@@ -41,6 +43,7 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
  * @since 9.1
  */
 public class ComputationPool {
+    private static final Log log = LogFactory.getLog(ComputationPool.class);
     private final ComputationMetadataMapping metadata;
     private final int threads;
     private final Streams streams;
@@ -84,7 +87,7 @@ public class ComputationPool {
         }
         // close the pool no new admission
         threadPool.shutdown();
-        System.out.println(metadata.name + " pool started with " + threads + " threads");
+        log.debug("Pool started for " + metadata.name + " size: " + threads);
     }
 
     public boolean drainAndStop(Duration timeout) {
@@ -93,9 +96,6 @@ public class ComputationPool {
         }
         runners.forEach(ComputationRunner::drain);
         boolean ret = awaitPoolTermination(timeout);
-        if (!ret) {
-            System.out.println("Fail to drain");
-        }
         stop(Duration.ofSeconds(1));
         return ret;
     }
@@ -127,12 +127,11 @@ public class ComputationPool {
     private boolean awaitPoolTermination(Duration timeout) {
         try {
             if (!threadPool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                System.out.println("Timeout on wait for pool termination for: " + metadata.name);
+                log.warn("Timeout on wait for pool termination for: " + metadata.name);
                 return false;
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.out.println(getComputationName() + " pool INTERRUPTED");
         }
         return true;
     }
@@ -160,7 +159,7 @@ public class ComputationPool {
         @Override
         public Thread newThread(Runnable r) {
             Thread t = new Thread(r, String.format("%s-%02d", prefix, count.getAndIncrement()));
-            t.setUncaughtExceptionHandler((t1, e) -> System.out.println("Uncaught error on thread " + t1.getName() + " " + e.getMessage()));
+            t.setUncaughtExceptionHandler((t1, e) -> log.error("Uncaught exception: " + e.getMessage(), e));
             return t;
         }
     }

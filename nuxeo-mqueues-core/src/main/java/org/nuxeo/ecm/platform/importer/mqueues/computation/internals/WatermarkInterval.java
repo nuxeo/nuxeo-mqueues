@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 
 /**
@@ -27,6 +29,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
  * @since 9.1
  */
 public class WatermarkInterval {
+    private static final Log log = LogFactory.getLog(WatermarkInterval.class);
+
     private Watermark low = Watermark.LOWEST;
     private Watermark high = Watermark.LOWEST;
 

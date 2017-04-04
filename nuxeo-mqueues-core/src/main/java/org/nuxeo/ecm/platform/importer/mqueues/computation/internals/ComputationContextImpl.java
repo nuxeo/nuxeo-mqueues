@@ -32,9 +32,7 @@ import java.util.Objects;
  * @since 9.1
  */
 public class ComputationContextImpl implements ComputationContext {
-
     private final ComputationMetadataMapping metadata;
-
     private final Map<String, List<Record>> streamRecords;
     private final Map<String, Long> timers;
     private boolean commitFlag = false;
@@ -109,6 +107,5 @@ public class ComputationContextImpl implements ComputationContext {
     public void setCommit(boolean commit) {
         commitFlag = commit;
     }
-
 
 }

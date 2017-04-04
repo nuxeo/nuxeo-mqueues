@@ -41,6 +41,10 @@
     <priority value="WARN" />
   </category>
 
+  <category name="org.nuxeo.ecm.platform.importer.mqueues.computation">
+    <priority value="WARN" />
+  </category>
+
   <!-- hide the warn and stack on retry -->
   <category name="org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerRunner">
     <priority value="ERROR" />

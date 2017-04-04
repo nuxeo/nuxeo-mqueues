@@ -26,8 +26,6 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
  * @since 9.1
  */
 public class ComputationForwardSlow extends ComputationForward {
-
-
     private final int averageDelayMs;
 
     public ComputationForwardSlow(String name, int inputs, int outputs, int averageDelayMs) {
@@ -45,7 +43,6 @@ public class ComputationForwardSlow extends ComputationForward {
             Thread.sleep(averageDelayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.out.println("Interrupted");
         }
         super.processRecord(context, inputStreamName, record);
     }

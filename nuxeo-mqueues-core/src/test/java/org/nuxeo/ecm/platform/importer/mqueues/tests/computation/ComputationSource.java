@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
@@ -34,7 +36,7 @@ import java.util.stream.IntStream;
  * @since 9.1
  */
 public class ComputationSource implements Computation {
-
+    private static final Log log = LogFactory.getLog(ComputationSource.class);
     private final ComputationMetadata metadata;
     private final int records;
     private final int batchSize;
@@ -84,7 +86,7 @@ public class ComputationSource implements Computation {
                 metadata.ostreams.forEach(o -> context.produceRecord(o, record));
                 // System.out.println("Generate record: " + generated + " wm " + lastWatermark);
                 if (generated % 100 == 0) {
-                    System.out.println("Generate record: " + generated + " wm " + lastWatermark);
+                    log.debug("Generate record: " + generated + " wm " + lastWatermark);
                 }
             }
             context.setCommit(true);
@@ -93,6 +95,7 @@ public class ComputationSource implements Computation {
             } else {
                 // set computation low watermark to the target computation;
                 context.setSourceLowWatermark(Watermark.completedOf(Watermark.ofTimestamp(targetTimestamp)).getValue());
+                log.debug("Generate record tereminated: " + generated + " wm " + lastWatermark);
             }
         }
     }

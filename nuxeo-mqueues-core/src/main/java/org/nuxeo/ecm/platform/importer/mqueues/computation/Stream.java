@@ -50,7 +50,7 @@ public interface Stream extends AutoCloseable {
     /**
      * Ask a tailer with a group namespace, there should be only one tailer for a group namespace should not
      */
-    StreamTailer createTailerForPartition(String group, int i);
+    StreamTailer createTailerForPartition(String group, int partition);
 
 
 }

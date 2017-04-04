@@ -75,11 +75,9 @@ public class TestComputationManager {
         }
     }
 
-    @Test
-    public void testSimpleTopo() throws Exception {
+    public void testSimpleTopo(int nbRecords, int concurrency) throws Exception {
         final long targetTimestamp = System.currentTimeMillis();
         final long targetWatermark = Watermark.ofTimestamp(targetTimestamp).getValue();
-        final int nbRecords = 10;
         Topology topology = Topology.builder()
                 .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Arrays.asList("o1:s1"))
                 .addComputation(() -> new ComputationForward("C1", 1, 1), Arrays.asList("i1:s1", "o1:s2"))
@@ -88,36 +86,50 @@ public class TestComputationManager {
                 .addComputation(() -> new ComputationRecordCounter("COUNTER", Duration.ofMillis(100)), Arrays.asList("i1:s4", "o1:output"))
                 .build();
         // one thread for each computation
-        Settings settings = new Settings(1);
+        Settings settings = new Settings(concurrency);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
         try (Streams streams = new StreamsImpl(folder.newFolder().toPath())) {
-
             ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
             manager.start();
             long start = System.currentTimeMillis();
-
+            // this check works only if there is only one record with the target timestamp
+            // so using concurrency > 1 will fail
             while (!manager.isDone(targetTimestamp)) {
                 Thread.sleep(30);
                 long lowWatermark = manager.getLowWatermark();
                 System.out.println("low: " + lowWatermark + " dist: " + (targetWatermark - lowWatermark));
             }
-            System.out.println("Elapsed: " + (System.currentTimeMillis() - start));
+            double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;
             // shutdown brutally so there is no more processing in background
             manager.shutdown();
 
             // read the results
             int result = readCounterFrom(streams, "output");
-            assertEquals(nbRecords, result);
+            assertEquals(nbRecords * concurrency, result);
+            System.out.println(String.format("topo: simple, concurrency: %d, records: %s, took: %.2fs, throughput: %.2f records/s",
+                    concurrency, result, elapsed, result / elapsed));
         }
     }
 
     @Test
-    public void testComplexTopo() throws Exception {
+    public void testSimpleTopoOneRecordOneThread() throws Exception {
+        testSimpleTopo(1, 1);
+    }
+
+    @Test
+    public void testSimpleTopoFewRecordsOneThread() throws Exception {
+        testSimpleTopo(17, 1);
+    }
+
+    @Test
+    public void testSimpleTopoManyRecordsOneThread() throws Exception {
+        testSimpleTopo(1003, 1);
+    }
+
+    public void testComplexTopo(int nbRecords, int concurrency) throws Exception {
         final long targetTimestamp = System.currentTimeMillis();
         final long targetWatermark = Watermark.ofTimestamp(targetTimestamp).getValue();
-        final int nbRecords = 1000;
-        final int concurrent = 17;
         Topology topology = Topology.builder()
                 .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Arrays.asList("o1:s1"))
                 .addComputation(() -> new ComputationForward("C1", 1, 2), Arrays.asList("i1:s1", "o1:s2", "o2:s3"))
@@ -128,7 +140,7 @@ public class TestComputationManager {
                 .addComputation(() -> new ComputationRecordCounter("COUNTER", Duration.ofMillis(100)), Arrays.asList("i1:s5", "o1:output"))
                 .build();
 
-        Settings settings = new Settings(concurrent).setExternalStreamPartitions("output", 1);
+        Settings settings = new Settings(concurrency).setExternalStreamPartitions("output", 1);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
         try (Streams streams = new StreamsImpl(folder.newFolder().toPath())) {
@@ -144,10 +156,40 @@ public class TestComputationManager {
             // read the results
             int result = readCounterFrom(streams, "output");
             assertEquals(2 * settings.getConcurrency("GENERATOR") * nbRecords, result);
-            System.out.println(String.format("count: %s in %.2fs, throughput: %.2f records/s", result, elapsed, result / elapsed));
+            System.out.println(String.format("topo: complex, concurrency: %d, records: %s, took: %.2fs, throughput: %.2f records/s",
+                    concurrency, result, elapsed, result / elapsed));
         }
     }
 
+    @Test
+    public void testComplexTopoOneRecordOneThread() throws Exception {
+        testComplexTopo(1, 1);
+    }
+
+    @Test
+    public void testComplexTopoFewRecordsOneThread() throws Exception {
+        testComplexTopo(17, 1);
+    }
+
+    @Test
+    public void testComplexTopoManyRecordsOneThread() throws Exception {
+        testComplexTopo(1003, 1);
+    }
+
+    @Test
+    public void testComplexTopoOneRecord() throws Exception {
+        testComplexTopo(1, 8);
+    }
+
+    @Test
+    public void testComplexTopoFewRecords() throws Exception {
+        testComplexTopo(17, 8);
+    }
+
+    @Test
+    public void testComplexTopoManyRecords() throws Exception {
+        testComplexTopo(1003, 16);
+    }
 
     @Test
     public void testStopAndResume() throws Exception {
@@ -244,8 +286,17 @@ public class TestComputationManager {
 
     }
 
-    private int readCounterFrom(Streams streams, String output) throws InterruptedException {
-        StreamTailer tailer = streams.getStream("output").createTailerForPartition("results", 0);
+    private int readCounterFrom(Streams streams, String stream) throws InterruptedException {
+        int partitions = streams.getStream(stream).getPartitions();
+        int ret = 0;
+        for (int i = 0; i < partitions; i++) {
+            ret += readCounterFromPartion(streams, stream, i);
+        }
+        return ret;
+    }
+
+    private int readCounterFromPartion(Streams streams, String stream, int partition) throws InterruptedException {
+        StreamTailer tailer = streams.getStream(stream).createTailerForPartition("results", partition);
         int result = 0;
         for (Record record = tailer.read(Duration.ofMillis(1)); record != null; record = tailer.read(Duration.ofMillis(1))) {
             result += Integer.valueOf(record.key);
@@ -253,6 +304,7 @@ public class TestComputationManager {
         tailer.commit();
         return result;
     }
+
 
     private int countRecordIn(Streams streams, String stream) throws Exception {
         int ret = 0;

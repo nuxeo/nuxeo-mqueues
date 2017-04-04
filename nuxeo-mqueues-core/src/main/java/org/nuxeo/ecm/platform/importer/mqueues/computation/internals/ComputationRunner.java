@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
@@ -38,7 +40,7 @@ import java.util.stream.Collectors;
  * @since 9.1
  */
 public class ComputationRunner implements Runnable {
-
+    private static final Log log = LogFactory.getLog(ComputationRunner.class);
     private static final long STARVING_TIMEOUT_MS = 500;
     public static final Duration READ_TIMEOUT = Duration.ofMillis(25);
     private final ComputationContextImpl context;
@@ -73,12 +75,12 @@ public class ComputationRunner implements Runnable {
     }
 
     public void stop() {
-        System.out.println(metadata.name + " receive STOP");
+        log.debug(metadata.name + " Receives Stop signal");
         stop = true;
     }
 
     public void drain() {
-        System.out.println(metadata.name + " receive DRAIN");
+        log.debug(metadata.name + " Receives Drain signal");
         drain = true;
     }
 
@@ -89,15 +91,19 @@ public class ComputationRunner implements Runnable {
         try {
             processLoop();
         } catch (InterruptedException e) {
-            System.out.println(metadata.name + " INTERRUPTED");
+            // this is expected when the pool is shutdownNow
+            if (log.isTraceEnabled()) {
+                log.debug(metadata.name + " Interrupted", e);
+            } else {
+                log.debug(metadata.name + " Interrupted");
+            }
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            System.out.println(metadata.name + " FAILURE: " + e.getClass() + " " + e.getMessage());
-            e.printStackTrace();
+            log.error(metadata.name + ": " + e.getMessage(), e);
             throw e;
         } finally {
             computation.destroy();
-            System.out.println(metadata.name + " exited");
+            log.debug(metadata.name + " Exited");
         }
     }
 
@@ -116,13 +122,13 @@ public class ComputationRunner implements Runnable {
             // for a source we take lastTimerExecution starvation
             if (metadata.istreams.isEmpty()) {
                 if (lastTimerExecution > 0 && (now - lastTimerExecution) > STARVING_TIMEOUT_MS) {
-                    System.out.println(metadata.name + " end of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
+                    log.debug(metadata.name + " End of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
                     return false;
                 }
             } else {
                 if ((now - lastReadTime) > STARVING_TIMEOUT_MS) {
-                    System.out.println(metadata.name + " end of drain, no more input after " + (now - lastReadTime) +
-                            " ms after " + counterRecord + " record readed, in " + counter + " read attempt");
+                    log.debug(metadata.name + " End of drain no more input after " + (now - lastReadTime) +
+                            " ms, " + counterRecord + " records readed, " + counter + " reads attempt");
                     return false;
                 }
             }
@@ -194,7 +200,7 @@ public class ComputationRunner implements Runnable {
 
     private void checkRecordFlags(Record record) {
         if (record.flags.contains(Record.Flag.POISON_PILL)) {
-            System.out.println(metadata.name + " receive POISON PILL");
+            log.debug(metadata.name + " receive POISON PILL");
             context.setCommit(true);
             stop = true;
         } else if (record.flags.contains(Record.Flag.COMMIT)) {
@@ -216,7 +222,7 @@ public class ComputationRunner implements Runnable {
                 completed = true;
             } finally {
                 if (!completed) {
-                    System.out.println("COMMIT FAILURE: commit failure on " + metadata.name);
+                    log.error(metadata.name + "COMMIT FAILURE: commit failure, resume may create duplicates");
                 }
             }
         }
@@ -244,7 +250,9 @@ public class ComputationRunner implements Runnable {
                 if (record.watermark == 0) {
                     record.watermark = lowWatermark.getLow().getValue();
                 } else if (record.watermark < lowWatermark.getLow().getValue()) {
-                    // System.out.println("Disorder " + metadata.name + " send older message " + record.watermark + " " + lowWatermark);
+                    if (log.isTraceEnabled()) {
+                        log.trace(metadata.name + " send record in DISORDER " + record.watermark + " " + lowWatermark);
+                    }
                     lowWatermark.mark(record.watermark);
                 }
                 stream.appendRecord(record);

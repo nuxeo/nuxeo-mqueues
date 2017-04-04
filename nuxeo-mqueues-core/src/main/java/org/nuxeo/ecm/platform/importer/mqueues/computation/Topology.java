@@ -51,7 +51,6 @@ public class Topology {
         } catch (DirectedAcyclicGraph.CycleFoundException e) {
             throw new IllegalStateException("Cycle found in topology: " + e.getMessage(), e);
         }
-        System.out.println(dag.toString());
     }
 
     /**

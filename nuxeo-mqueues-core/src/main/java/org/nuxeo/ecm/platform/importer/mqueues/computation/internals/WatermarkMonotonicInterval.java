@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 
 /**
@@ -27,6 +29,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
  * @since 9.1
  */
 public class WatermarkMonotonicInterval {
+    private static final Log log = LogFactory.getLog(WatermarkMonotonicInterval.class);
+
     private Watermark lowest = Watermark.LOWEST;
     private volatile Watermark low = Watermark.LOWEST;
     private Watermark high = Watermark.LOWEST;
@@ -43,8 +47,8 @@ public class WatermarkMonotonicInterval {
             low = high = watermark;
         } else if (watermark.compareTo(low) < 0) {
             if (watermark.compareTo(lowest) < 0) {
-                // low watermark must increase
-                // System.out.println("rejected mark to low");
+                // low watermark must increase to be monotonic
+                log.trace("receive too low watermark, rejected " + watermark + " lowest: " + lowest);
                 low = lowest;
             } else {
                 low = watermark;
