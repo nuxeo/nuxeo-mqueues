@@ -16,12 +16,12 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
+package org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq;
 
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 
@@ -32,21 +32,21 @@ import java.util.Objects;
 /**
  * @since 9.1
  */
-public class StreamImpl implements Stream {
+public class StreamMQ implements Stream {
 
     private final Path basePath;
     private final String name;
     private final int partitions;
     private final MQueues<Record> mQueues;
 
-    public StreamImpl(Path basePath, String name, int partitions) {
+    public StreamMQ(Path basePath, String name, int partitions) {
         this.basePath = basePath;
         this.name = name;
         this.partitions = partitions;
         this.mQueues = new CQMQueues<>(new File(basePath.toFile(), name), partitions);
     }
 
-    public StreamImpl(Path basePath, String name) {
+    public StreamMQ(Path basePath, String name) {
         this.basePath = basePath;
         this.name = name;
         this.mQueues = new CQMQueues<>(new File(basePath.toFile(), name));
@@ -78,7 +78,7 @@ public class StreamImpl implements Stream {
 
     @Override
     public StreamTailer createTailerForPartition(String group, int i) {
-        return new StreamTailerImpl(name, mQueues.createTailer(i, group));
+        return new StreamTailerMQ(name, mQueues.createTailer(i, group));
     }
 
     @Override

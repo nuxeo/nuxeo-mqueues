@@ -22,8 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
 import java.time.Duration;
 import java.util.ArrayList;

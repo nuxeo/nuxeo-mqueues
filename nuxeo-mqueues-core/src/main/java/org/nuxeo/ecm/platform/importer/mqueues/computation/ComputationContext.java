@@ -27,15 +27,15 @@ public interface ComputationContext {
     /**
      * Set local state for a given key.
      *
-     * @param key: Key to set in local store.
-     * @param binaryValue: Value to store at key.
+     * @param key Key to set in local store.
+     * @param binaryValue Value to store at key.
      */
     void setState(final String key, final byte[] binaryValue);
 
     /**
      * Get local state for a given key
      *
-     * @param key: Key to receive from local store.
+     * @param key Key to receive from local store.
      * @return the state executed upon data retrieval.
      */
     byte[] getState(final String key);
@@ -43,21 +43,16 @@ public interface ComputationContext {
     /**
      * Register a timer callback for some point in the future
      *
-     * @param key:  Name of the timer callback.
-     * @param time: The (ms since epoch) at which the callback should
-     *              be fired
+     * @param key Name of the timer callback.
+     * @param time  The (ms since epoch) at which the callback should be fired
      */
     void setTimer(final String key, final long time);
 
-    void removeTimer(String key);
-
     /**
-     * Emit a record downstream. Records are send effectively when the commit flag is set, {@link #setCommit(boolean)}.
+     * Emit a record downstream. Records are send effectively on checkpoint using {@link #askForCheckpoint()}.
      *
-     * @param streamName: The name of the stream on which the record should
-     *                    be emitted.
-     * @param key:  The key associated with the record. Only relevant
-     *                    when routing method is `GROUP_BY`.
+     * @param streamName The name of the stream on which the record should be emitted.
+     * @param key The key associated with the record. Only relevant when routing method is `GROUP_BY`.
      * @param data: The binary blob to send downstream.
      */
     void produceRecord(final String streamName, final String key, final byte[] data);
@@ -70,7 +65,7 @@ public interface ComputationContext {
     void setSourceLowWatermark(long watermark);
 
     /**
-     * When true the records are send and offset saved.
+     * Ask for checkpoint to send records, save input stream offset position.
      */
-    void setCommit(boolean commit);
+    void askForCheckpoint();
 }

@@ -16,7 +16,7 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation;
+package org.nuxeo.ecm.platform.importer.mqueues.computation.spi;
 
 
 import java.util.Map;

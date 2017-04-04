@@ -22,10 +22,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.StreamsImpl;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq.StreamsMQ;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -49,7 +49,7 @@ public class TestStream {
 
     @Test
     public void testStreams() throws Exception {
-        Streams streams = new StreamsImpl(folder.newFolder().toPath());
+        Streams streams = new StreamsMQ(folder.newFolder().toPath());
         Stream stream = streams.getOrCreateStream("foo", 10);
         assertEquals(stream.getName(), "foo");
         assertEquals(stream.getPartitions(), 10);
@@ -65,7 +65,7 @@ public class TestStream {
 
     @Test
     public void testStream() throws Exception {
-        Streams streams = new StreamsImpl(folder.newFolder().toPath());
+        Streams streams = new StreamsMQ(folder.newFolder().toPath());
         Stream stream = streams.getOrCreateStream("foo", 1);
         assertEquals(stream.getName(), "foo");
 
@@ -105,7 +105,7 @@ public class TestStream {
 
     @Test
     public void testNullRecord() throws Exception {
-        Streams streams = new StreamsImpl(folder.newFolder().toPath());
+        Streams streams = new StreamsMQ(folder.newFolder().toPath());
         Stream stream = streams.getOrCreateStream("foo", 1);
 
         stream.appendRecord("foo", null);
@@ -133,13 +133,13 @@ public class TestStream {
         final int partitions = 1;
         final String name = "foo";
         Path base = folder.newFolder().toPath();
-        try (Streams streams = new StreamsImpl(base)) {
+        try (Streams streams = new StreamsMQ(base)) {
             Stream stream = streams.getOrCreateStream(name, partitions);
             assertEquals(name, stream.getName());
             assertEquals(partitions, stream.getPartitions());
             stream.appendRecord(Record.of("key", "value".getBytes()));
         }
-        try (Streams streams = new StreamsImpl(base)) {
+        try (Streams streams = new StreamsMQ(base)) {
             Stream stream = streams.getOrCreateStream(name, 2 * partitions);
             assertEquals(name, stream.getName());
             assertEquals(partitions, stream.getPartitions());

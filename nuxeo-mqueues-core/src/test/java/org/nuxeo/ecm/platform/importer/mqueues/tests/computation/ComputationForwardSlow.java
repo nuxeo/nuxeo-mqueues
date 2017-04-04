@@ -43,6 +43,7 @@ public class ComputationForwardSlow extends ComputationForward {
             Thread.sleep(averageDelayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
         }
         super.processRecord(context, inputStreamName, record);
     }

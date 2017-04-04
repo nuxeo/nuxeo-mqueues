@@ -23,10 +23,11 @@ import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq.StreamTailerMQ;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -67,7 +68,7 @@ public class ComputationRunner implements Runnable {
         this.partition = partition;
         this.context = new ComputationContextImpl(metadata);
 
-        this.tailers = new StreamTailerImpl[metadata.istreams.size()];
+        this.tailers = new StreamTailerMQ[metadata.istreams.size()];
         int i = 0;
         for (String streamName : metadata.istreams) {
             tailers[i++] = streams.getStream(streamName).createTailerForPartition(metadata.name, partition);
@@ -155,7 +156,7 @@ public class ComputationRunner implements Runnable {
         });
         if (timerUpdate[0]) {
             checkSourceLowWatermark();
-            commitIfNecessary();
+            checkpointIfNecessary();
             lastTimerExecution = now;
         }
 
@@ -179,7 +180,7 @@ public class ComputationRunner implements Runnable {
             computation.processRecord(context, from, record);
             checkRecordFlags(record);
             checkSourceLowWatermark();
-            commitIfNecessary();
+            checkpointIfNecessary();
         }
     }
 
@@ -201,28 +202,28 @@ public class ComputationRunner implements Runnable {
     private void checkRecordFlags(Record record) {
         if (record.flags.contains(Record.Flag.POISON_PILL)) {
             log.debug(metadata.name + " receive POISON PILL");
-            context.setCommit(true);
+            context.askForCheckpoint();
             stop = true;
         } else if (record.flags.contains(Record.Flag.COMMIT)) {
-            context.setCommit(true);
+            context.askForCheckpoint();
         }
     }
 
-    private void commitIfNecessary() {
-        if (context.isCommit()) {
+    private void checkpointIfNecessary() {
+        if (context.requireCheckpoint()) {
             boolean completed = false;
             try {
                 sendRecords();
-                saveOffsets();
                 saveTimers();
                 saveState();
+                saveOffsets();
                 lowWatermark.checkpoint();
                 // System.out.println("checkpoint " + metadata.name + " " + lowWatermark);
-                context.setCommit(false);
+                context.removeCheckpointFlag();
                 completed = true;
             } finally {
                 if (!completed) {
-                    log.error(metadata.name + "COMMIT FAILURE: commit failure, resume may create duplicates");
+                    log.error(metadata.name + "CHECKPOINT FAILURE: resume may create duplicates");
                 }
             }
         }

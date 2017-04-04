@@ -35,7 +35,7 @@ public class ComputationContextImpl implements ComputationContext {
     private final ComputationMetadataMapping metadata;
     private final Map<String, List<Record>> streamRecords;
     private final Map<String, Long> timers;
-    private boolean commitFlag = false;
+    private boolean checkpointFlag = false;
     private long lowWatermark;
 
     public ComputationContextImpl(ComputationMetadataMapping metadata) {
@@ -68,7 +68,6 @@ public class ComputationContextImpl implements ComputationContext {
         timers.put(key, time);
     }
 
-    @Override
     public void removeTimer(String key) {
         Objects.requireNonNull(key);
         timers.remove(key);
@@ -99,13 +98,18 @@ public class ComputationContextImpl implements ComputationContext {
         return lowWatermark;
     }
 
-    public boolean isCommit() {
-        return commitFlag;
+    public boolean requireCheckpoint() {
+        return checkpointFlag;
+    }
+
+    public void removeCheckpointFlag() {
+        checkpointFlag = false;
     }
 
     @Override
-    public void setCommit(boolean commit) {
-        commitFlag = commit;
+    public void askForCheckpoint() {
+        checkpointFlag = true;
     }
 
 }
+

@@ -16,8 +16,9 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation;
+package org.nuxeo.ecm.platform.importer.mqueues.computation.spi;
 
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
 
 import java.time.Duration;

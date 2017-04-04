@@ -67,7 +67,7 @@ public class ComputationRecordCounter implements Computation {
     public void processTimer(ComputationContext context, String key, long time) {
         context.produceRecord("o1", Integer.toString(count), null);
         count = 0;
-        context.setCommit(true);
+        context.askForCheckpoint();
         context.setTimer("sum", System.currentTimeMillis() + intervalMs);
     }
 

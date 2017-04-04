@@ -33,6 +33,25 @@ public class ComputationMetadata {
     /** List of streams this computation may produce on */
     public final Set<String> ostreams;
 
+    public ComputationMetadata(String name, Set<String> inputStreams, Set<String> outputStreams) {
+        this.name = Objects.requireNonNull(name);
+
+        if (inputStreams == null) {
+            this.istreams = Collections.emptySet();
+        } else {
+            this.istreams = inputStreams;
+        }
+        if (outputStreams == null) {
+            this.ostreams = Collections.emptySet();
+        } else {
+            this.ostreams = outputStreams;
+        }
+
+        if (this.istreams.isEmpty() && this.ostreams.isEmpty()) {
+            throw new RuntimeException("Both input and output streams are empty");
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -61,24 +80,5 @@ public class ComputationMetadata {
                 ", istreams=" + istreams.stream().collect(Collectors.joining(",")) +
                 ", ostreams=" + ostreams.stream().collect(Collectors.joining(",")) +
                 '}';
-    }
-
-    public ComputationMetadata(String name, Set<String> istreams, Set<String> ostreams) {
-        this.name = Objects.requireNonNull(name);
-
-        if (istreams == null) {
-            this.istreams = Collections.emptySet();
-        } else {
-            this.istreams = istreams;
-        }
-        if (ostreams == null) {
-            this.ostreams = Collections.emptySet();
-        } else {
-            this.ostreams = ostreams;
-        }
-
-        if (this.istreams.isEmpty() && this.ostreams.isEmpty()) {
-            throw new RuntimeException("Both input and output streams are empty");
-        }
     }
 }

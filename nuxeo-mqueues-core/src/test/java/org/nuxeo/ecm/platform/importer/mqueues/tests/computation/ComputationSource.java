@@ -89,7 +89,7 @@ public class ComputationSource implements Computation {
                     log.debug("Generate record: " + generated + " wm " + lastWatermark);
                 }
             }
-            context.setCommit(true);
+            context.askForCheckpoint();
             if (generated < records) {
                 context.setTimer("generate", System.currentTimeMillis());
             } else {

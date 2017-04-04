@@ -16,8 +16,10 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation;
+package org.nuxeo.ecm.platform.importer.mqueues.computation.spi;
 
+
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 
 /**
  * Stream of {@link Record}.

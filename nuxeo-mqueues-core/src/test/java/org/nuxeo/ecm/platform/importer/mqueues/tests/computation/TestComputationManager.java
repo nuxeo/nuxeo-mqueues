@@ -24,12 +24,12 @@ import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationManager;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerImpl;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.StreamsImpl;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq.StreamsMQ;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -60,7 +60,7 @@ public class TestComputationManager {
                 .setConcurrency("C1", 1)
                 .setConcurrency("C2", 2);
 
-        try (Streams streams = new StreamsImpl(folder.newFolder().toPath())) {
+        try (Streams streams = new StreamsMQ(folder.newFolder().toPath())) {
             try {
                 ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
                 manager.stop();
@@ -88,8 +88,8 @@ public class TestComputationManager {
         // one thread for each computation
         Settings settings = new Settings(concurrency);
         // uncomment to get the plantuml diagram
-        // System.out.println(topology.toPlantuml(settings));
-        try (Streams streams = new StreamsImpl(folder.newFolder().toPath())) {
+        System.out.println(topology.toPlantuml(settings));
+        try (Streams streams = new StreamsMQ(folder.newFolder().toPath())) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
             manager.start();
             long start = System.currentTimeMillis();
@@ -143,7 +143,7 @@ public class TestComputationManager {
         Settings settings = new Settings(concurrency).setExternalStreamPartitions("output", 1);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
-        try (Streams streams = new StreamsImpl(folder.newFolder().toPath())) {
+        try (Streams streams = new StreamsMQ(folder.newFolder().toPath())) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
             long start = System.currentTimeMillis();
             manager.start();
@@ -217,7 +217,7 @@ public class TestComputationManager {
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
         // 1. run generators
-        try (Streams streams = new StreamsImpl(base)) {
+        try (Streams streams = new StreamsMQ(base)) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology1, settings1);
             long start = System.currentTimeMillis();
             manager.start();
@@ -230,7 +230,7 @@ public class TestComputationManager {
         int result = 0;
         // run and abort
         for (int i = 0; i < 10; i++) {
-            try (Streams streams = new StreamsImpl(base)) {
+            try (Streams streams = new StreamsMQ(base)) {
                 ComputationManager manager = new ComputationManagerImpl(streams, topology2, settings2);
                 long start = System.currentTimeMillis();
                 System.out.println("RESUME ");
@@ -245,7 +245,7 @@ public class TestComputationManager {
         }
 
         // 2. run the rest
-        try (Streams streams = new StreamsImpl(base)) {
+        try (Streams streams = new StreamsMQ(base)) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology2, settings2);
             long start = System.currentTimeMillis();
             manager.start();
@@ -272,7 +272,7 @@ public class TestComputationManager {
 
         Settings settings1 = new Settings(concurrent);
 
-        try (Streams streams = new StreamsImpl(base)) {
+        try (Streams streams = new StreamsMQ(base)) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology1, settings1);
             long start = System.currentTimeMillis();
             manager.start();

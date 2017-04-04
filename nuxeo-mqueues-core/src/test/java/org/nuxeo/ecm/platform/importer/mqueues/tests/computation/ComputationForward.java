@@ -64,7 +64,7 @@ public class ComputationForward implements Computation {
         // dispatch record to output stream
         String outputStream = ostreamList.get(counter++ % ostreamList.size());
         context.produceRecord(outputStream, record);
-        context.setCommit(true);
+        context.askForCheckpoint();
     }
 
     @Override

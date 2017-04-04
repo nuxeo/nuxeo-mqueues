@@ -23,9 +23,9 @@ import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationManager;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
 import java.time.Duration;
 import java.util.Comparator;

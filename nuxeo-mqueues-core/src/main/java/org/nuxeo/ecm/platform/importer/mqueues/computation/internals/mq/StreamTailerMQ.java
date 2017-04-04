@@ -16,10 +16,10 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
+package org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq;
 
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.StreamTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
 
@@ -28,12 +28,12 @@ import java.time.Duration;
 /**
  * @since 9.1
  */
-public class StreamTailerImpl implements StreamTailer {
+public class StreamTailerMQ implements StreamTailer {
 
     private final MQueues.Tailer<Record> tailer;
     private final String streamName;
 
-    public StreamTailerImpl(String streamName, MQueues.Tailer<Record> tailer) {
+    public StreamTailerMQ(String streamName, MQueues.Tailer<Record> tailer) {
         this.streamName = streamName;
         this.tailer = tailer;
     }

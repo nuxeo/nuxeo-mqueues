@@ -16,10 +16,10 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
+package org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq;
 
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -27,10 +27,10 @@ import java.nio.file.Path;
 /**
  * @since 9.1
  */
-public class StreamsImpl extends Streams {
+public class StreamsMQ extends Streams {
     private final Path basePath;
 
-    public StreamsImpl(Path basePath) {
+    public StreamsMQ(Path basePath) {
         this.basePath = basePath;
     }
 
@@ -41,11 +41,11 @@ public class StreamsImpl extends Streams {
 
     @Override
     public Stream open(String name) {
-        return new StreamImpl(basePath, name);
+        return new StreamMQ(basePath, name);
     }
 
     @Override
     public Stream create(String name, int partitions) {
-        return new StreamImpl(basePath, name, partitions);
+        return new StreamMQ(basePath, name, partitions);
     }
 }

@@ -35,6 +35,9 @@ import java.util.stream.Collectors;
  * @since 9.1
  */
 public class Topology {
+    private enum VertexType {
+        COMPUTATION, STREAM
+    }
 
     private final List<ComputationMetadataMapping> metadataList; // use a list because computation are ordered using dag
     private final Map<String, ComputationMetadataMapping> metadataMap = new HashMap<>();

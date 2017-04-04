@@ -30,7 +30,7 @@ public interface Computation {
      * Gives users a first opportunity to schedule timer callbacks and
      * produce records.
      *
-     * @param context: The computation context object provided by the system.
+     * @param context The computation context object provided by the system.
      */
     void init(ComputationContext context);
 
@@ -44,18 +44,18 @@ public interface Computation {
     /**
      * Process an incoming record on one of the computation's input streams.
      *
-     * @param context: The computation context object provided by the system.
-     * @param inputStreamName: Name of the input stream that provides the record.
-     * @param record: The record.
+     * @param context The computation context object provided by the system.
+     * @param inputStreamName Name of the input stream that provides the record.
+     * @param record The record.
      */
     void processRecord(ComputationContext context, String inputStreamName, Record record);
 
     /**
      * Process a timer callback previously set via {@link ComputationContext#setTimer(String, long)}.
      *
-     * @param context: The computation context object provided by the system.
-     * @param key: The name of the timer.
-     * @param timestamp: The timestamp (in ms) for which the callback was scheduled.
+     * @param context The computation context object provided by the system.
+     * @param key The name of the timer.
+     * @param timestamp The timestamp (in ms) for which the callback was scheduled.
      */
     void processTimer(ComputationContext context, String key, long timestamp);
 
