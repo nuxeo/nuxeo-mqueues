@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * A set of {@link Stream}.
  *
- * @since 9.1
+ * @since 9.2
  */
 public abstract class Streams implements AutoCloseable {
     private final Map<String, Stream> streams = new ConcurrentHashMap<>();

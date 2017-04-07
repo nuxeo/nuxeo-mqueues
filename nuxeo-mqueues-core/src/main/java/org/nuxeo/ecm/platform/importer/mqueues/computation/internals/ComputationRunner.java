@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 /**
  * Thread driving a Computation
  *
- * @since 9.1
+ * @since 9.2
  */
 public class ComputationRunner implements Runnable {
     private static final Log log = LogFactory.getLog(ComputationRunner.class);

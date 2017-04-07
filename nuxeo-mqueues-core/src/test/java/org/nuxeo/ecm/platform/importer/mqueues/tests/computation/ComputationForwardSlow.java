@@ -22,19 +22,20 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 
 /**
+ * Same as {@link ComputationForward} but add latency on processing.
  *
  * @since 9.1
  */
 public class ComputationForwardSlow extends ComputationForward {
     private final int averageDelayMs;
 
+    public ComputationForwardSlow(String name, int inputs, int outputs) {
+        this(name, inputs, outputs, 10);
+    }
+
     public ComputationForwardSlow(String name, int inputs, int outputs, int averageDelayMs) {
         super(name, inputs, outputs);
         this.averageDelayMs = averageDelayMs;
-    }
-
-    public ComputationForwardSlow(String name, int inputs, int outputs) {
-        this(name, inputs, outputs, 10);
     }
 
     @Override

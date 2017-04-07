@@ -26,7 +26,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
  * Keep track of minimum and maximum watermark level.
  * On checkpoint move the low watermark to the previous maximum mark.
  *
- * @since 9.1
+ * @since 9.2
  */
 public class WatermarkInterval {
     private static final Log log = LogFactory.getLog(WatermarkInterval.class);

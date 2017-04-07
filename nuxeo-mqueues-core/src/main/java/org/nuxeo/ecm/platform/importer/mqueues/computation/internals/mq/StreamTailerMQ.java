@@ -26,7 +26,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
 import java.time.Duration;
 
 /**
- * @since 9.1
+ * @since 9.2
  */
 public class StreamTailerMQ implements StreamTailer {
 

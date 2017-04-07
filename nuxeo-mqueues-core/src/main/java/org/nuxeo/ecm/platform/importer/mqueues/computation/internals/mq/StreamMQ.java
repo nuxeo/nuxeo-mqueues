@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 /**
- * @since 9.1
+ * @since 9.2
  */
 public class StreamMQ implements Stream {
 

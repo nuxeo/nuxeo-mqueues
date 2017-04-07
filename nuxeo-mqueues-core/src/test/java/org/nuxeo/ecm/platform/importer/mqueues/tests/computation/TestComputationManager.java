@@ -88,7 +88,7 @@ public class TestComputationManager {
         // one thread for each computation
         Settings settings = new Settings(concurrency);
         // uncomment to get the plantuml diagram
-        System.out.println(topology.toPlantuml(settings));
+        // System.out.println(topology.toPlantuml(settings));
         try (Streams streams = new StreamsMQ(folder.newFolder().toPath())) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
             manager.start();

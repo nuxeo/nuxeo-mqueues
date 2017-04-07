@@ -21,14 +21,16 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation;
 
 
 /**
- * @since 9.1
+ * Computation receive record from input streams one at a time, it can produce record on its output streams.
+ * A timer processing can be used to windowing computation.
+ *
+ * @since 9.2
  */
 public interface Computation {
 
     /**
      * Called when the framework has registered the computation successfully.
-     * Gives users a first opportunity to schedule timer callbacks and
-     * produce records.
+     * Gives users a first opportunity to schedule timer callbacks and produce records.
      *
      * @param context The computation context object provided by the system.
      */
@@ -36,8 +38,7 @@ public interface Computation {
 
     /**
      * Called when the framework is ready to shutdown the computation.
-     * Gives users a chance to perform some cleanup before the process
-     * is killed.
+     * Gives users a chance to perform some cleanup before the process is killed.
      */
     void destroy();
 

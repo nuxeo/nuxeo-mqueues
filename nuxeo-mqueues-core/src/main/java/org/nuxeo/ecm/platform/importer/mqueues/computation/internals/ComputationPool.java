@@ -40,7 +40,7 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 /**
  * Pool of ComputationRunner
  *
- * @since 9.1
+ * @since 9.2
  */
 public class ComputationPool {
     private static final Log log = LogFactory.getLog(ComputationPool.class);

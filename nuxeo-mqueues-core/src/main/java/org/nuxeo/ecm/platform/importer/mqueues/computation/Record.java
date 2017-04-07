@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * @since 9.1
+ * @since 9.2
  */
 public class Record implements Externalizable {
     private static final EnumSet<Flag> DEFAULT_FLAG = EnumSet.of(Flag.DEFAULT);

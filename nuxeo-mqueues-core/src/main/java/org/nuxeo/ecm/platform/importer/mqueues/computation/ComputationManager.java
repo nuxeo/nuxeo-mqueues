@@ -21,7 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation;
 import java.time.Duration;
 
 /**
- * @since 9.1
+ * @since 9.2
  */
 public interface ComputationManager {
     /**

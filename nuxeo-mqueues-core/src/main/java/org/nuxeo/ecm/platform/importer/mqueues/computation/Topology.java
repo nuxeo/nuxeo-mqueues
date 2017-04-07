@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 
 
 /**
- * @since 9.1
+ * @since 9.2
  */
 public class Topology {
     private enum VertexType {

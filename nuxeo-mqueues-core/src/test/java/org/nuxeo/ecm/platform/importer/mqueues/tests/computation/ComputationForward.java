@@ -18,44 +18,29 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.AbstractComputation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Computation that read from multiple inputs and round robin records on outputs.
+ * Request for checkpoint on each record (no batching).
  *
  * @since 9.1
  */
-public class ComputationForward implements Computation {
-
-    private final ComputationMetadata metadata;
+public class ComputationForward extends AbstractComputation {
     private final List<String> ostreamList;
     private int counter = 0;
 
     public ComputationForward(String name, int inputs, int outputs) {
+        super(name, inputs, outputs);
         if (inputs <= 0) {
             throw new IllegalArgumentException("Can not forward without inputs");
         }
-        this.metadata = new ComputationMetadata(
-                name,
-                IntStream.range(1, inputs + 1).boxed().map(i -> "i" + i).collect(Collectors.toSet()),
-                IntStream.range(1, outputs + 1).boxed().map(i -> "o" + i).collect(Collectors.toSet()));
         ostreamList = new ArrayList<>(metadata.ostreams);
-    }
-
-    @Override
-    public void init(ComputationContext context) {
-    }
-
-    @Override
-    public void destroy() {
     }
 
     @Override
@@ -67,12 +52,4 @@ public class ComputationForward implements Computation {
         context.askForCheckpoint();
     }
 
-    @Override
-    public void processTimer(ComputationContext context, String key, long time) {
-    }
-
-    @Override
-    public ComputationMetadata metadata() {
-        return metadata;
-    }
 }

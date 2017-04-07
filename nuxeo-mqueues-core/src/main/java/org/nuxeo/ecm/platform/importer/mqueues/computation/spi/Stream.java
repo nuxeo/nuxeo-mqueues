@@ -31,7 +31,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
  *
  * Note that Stream is thread safe but not {@link StreamTailer}.
  *
- * @since 9.1
+ * @since 9.2
  */
 public interface Stream extends AutoCloseable {
 

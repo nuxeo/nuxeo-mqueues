@@ -25,7 +25,7 @@ import java.io.File;
 import java.nio.file.Path;
 
 /**
- * @since 9.1
+ * @since 9.2
  */
 public class StreamsMQ extends Streams {
     private final Path basePath;

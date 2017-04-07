@@ -27,7 +27,7 @@ import java.time.Duration;
  * A tailer for a partition of a Stream.
  * This is not thread safe.
  *
- * @since 9.1
+ * @since 9.2
  */
 public interface StreamTailer extends AutoCloseable {
 

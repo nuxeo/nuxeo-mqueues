@@ -18,23 +18,18 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.AbstractComputation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashSet;
 
 /**
- * Computation that count record.
+ * Computation that count input records and output counter at fixed interval.
  *
  * @since 9.1
  */
-public class ComputationRecordCounter implements Computation {
-
-    private final ComputationMetadata metadata;
+public class ComputationRecordCounter extends AbstractComputation {
     private final long intervalMs;
     private int count;
 
@@ -42,20 +37,13 @@ public class ComputationRecordCounter implements Computation {
      * Output record counter every interval.
      */
     public ComputationRecordCounter(String name, Duration interval) {
-        this.metadata = new ComputationMetadata(
-                name,
-                new HashSet<>(Arrays.asList("i1")),
-                new HashSet<>(Arrays.asList("o1")));
+        super(name, 1, 1);
         this.intervalMs = interval.toMillis();
     }
 
     @Override
     public void init(ComputationContext context) {
         context.setTimer("sum", System.currentTimeMillis() + intervalMs);
-    }
-
-    @Override
-    public void destroy() {
     }
 
     @Override
@@ -67,12 +55,8 @@ public class ComputationRecordCounter implements Computation {
     public void processTimer(ComputationContext context, String key, long time) {
         context.produceRecord("o1", Integer.toString(count), null);
         count = 0;
-        context.askForCheckpoint();
         context.setTimer("sum", System.currentTimeMillis() + intervalMs);
+        context.askForCheckpoint();
     }
 
-    @Override
-    public ComputationMetadata metadata() {
-        return metadata;
-    }
 }

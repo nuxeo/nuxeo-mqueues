@@ -20,24 +20,21 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.AbstractComputation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadata;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 
-import java.util.Collections;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 /**
- * Computation that procduce records.
+ * Source computation that produces random records.
+ *
+ * Source computation must take care of submitting ordered watermark
+ * The target timestamp is used to build the watermark of the last record.
  *
  * @since 9.1
  */
-public class ComputationSource implements Computation {
+public class ComputationSource extends AbstractComputation {
     private static final Log log = LogFactory.getLog(ComputationSource.class);
-    private final ComputationMetadata metadata;
     private final int records;
     private final int batchSize;
     private int generated = 0;
@@ -47,20 +44,14 @@ public class ComputationSource implements Computation {
         this(name, 1, 10, 3, 0);
     }
 
-    /**
-     * The targetTimestamp will be used for the last batch of record
-     */
     public ComputationSource(String name, int outputs, int records, int batchSize, long targetTimestamp) {
+        super(name, 0, outputs);
         if (outputs <= 0) {
-            throw new IllegalArgumentException("Can produce records without outputs");
+            throw new IllegalArgumentException("Can produce records without output streams");
         }
         this.records = records;
         this.batchSize = batchSize;
         this.targetTimestamp = targetTimestamp;
-        this.metadata = new ComputationMetadata(
-                name,
-                Collections.emptySet(),
-                IntStream.range(1, outputs + 1).boxed().map(i -> "o" + i).collect(Collectors.toSet()));
     }
 
     @Override
@@ -69,48 +60,41 @@ public class ComputationSource implements Computation {
     }
 
     @Override
-    public void destroy() {
-    }
-
-    @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
+        // source computation has no input
     }
 
     @Override
     public void processTimer(ComputationContext context, String key, long time) {
         if ("generate".equals(key)) {
-            long lastWatermark = 0;
-            for (int i = 0; (i < batchSize) && (generated < records); i++) {
-                Record record = getRandomRecord(++generated);
-                lastWatermark = record.watermark = getWatermark();
-                metadata.ostreams.forEach(o -> context.produceRecord(o, record));
-                // System.out.println("Generate record: " + generated + " wm " + lastWatermark);
+            int endOfBatch = Math.min(generated + batchSize, records);
+            do {
+                generated += 1;
+                metadata.ostreams.forEach(o -> context.produceRecord(o, getRandomRecord()));
                 if (generated % 100 == 0) {
-                    log.debug("Generate record: " + generated + " wm " + lastWatermark);
+                    log.debug("Generate record: " + generated + " wm " + getWatermark());
                 }
-            }
-            context.askForCheckpoint();
+            } while (generated < endOfBatch);
             if (generated < records) {
                 context.setTimer("generate", System.currentTimeMillis());
+                context.setSourceLowWatermark(getWatermark());
             } else {
-                // set computation low watermark to the target computation;
+                log.debug("Generate record terminated: " + generated + " last wm " + getWatermark());
                 context.setSourceLowWatermark(Watermark.completedOf(Watermark.ofTimestamp(targetTimestamp)).getValue());
-                log.debug("Generate record tereminated: " + generated + " wm " + lastWatermark);
             }
+            context.askForCheckpoint();
         }
     }
 
-    private long getWatermark() {
+    protected long getWatermark() {
+        // return watermark that increment up to target
         return Watermark.ofTimestamp(targetTimestamp - (records - generated)).getValue();
     }
 
-    @Override
-    public ComputationMetadata metadata() {
-        return metadata;
-    }
-
-    public Record getRandomRecord(int i) {
-        String msg = "data from " + metadata.name + " msg " + i;
-        return Record.of("key" + i, msg.getBytes());
+    protected Record getRandomRecord() {
+        String msg = "data from " + metadata.name + " msg " + generated;
+        Record ret = Record.of("key" + generated, msg.getBytes());
+        ret.watermark = getWatermark();
+        return ret;
     }
 }

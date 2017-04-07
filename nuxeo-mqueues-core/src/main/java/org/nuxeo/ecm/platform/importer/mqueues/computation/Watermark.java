@@ -29,7 +29,7 @@ import static java.lang.Math.toIntExact;
  *
  * Watermark are immutable.
  *
- * @since 9.1
+ * @since 9.2
  */
 final public class Watermark implements Comparable<Watermark> {
     final private long timestamp;

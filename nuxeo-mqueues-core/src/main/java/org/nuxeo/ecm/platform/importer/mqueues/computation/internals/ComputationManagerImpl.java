@@ -37,7 +37,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * @since 9.1
+ * @since 9.2
  */
 public class ComputationManagerImpl implements ComputationManager {
     private static final Log log = LogFactory.getLog(ComputationManagerImpl.class);
