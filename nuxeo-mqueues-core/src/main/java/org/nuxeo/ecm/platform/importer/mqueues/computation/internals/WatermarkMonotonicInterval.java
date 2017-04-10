@@ -48,7 +48,9 @@ public class WatermarkMonotonicInterval {
         } else if (watermark.compareTo(low) < 0) {
             if (watermark.compareTo(lowest) < 0) {
                 // low watermark must increase to be monotonic
-                log.trace("receive too low watermark, rejected " + watermark + " lowest: " + lowest);
+                if (log.isTraceEnabled()) {
+                    log.trace("receive too low watermark, rejected " + watermark + " lowest: " + lowest);
+                }
                 low = lowest;
             } else {
                 low = watermark;

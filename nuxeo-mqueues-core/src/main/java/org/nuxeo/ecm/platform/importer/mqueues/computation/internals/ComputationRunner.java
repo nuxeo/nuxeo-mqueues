@@ -186,8 +186,7 @@ public class ComputationRunner implements Runnable {
 
     private Duration getTimeoutDuration() {
         // Adapt the duration so we are not throttling when one of the input stream is empty
-        // TODO may remove the default min to 1ms, 0 should be ok
-        return Duration.ofMillis(Math.max(1, Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime)));
+        return Duration.ofMillis(Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime));
     }
 
     private void checkSourceLowWatermark() {

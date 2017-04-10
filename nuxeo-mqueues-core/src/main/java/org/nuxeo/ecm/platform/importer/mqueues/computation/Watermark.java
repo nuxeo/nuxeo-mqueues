@@ -125,10 +125,10 @@ final public class Watermark implements Comparable<Watermark> {
             return Integer.MAX_VALUE;
         }
         long diff = value - o.value;
-        try {
-            return toIntExact(diff);
-        } catch (ArithmeticException e) {
-            // in this case a simple int cast can return an inverted value
+        // cast diff to int when possible
+        int ret = (int) diff;
+        if (ret == diff) {
+            return ret;
         }
         if (diff > 0) {
             return Integer.MAX_VALUE;
