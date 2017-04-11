@@ -23,21 +23,30 @@ import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.work.WorkManagerImpl;
 import org.nuxeo.ecm.core.work.WorkQueueRegistry;
 import org.nuxeo.ecm.core.work.api.Work;
+import org.nuxeo.ecm.core.work.api.WorkQueueDescriptor;
 import org.nuxeo.ecm.core.work.api.WorkQueueMetrics;
 import org.nuxeo.ecm.core.work.api.WorkSchedulePath;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerImpl;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq.StreamsMQ;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
 import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.transaction.TransactionHelper;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.naming.NamingException;
+import javax.transaction.RollbackException;
+import javax.transaction.Synchronization;
+import javax.transaction.SystemException;
+import javax.transaction.Transaction;
+import javax.transaction.TransactionManager;
 
 
 /**
@@ -52,16 +61,43 @@ public class WorkManagerComputation extends WorkManagerImpl {
     protected StreamsMQ streams;
     protected WorkQueueRegistry wqRegistry;
 
+    public class WorkScheduling implements Synchronization {
+        public final Work work;
+        public final Scheduling scheduling;
+
+
+        public WorkScheduling(Work work, Scheduling scheduling) {
+            this.work = work;
+            this.scheduling = scheduling;
+        }
+
+        public void beforeCompletion() {
+        }
+
+        public void afterCompletion(int status) {
+            if (status == 3) {
+                WorkManagerComputation.this.schedule(this.work, this.scheduling, false);
+            } else {
+                if (status != 4) {
+                    throw new IllegalArgumentException("Unsupported transaction status " + status);
+                }
+            }
+
+        }
+    }
+
     @Override
     public void schedule(Work work, Scheduling scheduling, boolean afterCommit) {
         if (log.isDebugEnabled()) {
             log.debug("SCHEDULE " + work + ", to: " + work.getCategory() + ", scheduling: " + scheduling + " after commait: " + afterCommit);
         }
         String queueId = getCategoryQueueId(work.getCategory());
+        // TODO: YYYY test why this check need to be removed
         if (!isQueuingEnabled(queueId)) {
             return;
         }
         if (afterCommit && scheduleAfterCommit(work, scheduling)) {
+            System.out.println("OUT");
             return;
         }
         WorkSchedulePath.newInstance(work);
@@ -69,8 +105,18 @@ public class WorkManagerComputation extends WorkManagerImpl {
 
         // TODO choose a key with a transaction id so all jobs from the same tx are ordered ?
         String key = work.getId();
-        streams.getStream(work.getCategory()).
-                appendRecord(key, WorkComputation.serialize(work));
+        Stream stream = streams.getStream(work.getCategory());
+        if (stream == null) {
+            log.error("Unknown stream (work category): " + work.getCategory());
+            return;
+        }
+        stream.appendRecord(key, ComputationWork.serialize(work));
+    }
+
+    @Override
+    public boolean isQueuingEnabled(String queueId) {
+        WorkQueueDescriptor wqd = this.getWorkQueueDescriptor(queueId);
+        return wqd != null && wqd.isQueuingEnabled();
     }
 
     @Override
@@ -114,7 +160,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
         return ret;
     }
 
-    public void initStream() {
+    protected void initStream() {
         File dir = new File(Framework.getRuntime().getHome(), "data/streams");
         log.info("Init WorkManager Streams in: " + dir.getAbsolutePath());
         streams = new StreamsMQ(dir.toPath());
@@ -127,7 +173,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
 
     protected void initTopology() {
         Topology.Builder builder = Topology.builder();
-        wqRegistry.getQueueIds().forEach(item -> builder.addComputation(() -> new WorkComputation(item), Collections.singletonList("i1:" + item)));
+        wqRegistry.getQueueIds().forEach(item -> builder.addComputation(() -> new ComputationWork(item), Collections.singletonList("i1:" + item)));
         this.topology = builder.build();
         this.settings = new Settings(DEFAULT_CONCURRENCY);
         wqRegistry.getQueueIds().forEach(item -> settings.setConcurrency(item, wqRegistry.get(item).getMaxThreads()));
@@ -190,6 +236,65 @@ public class WorkManagerComputation extends WorkManagerImpl {
     @Override
     public List<String> listWorkIds(String s, Work.State state) {
         return null;
+    }
+
+
+    protected boolean scheduleAfterCommit(Work work, Scheduling scheduling) {
+        TransactionManager transactionManager;
+        try {
+            transactionManager = TransactionHelper.lookupTransactionManager();
+        } catch (NamingException var7) {
+            transactionManager = null;
+        }
+
+        if (transactionManager == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Not scheduling work after commit because of missing transaction manager: " + work);
+            }
+
+            return false;
+        } else {
+            try {
+                Transaction transaction = transactionManager.getTransaction();
+                if (transaction == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Not scheduling work after commit because of missing transaction: " + work);
+                    }
+
+                    return false;
+                } else {
+                    int status = transaction.getStatus();
+                    if (status == 0) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Scheduling work after commit: " + work);
+                        }
+                        transaction.registerSynchronization(new WorkManagerImpl.WorkScheduling(work, scheduling));
+                        return true;
+                    } else if (status == 3) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Scheduling work immediately: " + work);
+                        }
+
+                        return false;
+                    } else if (status == 1) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Cancelling schedule because transaction marked rollback-only: " + work);
+                        }
+
+                        return true;
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Not scheduling work after commit because transaction is in status " + status + ": " + work);
+                        }
+
+                        return false;
+                    }
+                }
+            } catch (RollbackException | SystemException var6) {
+                log.error("Cannot schedule after commit", var6);
+                return false;
+            }
+        }
     }
 
 }

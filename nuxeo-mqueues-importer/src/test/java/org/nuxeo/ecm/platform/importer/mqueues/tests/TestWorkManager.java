@@ -20,9 +20,12 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.ecm.core.security.UpdateACEStatusWork;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.work.SleepWork;
+import org.nuxeo.ecm.core.work.api.Work;
 import org.nuxeo.ecm.core.work.api.WorkManager;
+import org.nuxeo.ecm.platform.importer.mqueues.workmanager.ComputationWork;
 import org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputation;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
@@ -30,6 +33,7 @@ import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.LocalDeploy;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
@@ -44,6 +48,33 @@ public class TestWorkManager {
     public void testService() {
         WorkManagerComputation service = (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
         assertNotNull(service);
+    }
+
+    @Test
+    public void testWorkSerialization() {
+        SleepWork work = new SleepWork(1000L, "cat", true, "some-id");
+        work.setStartTime();
+        work.setStatus("Foo");
+        checkSerialization(work);
+
+        UpdateACEStatusWork work2 = new UpdateACEStatusWork();
+        checkSerialization(work2);
+    }
+
+    protected void checkSerialization(Work work) {
+        byte[] data = ComputationWork.serialize(work);
+        Work actual = ComputationWork.deserialize(data);
+        assertEqualsWork(work, actual);
+        assertEquals(work, ComputationWork.deserialize(ComputationWork.serialize(actual)));
+    }
+
+    protected void assertEqualsWork(Work expected, Work actual) {
+        assertEquals(expected.getId(), actual.getId());
+        assertEquals(expected.getCategory(), actual.getCategory());
+        assertEquals(expected.getTitle(), actual.getTitle());
+        assertEquals(expected.toString(), actual.toString());
+        assertEquals(expected.getStatus(), actual.getStatus());
+        assertEquals(expected, actual);
     }
 
     @Test

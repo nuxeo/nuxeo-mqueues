@@ -35,8 +35,8 @@ import java.io.ObjectOutputStream;
 /**
  * @since 9.2
  */
-public class WorkComputation extends AbstractComputation {
-    public WorkComputation(String name) {
+public class ComputationWork extends AbstractComputation {
+    public ComputationWork(String name) {
         super(name, 1, 0);
     }
 
