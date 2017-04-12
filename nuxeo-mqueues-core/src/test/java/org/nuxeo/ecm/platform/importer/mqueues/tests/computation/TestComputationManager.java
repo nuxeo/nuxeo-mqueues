@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -191,6 +192,7 @@ public class TestComputationManager {
         testComplexTopo(1003, 16);
     }
 
+    @Ignore("NXP-22129")
     @Test
     public void testStopAndResume() throws Exception {
         final long targetTimestamp = System.currentTimeMillis();
