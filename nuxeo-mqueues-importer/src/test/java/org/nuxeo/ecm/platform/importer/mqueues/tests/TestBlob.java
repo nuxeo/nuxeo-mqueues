@@ -120,7 +120,7 @@ public class TestBlob {
 
     private String saveBlobOnBlobProvider(String providerName, Blob blob) throws IOException {
         BlobProvider blobProvider = Framework.getService(BlobManager.class).getBlobProvider(providerName);
-        return blobProvider.writeBlob(blob, null);
+        return blobProvider.writeBlob(blob);
     }
 
     private Blob createBlob(String content, String filename) {

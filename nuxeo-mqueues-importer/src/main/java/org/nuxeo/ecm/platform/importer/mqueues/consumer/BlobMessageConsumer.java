@@ -86,7 +86,7 @@ public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
                 blob = new StringBlob(message.getContent(), null, null, null);
             }
             BlobManager.BlobInfo bi = new BlobManager.BlobInfo();
-            bi.digest = blobProvider.writeBlob(blob, null);
+            bi.digest = blobProvider.writeBlob(blob);
             bi.key = blobProviderName + ":" + bi.digest;
             bi.length = blob.getLength();
             bi.filename = message.getFilename();
