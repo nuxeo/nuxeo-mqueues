@@ -19,7 +19,7 @@
 
 package org.nuxeo.ecm.platform.importer.mqueues.producer;
 
-import org.nuxeo.ecm.core.blob.BlobManager;
+import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
 
 import java.io.BufferedReader;
@@ -74,13 +74,13 @@ public class RandomBlobInfoProvider implements AutoCloseable {
         return ret;
     }
 
-    public BlobManager.BlobInfo getBlobInfo(DocumentMessage.Builder builder) {
+    public BlobInfo getBlobInfo(DocumentMessage.Builder builder) {
         String line = getNextLine();
         String[] tokens = line.split(",");
         if (tokens.length < 6) {
             throw new IllegalArgumentException("Invalid csv file not enough field per line: " + currentFile + " " + line);
         }
-        BlobManager.BlobInfo ret = new BlobManager.BlobInfo();
+        BlobInfo ret = new BlobInfo();
         ret.key = tokens[0].trim();
         ret.digest = tokens[1].trim();
         ret.length = Long.valueOf(tokens[2].trim());

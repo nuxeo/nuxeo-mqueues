@@ -25,7 +25,7 @@ import org.nuxeo.ecm.core.api.CoreInstance;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.model.PropertyNotFoundException;
-import org.nuxeo.ecm.core.blob.BlobManager;
+import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.core.blob.SimpleManagedBlob;
 import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
 import org.nuxeo.runtime.transaction.TransactionHelper;
@@ -90,7 +90,7 @@ public class DocumentMessageConsumer extends AbstractConsumer<DocumentMessage> {
         if (message.getBlob() != null) {
             blob = message.getBlob();
         } else if (message.getBlobInfo() != null) {
-            BlobManager.BlobInfo blobInfo = message.getBlobInfo();
+            BlobInfo blobInfo = message.getBlobInfo();
             blob = new SimpleManagedBlob(blobInfo);
         }
         return blob;

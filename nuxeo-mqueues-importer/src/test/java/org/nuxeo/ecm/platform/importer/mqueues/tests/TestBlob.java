@@ -24,6 +24,7 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
+import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.core.blob.BlobManager;
 import org.nuxeo.ecm.core.blob.BlobProvider;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
@@ -81,7 +82,7 @@ public class TestBlob {
         assertEquals(17, blob.getLength());
 
         // 2. get the blob info to keep and create a ref
-        BlobManager.BlobInfo blobInfo = new BlobManager.BlobInfo();
+        BlobInfo blobInfo = new BlobInfo();
         blobInfo.key = blobProviderName + ":" + digest;
         blobInfo.digest = digest;
         blobInfo.encoding = blob.getEncoding();

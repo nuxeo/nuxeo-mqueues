@@ -21,6 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.consumer;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
+import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.core.blob.BlobManager;
 import org.nuxeo.ecm.core.blob.BlobProvider;
 import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
@@ -85,7 +86,7 @@ public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
                 // we don't submit filename or encoding this is not saved in the binary store but in the document
                 blob = new StringBlob(message.getContent(), null, null, null);
             }
-            BlobManager.BlobInfo bi = new BlobManager.BlobInfo();
+            BlobInfo bi = new BlobInfo();
             bi.digest = blobProvider.writeBlob(blob);
             bi.key = blobProviderName + ":" + bi.digest;
             bi.length = blob.getLength();
@@ -98,7 +99,7 @@ public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
         }
     }
 
-    private void saveBlobInfo(BlobManager.BlobInfo bi) {
+    private void saveBlobInfo(BlobInfo bi) {
         outputWriter.write(String.format("%s, %s, %d, \"%s\", %s, %s\n",
                 bi.key, bi.digest, bi.length, sanitize(bi.filename), sanitize(bi.mimeType), sanitize(bi.encoding)));
     }
