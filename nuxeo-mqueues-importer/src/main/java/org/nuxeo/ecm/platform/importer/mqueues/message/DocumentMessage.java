@@ -19,7 +19,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.message;
 
 import org.nuxeo.ecm.core.api.Blob;
-import org.nuxeo.ecm.core.blob.BlobManager;
+import org.nuxeo.ecm.core.blob.BlobInfo;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -40,7 +40,7 @@ public class DocumentMessage implements Message {
     private String name;
     private Map<String, Serializable> properties;
     private Blob blob;
-    private BlobManager.BlobInfo blobInfo;
+    private BlobInfo blobInfo;
 
     private DocumentMessage(Builder builder) {
         type = builder.type;
@@ -80,7 +80,7 @@ public class DocumentMessage implements Message {
         return blob;
     }
 
-    public BlobManager.BlobInfo getBlobInfo() {
+    public BlobInfo getBlobInfo() {
         return blobInfo;
     }
 
@@ -101,7 +101,7 @@ public class DocumentMessage implements Message {
         private final String type;
         private Map<String, Serializable> properties;
         private Blob blob;
-        private BlobManager.BlobInfo blobInfo;
+        private BlobInfo blobInfo;
 
         protected Builder(String type, String parentPath, String name) {
             this.type = type;
@@ -120,8 +120,8 @@ public class DocumentMessage implements Message {
             return this;
         }
 
-        public Builder setBlobInfo(BlobManager.BlobInfo blobInfo) {
-            this.blobInfo = new BlobManager.BlobInfo(blobInfo);
+        public Builder setBlobInfo(BlobInfo blobInfo) {
+            this.blobInfo = new BlobInfo(blobInfo);
             return this;
         }
 
@@ -197,7 +197,7 @@ public class DocumentMessage implements Message {
             blob = (Blob) in.readObject();
         }
         if (in.readBoolean()) {
-            blobInfo = new BlobManager.BlobInfo();
+            blobInfo = new BlobInfo();
             blobInfo.key = (String) in.readObject();
             blobInfo.digest = (String) in.readObject();
             blobInfo.length = in.readLong();
