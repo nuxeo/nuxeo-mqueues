@@ -76,12 +76,12 @@ public class ComputationRunner implements Runnable {
     }
 
     public void stop() {
-        log.debug(metadata.name + " Receives Stop signal");
+        log.debug(metadata.name + ": Receives Stop signal");
         stop = true;
     }
 
     public void drain() {
-        log.debug(metadata.name + " Receives Drain signal");
+        log.debug(metadata.name + ": Receives Drain signal");
         drain = true;
     }
 
@@ -94,17 +94,22 @@ public class ComputationRunner implements Runnable {
         } catch (InterruptedException e) {
             // this is expected when the pool is shutdownNow
             if (log.isTraceEnabled()) {
-                log.debug(metadata.name + " Interrupted", e);
+                log.debug(metadata.name + ": Interrupted", e);
             } else {
-                log.debug(metadata.name + " Interrupted");
+                log.debug(metadata.name + ": Interrupted");
             }
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            log.error(metadata.name + ": " + e.getMessage(), e);
-            throw e;
+            if (Thread.currentThread().isInterrupted()) {
+                // this can happen when pool is shutdownNow throwing ClosedByInterruptException
+                log.info(metadata.name + ": Interrupted", e);
+            } else {
+                log.error(metadata.name + ": Exception in processLoop: " + e.getMessage(), e);
+                throw e;
+            }
         } finally {
             computation.destroy();
-            log.debug(metadata.name + " Exited");
+            log.debug(metadata.name + ": Exited");
         }
     }
 
@@ -116,19 +121,19 @@ public class ComputationRunner implements Runnable {
     }
 
     private boolean continueLoop() {
-        if (stop) {
+        if (stop || Thread.currentThread().isInterrupted()) {
             return false;
         } else if (drain) {
             long now = System.currentTimeMillis();
             // for a source we take lastTimerExecution starvation
             if (metadata.istreams.isEmpty()) {
                 if (lastTimerExecution > 0 && (now - lastTimerExecution) > STARVING_TIMEOUT_MS) {
-                    log.debug(metadata.name + " End of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
+                    log.debug(metadata.name + ": End of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
                     return false;
                 }
             } else {
                 if ((now - lastReadTime) > STARVING_TIMEOUT_MS) {
-                    log.debug(metadata.name + " End of drain no more input after " + (now - lastReadTime) +
+                    log.debug(metadata.name + ": End of drain no more input after " + (now - lastReadTime) +
                             " ms, " + counterRecord + " records readed, " + counter + " reads attempt");
                     return false;
                 }
@@ -137,7 +142,7 @@ public class ComputationRunner implements Runnable {
         return true;
     }
 
-    private void processTimer() {
+    private void processTimer() throws InterruptedException {
         Map<String, Long> timers = context.getTimers();
         if (timers.isEmpty()) {
             return;
@@ -176,7 +181,7 @@ public class ComputationRunner implements Runnable {
             counterRecord++;
             lowWatermark.mark(record.watermark);
             String from = metadata.reverseMap(tailer.getStreamName());
-            // System.out.println(metadata.name + " receive from " + from + " record: " + record);
+            // System.out.println(metadata.name + ": Receive from " + from + " record: " + record);
             computation.processRecord(context, from, record);
             checkRecordFlags(record);
             checkSourceLowWatermark();
@@ -193,14 +198,14 @@ public class ComputationRunner implements Runnable {
         long watermark = context.getSourceLowWatermark();
         if (watermark > 0) {
             lowWatermark.mark(Watermark.ofValue(watermark));
-            // System.out.println(metadata.name + " set source wm " + lowWatermark);
+            // System.out.println(metadata.name + ": Set source wm " + lowWatermark);
             context.setSourceLowWatermark(0);
         }
     }
 
     private void checkRecordFlags(Record record) {
         if (record.flags.contains(Record.Flag.POISON_PILL)) {
-            log.debug(metadata.name + " receive POISON PILL");
+            log.debug(metadata.name + ": Receive POISON PILL");
             context.askForCheckpoint();
             stop = true;
         } else if (record.flags.contains(Record.Flag.COMMIT)) {
@@ -208,24 +213,35 @@ public class ComputationRunner implements Runnable {
         }
     }
 
-    private void checkpointIfNecessary() {
+    private void checkpointIfNecessary() throws InterruptedException {
         if (context.requireCheckpoint()) {
             boolean completed = false;
             try {
-                sendRecords();
-                saveTimers();
-                saveState();
-                saveOffsets();
-                lowWatermark.checkpoint();
-                // System.out.println("checkpoint " + metadata.name + " " + lowWatermark);
-                context.removeCheckpointFlag();
+                checkpoint();
                 completed = true;
             } finally {
                 if (!completed) {
-                    log.error(metadata.name + "CHECKPOINT FAILURE: resume may create duplicates");
+                    log.error(metadata.name + ": CHECKPOINT FAILURE: Resume may create duplicates.");
                 }
             }
         }
+    }
+
+    private void checkpoint() throws InterruptedException {
+        sendRecords();
+        saveTimers();
+        saveState();
+        // Simulate slow checkpoint
+//        try {
+//            Thread.sleep(1);
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            throw e;
+//        }
+        saveOffsets();
+        lowWatermark.checkpoint();
+        // System.out.println("checkpoint " + metadata.name + " " + lowWatermark);
+        context.removeCheckpointFlag();
     }
 
     private void saveTimers() {
@@ -251,7 +267,7 @@ public class ComputationRunner implements Runnable {
                     record.watermark = lowWatermark.getLow().getValue();
                 } else if (record.watermark < lowWatermark.getLow().getValue()) {
                     if (log.isTraceEnabled()) {
-                        log.trace(metadata.name + " send record in DISORDER " + record.watermark + " " + lowWatermark);
+                        log.trace(metadata.name + ": Send record in DISORDER " + record.watermark + " " + lowWatermark);
                     }
                     lowWatermark.mark(record.watermark);
                 }

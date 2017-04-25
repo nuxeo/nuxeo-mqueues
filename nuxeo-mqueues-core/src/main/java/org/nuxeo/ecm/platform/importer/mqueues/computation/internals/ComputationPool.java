@@ -117,6 +117,7 @@ public class ComputationPool {
             try {
                 threadPool.awaitTermination(1, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
+                log.warn(metadata.name + ": Interrupted in shutdown");
                 Thread.currentThread().interrupt();
             }
         }
@@ -127,11 +128,13 @@ public class ComputationPool {
     private boolean awaitPoolTermination(Duration timeout) {
         try {
             if (!threadPool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                log.warn("Timeout on wait for pool termination for: " + metadata.name);
+                log.warn(metadata.name + ": Timeout on wait for pool termination");
                 return false;
             }
         } catch (InterruptedException e) {
+            log.warn(metadata.name + ": Interrupted while waiting for pool termination");
             Thread.currentThread().interrupt();
+            return false;
         }
         return true;
     }

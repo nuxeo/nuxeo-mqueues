@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -192,7 +191,6 @@ public class TestComputationManager {
         testComplexTopo(1003, 16);
     }
 
-    @Ignore("NXP-22129")
     @Test
     public void testStopAndResume() throws Exception {
         final long targetTimestamp = System.currentTimeMillis();
@@ -215,9 +213,10 @@ public class TestComputationManager {
                 .build();
 
         Settings settings2 = new Settings(concurrent).setExternalStreamPartitions("output", 1)
-                .setConcurrency("COUNTER", 1);
+                .setConcurrency("COUNTER", concurrent);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
+
         // 1. run generators
         try (Streams streams = new StreamsMQ(base)) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology1, settings1);
@@ -230,23 +229,22 @@ public class TestComputationManager {
             System.out.println(String.format("generated :%s in %.2fs, throughput: %.2f records/s", total, elapsed, total / elapsed));
         }
         int result = 0;
-        // run and abort
+        // 2. resume and kill loop
         for (int i = 0; i < 10; i++) {
             try (Streams streams = new StreamsMQ(base)) {
                 ComputationManager manager = new ComputationManagerImpl(streams, topology2, settings2);
                 long start = System.currentTimeMillis();
-                System.out.println("RESUME ");
+                System.out.println("RESUME computations");
                 manager.start();
-                Thread.sleep(110);
-                System.out.println("KILL");
+                Thread.sleep(50 + i * 10);
+                System.out.println("KILL computations pool");
                 manager.shutdown();
                 long processed = readCounterFrom(streams, "output");
                 result += processed;
                 System.out.println("processed: " + processed + " total: " + result);
             }
         }
-
-        // 2. run the rest
+        // 3. run the rest
         try (Streams streams = new StreamsMQ(base)) {
             ComputationManager manager = new ComputationManagerImpl(streams, topology2, settings2);
             long start = System.currentTimeMillis();
@@ -256,8 +254,12 @@ public class TestComputationManager {
             // read the results
             long processed = readCounterFrom(streams, "output");
             result += processed;
-            assertEquals(2 * settings1.getConcurrency("GENERATOR") * nbRecords, result);
-            System.out.println(String.format("count: %s in %.2fs, throughput: %.2f records/s", result, elapsed, result / elapsed));
+            // the number of results can be bigger than expected, in the case of checkpoint failure
+            // some records can be reprocessed (duplicate), this is a delivery at least one, not exactly one.
+            long expected = 2 * settings1.getConcurrency("GENERATOR") * nbRecords;
+            assertTrue(expected <= result);
+            System.out.println(String.format("count: %s, expected: %s, in %.2fs, throughput: %.2f records/s",
+                    result, expected, elapsed, result / elapsed));
         }
 
     }
