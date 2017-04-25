@@ -67,7 +67,7 @@ public class StreamMQ implements Stream {
     public void appendRecord(String key, byte[] data) {
         Objects.requireNonNull(key);
         long watermark = Watermark.ofTimestamp(System.currentTimeMillis()).getValue();
-        mQueues.append(key.hashCode() % partitions, new Record(key, data, watermark, null));
+        mQueues.append((key.hashCode() & 0x7fffffff) % partitions, new Record(key, data, watermark, null));
     }
 
     @Override
