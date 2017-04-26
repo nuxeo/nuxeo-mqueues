@@ -20,7 +20,6 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
 import org.junit.Test;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkInterval;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkMonotonicInterval;
 
 import static org.junit.Assert.assertEquals;
@@ -119,11 +118,11 @@ public class TestWatermark {
 
     }
 
-    // WatermarkInterval tests
+    // WatermarkMonotonicInterval tests
 
     @Test
     public void testWmiIsDone() {
-        WatermarkInterval wmi = new WatermarkInterval();
+        WatermarkMonotonicInterval wmi = new WatermarkMonotonicInterval();
         wmi.mark(Watermark.ofTimestamp(10));
         assertTrue(wmi.isDone(9));
         assertFalse(wmi.isDone(10));
@@ -134,7 +133,7 @@ public class TestWatermark {
 
     @Test
     public void testWmiAdjustOnNullWatermark() {
-        WatermarkInterval wmi = new WatermarkInterval();
+        WatermarkMonotonicInterval wmi = new WatermarkMonotonicInterval();
         long low = wmi.mark(200000);
         assertEquals(200000, low);
         assertTrue(wmi.getLow().getTimestamp() > 0);
@@ -154,7 +153,7 @@ public class TestWatermark {
         long w2 = Watermark.ofTimestamp(t2).getValue();
         long w3 = Watermark.ofTimestamp(t3).getValue();
 
-        WatermarkInterval wmi = new WatermarkInterval();
+        WatermarkMonotonicInterval wmi = new WatermarkMonotonicInterval();
         wmi.mark(w2);
         wmi.mark(w3);
         wmi.mark(w2);
@@ -164,7 +163,7 @@ public class TestWatermark {
         assertEquals(w0, wmi.getLow().getValue());
         assertEquals(w3, wmi.getHigh().getValue());
 
-        // no checkpoint occure so nothing is done
+        // no checkpoint occurs so nothing is done
         assertFalse(wmi.getLow().isCompleted());
         assertFalse(wmi.isDone(t0));
         assertFalse(wmi.isDone(t3));
@@ -178,18 +177,15 @@ public class TestWatermark {
         assertTrue(wmi.getLow().getValue() > w3);
         assertEquals(t3, wmi.getLow().getTimestamp());
 
-        // mark with older watermark
+        // we can not go lower than the last checkpointed value
         wmi.mark(w0);
-        assertFalse(wmi.getLow().isCompleted());
-        assertEquals(w0, wmi.getLow().getValue());
-        assertFalse(wmi.isDone(t0));
-        assertFalse(wmi.isDone(t3));
+        assertEquals(t3, wmi.getLow().getTimestamp());
+        assertTrue(wmi.isDone(t3));
 
-        // checkpoint after w0
         wmi.checkpoint();
         assertTrue(wmi.getLow().isCompleted());
-        assertTrue(wmi.isDone(t0));
-        assertFalse(wmi.isDone(t1));
+        assertEquals(t3, wmi.getLow().getTimestamp());
+        assertTrue(wmi.isDone(t3));
     }
 
     @Test
@@ -204,7 +200,7 @@ public class TestWatermark {
         long w3 = Watermark.ofTimestamp(t0, (short) 3).getValue();
 
         Watermark x = Watermark.ofValue(w0);
-        WatermarkInterval wmi = new WatermarkInterval();
+        WatermarkMonotonicInterval wmi = new WatermarkMonotonicInterval();
         wmi.mark(w2);
         wmi.mark(w0);
         wmi.mark(w1);
@@ -218,15 +214,14 @@ public class TestWatermark {
         assertEquals(t0, wmi.getLow().getTimestamp());
         assertTrue(wmi.isDone(t0));
         assertFalse(wmi.isDone(t1));
+        assertEquals(w3 + 1, wmi.getLow().getValue());
 
-        // mark with a smaller wm
+        // mark with a smaller wm, but low stay on last checkpointed
         wmi.mark(w1);
-        assertEquals(w1, wmi.getLow().getValue());
+        assertEquals(w3 + 1, wmi.getLow().getValue());
 
         wmi.checkpoint();
-        System.out.println(wmi);
-        assertTrue(wmi.getLow().getValue() > w1);
-        assertTrue(w2 > wmi.getLow().getValue());
+        assertEquals(w3 + 1, wmi.getLow().getValue());
     }
 
 
@@ -237,7 +232,7 @@ public class TestWatermark {
         long w1 = Watermark.ofTimestamp(t0, (short) 1).getValue();
         long w2 = Watermark.ofTimestamp(t0, (short) 2).getValue();
 
-        WatermarkInterval wmi = new WatermarkInterval();
+        WatermarkMonotonicInterval wmi = new WatermarkMonotonicInterval();
         wmi.mark(w0);
         wmi.checkpoint();
 
@@ -255,18 +250,18 @@ public class TestWatermark {
 
     @Test
     public void testWmiLimits() {
-        WatermarkInterval wmi = new WatermarkInterval();
+        WatermarkMonotonicInterval wmi = new WatermarkMonotonicInterval();
         // checkpoint without mark
         wmi.checkpoint();
         assertTrue(wmi.getLow().isCompleted());
 
         // default low and high
-        wmi = new WatermarkInterval();
+        wmi = new WatermarkMonotonicInterval();
         assertEquals(Watermark.LOWEST, wmi.getLow());
         assertEquals(Watermark.LOWEST, wmi.getHigh());
 
         // mark lowest
-        wmi = new WatermarkInterval();
+        wmi = new WatermarkMonotonicInterval();
         wmi.mark(Watermark.LOWEST);
         long low = wmi.checkpoint();
         assertTrue(wmi.getLow().isCompleted());
@@ -276,6 +271,23 @@ public class TestWatermark {
         wmi.checkpoint();
         assertTrue(wmi.getLow().isCompleted());
         assertEquals(low, wmi.getLow().getValue());
+
+        // initial value and checkpoint
+        wmi = new WatermarkMonotonicInterval();
+        assertEquals(Watermark.LOWEST, wmi.getLow());
+        assertEquals(Watermark.LOWEST, wmi.getHigh());
+        wmi.checkpoint();
+        assertEquals(1, wmi.getLow().getValue());
+        assertEquals(Watermark.LOWEST, wmi.getHigh());
+        wmi.mark(0);
+        assertEquals(1, wmi.getLow().getValue());
+        assertEquals(Watermark.LOWEST, wmi.getHigh());
+
+        long t0 = System.currentTimeMillis();
+        wmi.mark(Watermark.ofTimestamp(t0));
+        assertEquals(t0, wmi.getHigh().getTimestamp());
+        assertEquals(1, wmi.getLow().getValue());
+
     }
 
     // test monotonic wmi

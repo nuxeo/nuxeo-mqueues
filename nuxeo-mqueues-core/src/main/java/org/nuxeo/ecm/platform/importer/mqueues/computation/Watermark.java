@@ -47,6 +47,9 @@ final public class Watermark implements Comparable<Watermark> {
     }
 
     static public Watermark ofValue(long watermarkValue) {
+        if (watermarkValue < 0) {
+            throw new IllegalArgumentException("Watermark must be positive");
+        }
         return new Watermark(
                 watermarkValue >> 17,
                 (short) ((watermarkValue >> 1) & 0xFFFF),
@@ -83,11 +86,7 @@ final public class Watermark implements Comparable<Watermark> {
     }
 
     public boolean isDone(long timestamp) {
-        if (this.timestamp > timestamp) {
-            return true;
-        }
-        // here sequence are not taken in account ?
-        return completed && (this.timestamp == timestamp);
+        return Watermark.ofTimestamp(timestamp).compareTo(this) < 0;
     }
 
     @Override
@@ -99,7 +98,6 @@ final public class Watermark implements Comparable<Watermark> {
         if (completed != watermark.completed) return false;
         if (timestamp != watermark.timestamp) return false;
         return sequence == watermark.sequence;
-
     }
 
     @Override

@@ -53,6 +53,15 @@ public class Record implements Externalizable {
         this.flags = flags;
     }
 
+    @Override
+    public String toString() {
+        return "Record{" +
+                "watermark=" + watermark +
+                ", flags=" + flags +
+                ", key='" + key + '\'' +
+                ", data.length=" + ((data == null) ? 0 : data.length) +
+                '}';
+    }
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {

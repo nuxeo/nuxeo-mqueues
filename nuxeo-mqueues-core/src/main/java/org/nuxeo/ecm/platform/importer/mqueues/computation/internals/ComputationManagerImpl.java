@@ -85,15 +85,15 @@ public class ComputationManagerImpl implements ComputationManager {
 
     @Override
     public void shutdown() {
-        log.debug("Shutdowning ...");
+        log.debug("Shutdown ...");
         pools.parallelStream().forEach(ComputationPool::shutdown);
-        log.debug("Shutdowned");
+        log.debug("Shutdown done");
     }
 
 
     @Override
     public long getLowWatermark() {
-        long ret = pools.stream().map(ComputationPool::getLowWatermark).min(Comparator.naturalOrder()).get();
+        long ret = pools.stream().map(ComputationPool::getLowWatermark).min(Comparator.naturalOrder()).orElse(0L);
         if (log.isTraceEnabled()) {
             log.trace("lowWatermark: " + ret);
             // topology.metadataList().forEach(meta -> System.out.println("  low " + meta.name + " : \t" + getLowWatermark(meta.name)));
@@ -104,7 +104,9 @@ public class ComputationManagerImpl implements ComputationManager {
     @Override
     public long getLowWatermark(String computationName) {
         Objects.nonNull(computationName);
-        return pools.stream().filter(pool -> computationName.equals(pool.getComputationName())).map(ComputationPool::getLowWatermark).min(Comparator.naturalOrder()).get();
+        // TODO: fix this sound wrong it should be the min of all ancestors computation, not only the computation
+        return pools.stream().filter(pool -> computationName.equals(pool.getComputationName()))
+                .map(ComputationPool::getLowWatermark).min(Comparator.naturalOrder()).orElse(0L);
     }
 
     @Override

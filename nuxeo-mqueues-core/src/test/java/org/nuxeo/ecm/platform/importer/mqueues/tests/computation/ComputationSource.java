@@ -75,11 +75,17 @@ public class ComputationSource extends AbstractComputation {
                     log.debug("Generate record: " + generated + " wm " + getWatermark());
                 }
             } while (generated < endOfBatch);
+//            try {
+//                Thread.sleep(100);
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//                throw new RuntimeException(e);
+//            }
             if (generated < records) {
                 context.setTimer("generate", System.currentTimeMillis());
                 context.setSourceLowWatermark(getWatermark());
             } else {
-                log.debug("Generate record terminated: " + generated + " last wm " + getWatermark());
+                log.info("Generate record terminated: " + generated + " last wm " + getWatermark());
                 context.setSourceLowWatermark(Watermark.completedOf(Watermark.ofTimestamp(targetTimestamp)).getValue());
             }
             context.askForCheckpoint();

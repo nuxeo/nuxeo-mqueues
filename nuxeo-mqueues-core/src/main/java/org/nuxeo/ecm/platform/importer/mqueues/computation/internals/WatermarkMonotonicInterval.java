@@ -30,18 +30,25 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
  */
 public class WatermarkMonotonicInterval {
     private static final Log log = LogFactory.getLog(WatermarkMonotonicInterval.class);
-
-    private Watermark lowest = Watermark.LOWEST;
     private volatile Watermark low = Watermark.LOWEST;
+    private Watermark lowest = Watermark.LOWEST;
     private Watermark high = Watermark.LOWEST;
 
     public WatermarkMonotonicInterval() {
     }
 
+    /**
+     * Take in account the watermark.<br/>
+     * Not thread safe.
+     */
     public long mark(long watermarkValue) {
         return mark(Watermark.ofValue(watermarkValue));
     }
 
+    /**
+     * Take in account the watermark.<br/>
+     * Not thread safe.
+     */
     public long mark(Watermark watermark) {
         if (low == Watermark.LOWEST) {
             low = high = watermark;
@@ -62,10 +69,13 @@ public class WatermarkMonotonicInterval {
         return low.getValue();
     }
 
+    /**
+     * Move the low watermark to the highest mark.
+     * Returns the low watermark that should be monotonic (the value returned here never decrease).<br/>
+     * Not thread safe.
+     */
     public long checkpoint() {
-        low = high;
-        high = Watermark.LOWEST;
-        low = Watermark.completedOf(low);
+        low = Watermark.completedOf(high);
         lowest = low;
         // System.out.println(low);
         return low.getValue();
@@ -75,6 +85,10 @@ public class WatermarkMonotonicInterval {
         return low.isDone(timestamp);
     }
 
+    /**
+     * Returns the low mark. The value can decrease but not under the last checkpoint value.<br/>
+     * Thread safe usage.
+     */
     public Watermark getLow() {
         return low;
     }
@@ -90,4 +104,5 @@ public class WatermarkMonotonicInterval {
                 ", high=" + high +
                 '}';
     }
+
 }

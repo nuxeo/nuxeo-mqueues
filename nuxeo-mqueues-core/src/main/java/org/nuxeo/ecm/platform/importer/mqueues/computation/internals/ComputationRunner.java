@@ -264,12 +264,8 @@ public class ComputationRunner implements Runnable {
             for (Record record : context.getRecords(ostream)) {
                 // System.out.println(metadata.name + " send record to " + ostream + " lowwm " + lowWatermark);
                 if (record.watermark == 0) {
+                    // use low watermark when not set
                     record.watermark = lowWatermark.getLow().getValue();
-                } else if (record.watermark < lowWatermark.getLow().getValue()) {
-                    if (log.isTraceEnabled()) {
-                        log.trace(metadata.name + ": Send record in DISORDER " + record.watermark + " " + lowWatermark);
-                    }
-                    lowWatermark.mark(record.watermark);
                 }
                 stream.appendRecord(record);
             }
