@@ -24,6 +24,7 @@ import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
@@ -43,11 +44,11 @@ public class TestToplogy {
     public void testTopology() throws Exception {
 
         Topology topology = Topology.builder()
-                .addComputation(() -> new ComputationSource("C1"), Arrays.asList("o1:s1"))
+                .addComputation(() -> new ComputationSource("C1"), Collections.singletonList("o1:s1"))
                 .addComputation(() -> new ComputationForward("C2", 1, 2), Arrays.asList("i1:s1", "o1:s2", "o2:s3"))
                 .addComputation(() -> new ComputationForward("C3", 2, 1), Arrays.asList("i1:s1", "i2:s4", "o1:output"))
                 .addComputation(() -> new ComputationForward("C4", 1, 2), Arrays.asList("i1:s2", "o1:output", "o2:s4"))
-                .addComputation(() -> new ComputationForward("C5", 1, 0), Arrays.asList("i1:s3"))
+                .addComputation(() -> new ComputationForward("C5", 1, 0), Collections.singletonList("i1:s3"))
                 .build();
 
         assertNotNull(topology);
@@ -55,7 +56,7 @@ public class TestToplogy {
         assertEquals(5, topology.metadataList().size());
 
         assertEquals(new HashSet<>(), topology.getAncestorComputationNames("C1"));
-        assertEquals(new HashSet<>(Arrays.asList("C1")), topology.getAncestorComputationNames("C2"));
+        assertEquals(new HashSet<>(Collections.singletonList("C1")), topology.getAncestorComputationNames("C2"));
         assertEquals(new HashSet<>(Arrays.asList("C1", "C2", "C4")), topology.getAncestorComputationNames("C3"));
         assertEquals(new HashSet<>(Arrays.asList("C1", "C2")), topology.getAncestorComputationNames("C4"));
         assertEquals(new HashSet<>(Arrays.asList("C1", "C2")), topology.getAncestorComputationNames("C5"));
@@ -66,11 +67,11 @@ public class TestToplogy {
         assertTrue(topology.isSink("C5"));
         assertFalse(topology.isSink("C2"));
 
-        assertEquals(new HashSet<>(Arrays.asList("s1")), topology.getChildren("C1"));
-        assertEquals(new HashSet<>(Arrays.asList("C1")), topology.getParents("s1"));
+        assertEquals(new HashSet<>(Collections.singletonList("s1")), topology.getChildren("C1"));
+        assertEquals(new HashSet<>(Collections.singletonList("C1")), topology.getParents("s1"));
 
         assertEquals(new HashSet<>(Arrays.asList("s2", "s3")), topology.getChildren("C2"));
-        assertEquals(new HashSet<>(Arrays.asList("s1")), topology.getParents("C2"));
+        assertEquals(new HashSet<>(Collections.singletonList("s1")), topology.getParents("C2"));
 
         assertEquals(new HashSet<>(Arrays.asList("C3", "C4")), topology.getParents("output"));
         assertEquals(new HashSet<>(Arrays.asList("C1", "C2", "C3", "C4", "s1", "s2", "s4")),

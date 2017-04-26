@@ -50,8 +50,8 @@ public class TestComputation {
 
         // check expected metadata
         assertEquals("foo", comp.metadata().name);
-        assertEquals(new HashSet(Arrays.asList("i1", "i2")), comp.metadata().istreams);
-        assertEquals(new HashSet(Arrays.asList("o1", "o2", "o3", "o4")), comp.metadata().ostreams);
+        assertEquals(new HashSet<>(Arrays.asList("i1", "i2")), comp.metadata().istreams);
+        assertEquals(new HashSet<>(Arrays.asList("o1", "o2", "o3", "o4")), comp.metadata().ostreams);
 
         // create a context
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),
@@ -96,7 +96,7 @@ public class TestComputation {
         Computation comp = new ComputationSource("foo", outputStreams, nbRecordsToGenerate, batchSize, t0);
         assertEquals("foo", comp.metadata().name);
         assertEquals(Collections.emptySet(), comp.metadata().istreams);
-        assertEquals(new HashSet(Arrays.asList("o1", "o2")), comp.metadata().ostreams);
+        assertEquals(new HashSet<>(Arrays.asList("o1", "o2")), comp.metadata().ostreams);
 
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),
                 Collections.emptyMap()));
@@ -127,8 +127,8 @@ public class TestComputation {
         Duration interval = Duration.ofMillis(20);
         Computation comp = new ComputationRecordCounter("foo", interval);
         assertEquals("foo", comp.metadata().name);
-        assertEquals(new HashSet(Arrays.asList("i1")), comp.metadata().istreams);
-        assertEquals(new HashSet(Arrays.asList("o1")), comp.metadata().ostreams);
+        assertEquals(new HashSet<>(Collections.singletonList("i1")), comp.metadata().istreams);
+        assertEquals(new HashSet<>(Collections.singletonList("o1")), comp.metadata().ostreams);
 
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),
                 Collections.emptyMap()));
@@ -156,7 +156,7 @@ public class TestComputation {
         comp.processTimer(context, "sum", 0);
         // we now have 2 counter results
         assertEquals(2, context.getRecords("o1").size());
-        // the counter has been reseted
+        // the counter has been reset
         assertEquals("1", context.getRecords("o1").get(1).key);
 
     }

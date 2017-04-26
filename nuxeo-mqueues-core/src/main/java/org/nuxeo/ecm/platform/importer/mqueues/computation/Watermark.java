@@ -20,8 +20,6 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation;
 
 import java.util.Objects;
 
-import static java.lang.Math.toIntExact;
-
 /**
  * Watermark represents a point in time.
  * This point in time is composed of a millisecond timestamp and a sequence.

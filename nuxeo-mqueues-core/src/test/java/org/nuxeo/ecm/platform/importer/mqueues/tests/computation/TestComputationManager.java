@@ -34,6 +34,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -50,9 +51,9 @@ public class TestComputationManager {
     @Test
     public void testConflictSettings() throws Exception {
         Topology topology = Topology.builder()
-                .addComputation(() -> new ComputationSource("C1"), Arrays.asList("o1:s1"))
-                .addComputation(() -> new ComputationForward("C2", 1, 0), Arrays.asList("i1:s1"))
-                .addComputation(() -> new ComputationForward("C3", 1, 0), Arrays.asList("i1:s1"))
+                .addComputation(() -> new ComputationSource("C1"), Collections.singletonList("o1:s1"))
+                .addComputation(() -> new ComputationForward("C2", 1, 0), Collections.singletonList("i1:s1"))
+                .addComputation(() -> new ComputationForward("C3", 1, 0), Collections.singletonList("i1:s1"))
                 .build();
         // Concurrency must be the same for all computations that share an input stream
         // Here C2 and C3 read from s1 with different concurrency
@@ -79,7 +80,7 @@ public class TestComputationManager {
         final long targetTimestamp = System.currentTimeMillis();
         final long targetWatermark = Watermark.ofTimestamp(targetTimestamp).getValue();
         Topology topology = Topology.builder()
-                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Arrays.asList("o1:s1"))
+                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Collections.singletonList("o1:s1"))
                 .addComputation(() -> new ComputationForward("C1", 1, 1), Arrays.asList("i1:s1", "o1:s2"))
                 .addComputation(() -> new ComputationForward("C2", 1, 1), Arrays.asList("i1:s2", "o1:s3"))
                 .addComputation(() -> new ComputationForward("C3", 1, 1), Arrays.asList("i1:s3", "o1:s4"))
@@ -131,7 +132,7 @@ public class TestComputationManager {
         final long targetTimestamp = System.currentTimeMillis();
         final long targetWatermark = Watermark.ofTimestamp(targetTimestamp).getValue();
         Topology topology = Topology.builder()
-                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Arrays.asList("o1:s1"))
+                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Collections.singletonList("o1:s1"))
                 .addComputation(() -> new ComputationForward("C1", 1, 2), Arrays.asList("i1:s1", "o1:s2", "o2:s3"))
                 .addComputation(() -> new ComputationForward("C2", 2, 1), Arrays.asList("i1:s1", "i2:s4", "o1:s5"))
                 .addComputation(() -> new ComputationForward("C3", 1, 2), Arrays.asList("i1:s2", "o1:s5", "o2:s4"))
@@ -199,7 +200,7 @@ public class TestComputationManager {
         final int concurrent = 32;
         final Path base = folder.newFolder().toPath();
         Topology topology1 = Topology.builder()
-                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Arrays.asList("o1:s1"))
+                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Collections.singletonList("o1:s1"))
                 .build();
 
         Settings settings1 = new Settings(concurrent);
@@ -271,7 +272,7 @@ public class TestComputationManager {
         final int concurrent = 10;
         final Path base = folder.newFolder().toPath();
         Topology topology1 = Topology.builder()
-                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Arrays.asList("o1:s1"))
+                .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Collections.singletonList("o1:s1"))
                 .build();
 
         Settings settings1 = new Settings(concurrent);

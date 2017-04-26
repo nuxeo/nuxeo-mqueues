@@ -115,7 +115,7 @@ public class Topology {
         }
     }
 
-    public ComputationMetadataMapping getMetada(String name) {
+    public ComputationMetadataMapping getMetadata(String name) {
         return metadataMap.get(name);
     }
 

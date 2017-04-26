@@ -79,6 +79,10 @@ public class TestWatermark {
         assertEquals(wm, wm2);
         assertEquals(t0, wm2.getTimestamp());
 
+        // completed of 0 is possible
+        wm = Watermark.ofTimestamp(0, (short) 0);
+        wm2 = Watermark.completedOf(wm);
+        assertTrue(wm.compareTo(wm2) < 0);
     }
 
     @Test

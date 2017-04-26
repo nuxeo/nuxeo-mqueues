@@ -140,14 +140,16 @@ public class ComputationPool {
     }
 
     public long getLowWatermark() {
-        // 1. low value of uncompleted watermark that are not 0
-        long low = runners.stream().map(ComputationRunner::getLowWatermarkUncompleted).filter(wm -> wm > 0).min(Comparator.naturalOrder()).orElse(0L);
-        if (low > 0) {
-            return low;
+        // Take the lowest positive watermark of unprocessed records for the pool
+        long ret = runners.stream().map(ComputationRunner::getLowWatermarkUncompleted).filter(wm -> wm > 0)
+                .min(Comparator.naturalOrder()).orElse(0L);
+        if (ret == 0) {
+            // There is no pending records, the low watermark is the highest completed watermark
+            // (filter is used to remove the special case of 1 which is the completed value of 0)
+            ret = runners.stream().map(ComputationRunner::getLowWatermarkCompleted).filter(wm -> wm > 1)
+                    .max(Comparator.naturalOrder()).orElse(0L);
         }
-        // 2. max value of completed job that are not null
-        low = runners.stream().map(ComputationRunner::getLowWatermarkCompleted).max(Comparator.naturalOrder()).orElse(0L);
-        return low;
+        return ret;
     }
 
     protected static class NamedThreadFactory implements ThreadFactory {
