@@ -30,6 +30,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -44,6 +45,7 @@ public class ComputationRunner implements Runnable {
     private static final Log log = LogFactory.getLog(ComputationRunner.class);
     private static final long STARVING_TIMEOUT_MS = 500;
     public static final Duration READ_TIMEOUT = Duration.ofMillis(25);
+
     private final ComputationContextImpl context;
     private final int partition;
     private final Streams streams;
@@ -51,15 +53,17 @@ public class ComputationRunner implements Runnable {
     private final StreamTailer[] tailers;
     private final Supplier<Computation> supplier;
 
-    private Computation computation;
     private volatile boolean stop = false;
     private volatile boolean drain = false;
+
+    private Computation computation;
     private long counter = 0;
     private long counterRecord = 0;
     // private final WatermarkInterval lowWatermark = new WatermarkInterval();
     private final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
     private long lastReadTime = System.currentTimeMillis();
     private long lastTimerExecution = 0;
+    private String threadName;
 
     public ComputationRunner(Supplier<Computation> supplier, ComputationMetadataMapping metadata, int partition, Streams streams) {
         this.supplier = supplier;
@@ -87,6 +91,7 @@ public class ComputationRunner implements Runnable {
 
     @Override
     public void run() {
+        threadName = Thread.currentThread().getName();
         computation = supplier.get();
         computation.init(context);
         try {
@@ -109,8 +114,20 @@ public class ComputationRunner implements Runnable {
             }
         } finally {
             computation.destroy();
-            log.debug(metadata.name + ": Exited");
+            closeTailers();
+            log.info(metadata.name + ": Exited");
         }
+    }
+
+    private void closeTailers() {
+        Arrays.asList(tailers).stream().forEach(tailer -> {
+            try {
+                if (tailer != null)
+                    tailer.close();
+            } catch (Exception e) {
+                log.debug(metadata.name + ": Exception while closing tailer", e);
+            }
+        });
     }
 
     private void processLoop() throws InterruptedException {
@@ -128,12 +145,12 @@ public class ComputationRunner implements Runnable {
             // for a source we take lastTimerExecution starvation
             if (metadata.istreams.isEmpty()) {
                 if (lastTimerExecution > 0 && (now - lastTimerExecution) > STARVING_TIMEOUT_MS) {
-                    log.debug(metadata.name + ": End of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
+                    log.info(metadata.name + ": End of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
                     return false;
                 }
             } else {
                 if ((now - lastReadTime) > STARVING_TIMEOUT_MS) {
-                    log.debug(metadata.name + ": End of drain no more input after " + (now - lastReadTime) +
+                    log.info(metadata.name + ": End of drain no more input after " + (now - lastReadTime) +
                             " ms, " + counterRecord + " records readed, " + counter + " reads attempt");
                     return false;
                 }
@@ -161,8 +178,9 @@ public class ComputationRunner implements Runnable {
         });
         if (timerUpdate[0]) {
             checkSourceLowWatermark();
-            checkpointIfNecessary();
             lastTimerExecution = now;
+            setThreadName("timer");
+            checkpointIfNecessary();
         }
 
     }
@@ -185,6 +203,7 @@ public class ComputationRunner implements Runnable {
             computation.processRecord(context, from, record);
             checkRecordFlags(record);
             checkSourceLowWatermark();
+            setThreadName("record");
             checkpointIfNecessary();
         }
     }
@@ -242,6 +261,7 @@ public class ComputationRunner implements Runnable {
         lowWatermark.checkpoint();
         // System.out.println("checkpoint " + metadata.name + " " + lowWatermark);
         context.removeCheckpointFlag();
+        setThreadName("checkpoint");
     }
 
     private void saveTimers() {
@@ -273,17 +293,17 @@ public class ComputationRunner implements Runnable {
         }
     }
 
-    public long getLowWatermark() {
-        return lowWatermark.getLow().getValue();
+    public Watermark getLowWatermark() {
+        return lowWatermark.getLow();
     }
 
-    public long getLowWatermarkCompleted() {
-        Watermark low = lowWatermark.getLow();
-        return low.isCompleted() ? low.getValue() : 0;
-    }
-
-    public long getLowWatermarkUncompleted() {
-        Watermark low = lowWatermark.getLow();
-        return low.isCompleted() ? 0 : low.getValue();
+    private void setThreadName(String message) {
+        String name = threadName + ",records:" + counterRecord + ",lastRead:" + lastReadTime +
+                ",lastTimer:" + lastTimerExecution + ",wm:" + lowWatermark.getLow().getValue() +
+                ",loop:" + counter;
+        if (message != null) {
+            name += "," + message;
+        }
+        Thread.currentThread().setName(name);
     }
 }

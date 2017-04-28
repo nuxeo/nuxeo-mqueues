@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
 
@@ -29,11 +30,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
@@ -79,6 +82,7 @@ public class ComputationPool {
     }
 
     public void start() {
+        log.info(metadata.name + ": starting");
         threadPool = newFixedThreadPool(threads, new NamedThreadFactory(metadata.name + "Pool"));
         for (int i = 0; i < threads; i++) {
             ComputationRunner runner = new ComputationRunner(supplier, metadata, i, streams);
@@ -94,6 +98,7 @@ public class ComputationPool {
         if (threadPool == null || threadPool.isTerminated()) {
             return true;
         }
+        log.info(metadata.name + ": Draining");
         runners.forEach(ComputationRunner::drain);
         boolean ret = awaitPoolTermination(timeout);
         stop(Duration.ofSeconds(1));
@@ -104,6 +109,7 @@ public class ComputationPool {
         if (threadPool == null || threadPool.isTerminated()) {
             return true;
         }
+        log.info(metadata.name + ": Stopping");
         runners.forEach(ComputationRunner::stop);
         boolean ret = awaitPoolTermination(timeout);
         shutdown();
@@ -112,8 +118,9 @@ public class ComputationPool {
 
     public void shutdown() {
         if (threadPool != null && !threadPool.isTerminated()) {
+            log.info(metadata.name + ": Shutting down");
             threadPool.shutdownNow();
-            // give a chance to end threads with valid tailers when shutdown is followed by streams.close()
+            // give a chance to end threads with valid tailer when shutdown is followed by streams.close()
             try {
                 threadPool.awaitTermination(1, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
@@ -140,15 +147,21 @@ public class ComputationPool {
     }
 
     public long getLowWatermark() {
-        // Take the lowest positive watermark of unprocessed records for the pool
-        long ret = runners.stream().map(ComputationRunner::getLowWatermarkUncompleted).filter(wm -> wm > 0)
+        // Collect all the low watermark of the pool, filtering 0 (or 1 which is completed of 0)
+        Set<Watermark> watermarks = runners.stream().map(ComputationRunner::getLowWatermark)
+                .filter(wm -> wm.getValue() > 1).collect(Collectors.toSet());
+        // Take the lowest watermark of unprocessed (not completed) records
+        long ret = watermarks.stream().filter(wm -> !wm.isCompleted()).map(wm -> wm.getValue())
                 .min(Comparator.naturalOrder()).orElse(0L);
+        boolean pending = true;
         if (ret == 0) {
-            // There is no pending records, the low watermark is the highest completed watermark
-            // (filter is used to remove the special case of 1 which is the completed value of 0)
-            ret = runners.stream().map(ComputationRunner::getLowWatermarkCompleted).filter(wm -> wm > 1)
+            pending = false;
+            // There is no known pending records we take the max completed low watermark
+            ret = watermarks.stream().filter(wm -> wm.isCompleted()).map(wm -> wm.getValue())
                     .max(Comparator.naturalOrder()).orElse(0L);
         }
+        if (log.isTraceEnabled() && ret > 0)
+            log.trace(metadata.name + ": low: " + ret + " " + (pending ? "Pending" : "Completed"));
         return ret;
     }
 

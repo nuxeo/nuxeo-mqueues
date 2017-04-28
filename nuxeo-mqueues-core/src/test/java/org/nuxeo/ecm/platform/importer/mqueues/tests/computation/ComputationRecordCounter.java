@@ -48,6 +48,7 @@ public class ComputationRecordCounter extends AbstractComputation {
 
     @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
+        context.setSourceLowWatermark(record.watermark);
         count += 1;
     }
 
