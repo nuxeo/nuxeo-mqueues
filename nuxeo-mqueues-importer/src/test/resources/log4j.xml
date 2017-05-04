@@ -37,6 +37,18 @@
     <priority value="WARN" />
   </category>
 
+  <category name="org.nuxeo.runtime.osgi.OSGiRuntimeService">
+    <priority value="WARN"/>
+  </category>
+
+  <category name="org.nuxeo.ecm.core.work.WorkManagerImpl">
+    <priority value="WARN"/>
+  </category>
+
+  <category name="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputation">
+    <priority value="INFO"/>
+  </category>
+
   <category name="org.nuxeo.ecm.platform.importer.queue">
     <priority value="INFO" />
   </category>

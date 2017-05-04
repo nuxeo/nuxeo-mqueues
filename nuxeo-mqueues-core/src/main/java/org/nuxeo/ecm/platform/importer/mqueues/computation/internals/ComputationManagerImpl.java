@@ -93,9 +93,21 @@ public class ComputationManagerImpl implements ComputationManager {
 
     @Override
     public long getLowWatermark() {
-        long ret = pools.stream().map(ComputationPool::getLowWatermark).min(Comparator.naturalOrder()).orElse(0L);
+        Map<String, Long> watermarks = new HashMap<>(pools.size());
+        Set<String> roots = topology.getRoots();
+        Map<String, Long> watermarkTrees = new HashMap<>(roots.size());
+        // compute low watermark for each tree of computation
+        pools.forEach(pool -> watermarks.put(pool.getComputationName(), pool.getLowWatermark()));
+        for (String root : roots) {
+            watermarkTrees.put(root, topology.getDescendantComputationNames(root).stream().map(name -> watermarks.get(name))
+                    .min(Comparator.naturalOrder()).orElse(0L));
+        }
+        // return the minimum wm for all trees that are not 0
+        long ret = watermarkTrees.values().stream()
+                .filter(wm -> wm > 1).min(Comparator.naturalOrder()).orElse(0L);
         if (log.isTraceEnabled()) {
             log.trace("lowWatermark: " + ret);
+            watermarkTrees.forEach((k, v) -> log.trace("tree " + k + ": " + v));
             // topology.metadataList().forEach(meta -> System.out.println("  low " + meta.name + " : \t" + getLowWatermark(meta.name)));
         }
         return ret;
@@ -104,9 +116,13 @@ public class ComputationManagerImpl implements ComputationManager {
     @Override
     public long getLowWatermark(String computationName) {
         Objects.nonNull(computationName);
-        // TODO: fix this sound wrong it should be the min of all ancestors computation, not only the computation
-        return pools.stream().filter(pool -> computationName.equals(pool.getComputationName()))
-                .map(ComputationPool::getLowWatermark).min(Comparator.naturalOrder()).orElse(0L);
+        // the low wm for a computation is the minimum watermark for all its ancestors
+        Map<String, Long> watermarks = new HashMap<>(pools.size());
+        pools.forEach(pool -> watermarks.put(pool.getComputationName(), pool.getLowWatermark()));
+        long ret = topology.getAncestorComputationNames(computationName).stream().map(name -> watermarks.get(name))
+                .min(Comparator.naturalOrder()).orElse(0L);
+        ret = Math.min(ret, watermarks.get(computationName));
+        return ret;
     }
 
     @Override

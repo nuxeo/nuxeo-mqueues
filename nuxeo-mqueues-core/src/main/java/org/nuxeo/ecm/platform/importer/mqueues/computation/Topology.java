@@ -166,6 +166,11 @@ public class Topology {
         return dag.getDescendants(dag, start).stream().map(Vertex::getName).collect(Collectors.toSet());
     }
 
+    public Set<String> getDescendantComputationNames(String name) {
+        Vertex start = getVertex(name);
+        return dag.getDescendants(dag, start).stream().filter(vertex -> vertex.type == VertexType.COMPUTATION).map(vertex -> vertex.name).collect(Collectors.toSet());
+    }
+
     public Set<String> getChildren(String name) {
         Vertex start = getVertex(name);
         return dag.outgoingEdgesOf(start).stream().map(edge -> dag.getEdgeTarget(edge).getName()).collect(Collectors.toSet());
@@ -186,6 +191,15 @@ public class Topology {
         return dag.getAncestors(dag, start).stream().map(Vertex::getName).collect(Collectors.toSet());
     }
 
+    public Set<String> getRoots() {
+        Set<String> ret = new HashSet<>();
+        for (Vertex vertex : dag) {
+            if (dag.getAncestors(dag, vertex).isEmpty()) {
+                ret.add(vertex.getName());
+            }
+        }
+        return ret;
+    }
 
     public static class Builder {
         final Set<ComputationMetadataMapping> metadataSet = new HashSet<>();

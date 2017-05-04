@@ -82,7 +82,7 @@ public class ComputationPool {
     }
 
     public void start() {
-        log.info(metadata.name + ": starting");
+        log.info(metadata.name + ": Starting pool");
         threadPool = newFixedThreadPool(threads, new NamedThreadFactory(metadata.name + "Pool"));
         for (int i = 0; i < threads; i++) {
             ComputationRunner runner = new ComputationRunner(supplier, metadata, i, streams);
@@ -91,7 +91,7 @@ public class ComputationPool {
         }
         // close the pool no new admission
         threadPool.shutdown();
-        log.debug("Pool started for " + metadata.name + " size: " + threads);
+        log.debug(metadata.name + ": Pool started, threads: " + threads);
     }
 
     public boolean drainAndStop(Duration timeout) {

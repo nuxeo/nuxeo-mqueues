@@ -78,6 +78,10 @@ public class TestToplogy {
                 topology.getAncestors("output"));
         assertEquals(new HashSet<>(Arrays.asList("C2", "C3", "C4", "C5", "s2", "s3", "s4", "output")),
                 topology.getDescendants("s1"));
+        assertEquals(new HashSet<>(Arrays.asList("C2", "C3", "C4", "C5")),
+                topology.getDescendantComputationNames("s1"));
+
+        assertEquals(new HashSet<>(Arrays.asList("C1")), topology.getRoots());
 
         // check plantuml representation
         assertTrue(topology.toPlantuml().startsWith("@startuml"));
@@ -85,4 +89,22 @@ public class TestToplogy {
     }
 
 
+    @Test
+    public void testTopologyMultiRoot() throws Exception {
+
+        Topology topology = Topology.builder()
+                .addComputation(() -> new ComputationSource("R1"), Collections.singletonList("o1:s1"))
+                .addComputation(() -> new ComputationForward("C2", 1, 2), Arrays.asList("i1:s1", "o1:s2", "o2:s3"))
+                .addComputation(() -> new ComputationSource("R2"), Collections.singletonList("o1:s20"))
+                .addComputation(() -> new ComputationForward("C21", 1, 0), Collections.singletonList("i1:s20"))
+                .addComputation(() -> new ComputationForward("R3", 1, 1), Arrays.asList("i1:s30", "o1:s31"))
+                .build();
+
+        assertNotNull(topology);
+        assertEquals(new HashSet<>(Arrays.asList("R1", "R2", "s30")), topology.getRoots());
+        assertEquals(new HashSet<>(Arrays.asList("R3")),
+                topology.getDescendantComputationNames("s30"));
+
+
+    }
 }
