@@ -31,18 +31,20 @@ import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.test.runner.LocalDeploy;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @since 9.2
  */
-@Deploy("org.nuxeo.ecm.mqueues.importer")
+@Deploy({"org.nuxeo.ecm.mqueues.importer", "org.nuxeo.ecm.mqueues.importer.test"})
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@LocalDeploy("org.nuxeo.ecm.mqueues.work.config.test:test-workmanager-config.xml")
+// @LocalDeploy("org.nuxeo.ecm.mqueues.importer.test:test-workmanagercomputation-config.xml")
 public class TestWorkManager {
     @Test
     public void testService() {
@@ -78,11 +80,12 @@ public class TestWorkManager {
     }
 
     @Test
-    public void testSchedule() {
+    public void testSchedule() throws InterruptedException {
         WorkManagerComputation service = (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
         assertNotNull(service);
         SleepWork work = new SleepWork(1);
         service.schedule(work);
+        assertTrue(service.awaitCompletion(10, TimeUnit.SECONDS));
     }
 
 }
