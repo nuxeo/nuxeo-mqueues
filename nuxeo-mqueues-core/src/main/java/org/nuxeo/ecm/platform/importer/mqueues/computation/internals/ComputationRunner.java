@@ -58,7 +58,9 @@ public class ComputationRunner implements Runnable {
 
     private Computation computation;
     private long counter = 0;
-    private long counterRecord = 0;
+    private long inRecords = 0;
+    private long inCommitedRecords = 0;
+    private long outRecords = 0;
     // private final WatermarkInterval lowWatermark = new WatermarkInterval();
     private final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
     private long lastReadTime = System.currentTimeMillis();
@@ -93,7 +95,9 @@ public class ComputationRunner implements Runnable {
     public void run() {
         threadName = Thread.currentThread().getName();
         computation = supplier.get();
+        log.debug(metadata.name + ": Init");
         computation.init(context);
+        log.debug(metadata.name + ": Start");
         try {
             processLoop();
         } catch (InterruptedException e) {
@@ -115,7 +119,7 @@ public class ComputationRunner implements Runnable {
         } finally {
             computation.destroy();
             closeTailers();
-            log.info(metadata.name + ": Exited");
+            log.debug(metadata.name + ": Exited");
         }
     }
 
@@ -151,7 +155,7 @@ public class ComputationRunner implements Runnable {
             } else {
                 if ((now - lastReadTime) > STARVING_TIMEOUT_MS) {
                     log.info(metadata.name + ": End of drain no more input after " + (now - lastReadTime) +
-                            " ms, " + counterRecord + " records readed, " + counter + " reads attempt");
+                            " ms, " + inRecords + " records readed, " + counter + " reads attempt");
                     return false;
                 }
             }
@@ -196,7 +200,7 @@ public class ComputationRunner implements Runnable {
         Record record = tailer.read(timeoutRead);
         if (record != null) {
             lastReadTime = System.currentTimeMillis();
-            counterRecord++;
+            inRecords++;
             lowWatermark.mark(record.watermark);
             String from = metadata.reverseMap(tailer.getStreamName());
             // System.out.println(metadata.name + ": Receive from " + from + " record: " + record);
@@ -224,7 +228,7 @@ public class ComputationRunner implements Runnable {
 
     private void checkRecordFlags(Record record) {
         if (record.flags.contains(Record.Flag.POISON_PILL)) {
-            log.debug(metadata.name + ": Receive POISON PILL");
+            log.info(metadata.name + ": Receive POISON PILL");
             context.askForCheckpoint();
             stop = true;
         } else if (record.flags.contains(Record.Flag.COMMIT)) {
@@ -238,6 +242,7 @@ public class ComputationRunner implements Runnable {
             try {
                 checkpoint();
                 completed = true;
+                inCommitedRecords = inRecords;
             } finally {
                 if (!completed) {
                     log.error(metadata.name + ": CHECKPOINT FAILURE: Resume may create duplicates.");
@@ -261,6 +266,7 @@ public class ComputationRunner implements Runnable {
         lowWatermark.checkpoint();
         // System.out.println("checkpoint " + metadata.name + " " + lowWatermark);
         context.removeCheckpointFlag();
+        log.debug(metadata.name + ": checkpoint");
         setThreadName("checkpoint");
     }
 
@@ -288,6 +294,7 @@ public class ComputationRunner implements Runnable {
                     record.watermark = lowWatermark.getLow().getValue();
                 }
                 stream.appendRecord(record);
+                outRecords++;
             }
             context.getRecords(ostream).clear();
         }
@@ -298,7 +305,8 @@ public class ComputationRunner implements Runnable {
     }
 
     private void setThreadName(String message) {
-        String name = threadName + ",records:" + counterRecord + ",lastRead:" + lastReadTime +
+        String name = threadName + ",in:" + inRecords + ",inCommitted:" + inCommitedRecords + ",out:" + outRecords +
+                ",lastRead:" + lastReadTime +
                 ",lastTimer:" + lastTimerExecution + ",wm:" + lowWatermark.getLow().getValue() +
                 ",loop:" + counter;
         if (message != null) {
