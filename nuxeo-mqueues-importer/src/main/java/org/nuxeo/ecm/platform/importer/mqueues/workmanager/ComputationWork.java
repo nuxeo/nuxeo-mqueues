@@ -52,6 +52,18 @@ public class ComputationWork extends AbstractComputation {
         context.askForCheckpoint();
     }
 
+    @Override
+    public void init(ComputationContext context) {
+        super.init(context);
+        try {
+            // test to prevent conflict on startup
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            Thread.interrupted();
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Work deserialize(byte[] data) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
         ObjectInput in = null;
