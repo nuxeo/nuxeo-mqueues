@@ -26,9 +26,9 @@ import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.consumer.IdMessageFactory;
 
 import java.io.File;
@@ -61,7 +61,7 @@ public class TestQueuingPattern {
 
             // submit messages
             Offset offset1 = mq.append(0, IdMessage.of("id1"));
-            // may be processed but not commited because batch is not full
+            // may be processed but not committed because batch is not full
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
             mq.append(0, IdMessage.ofForceBatch("batch now"));
@@ -72,7 +72,7 @@ public class TestQueuingPattern {
             mq.append(1, IdMessage.POISON_PILL);
 
             List<ConsumerStatus> ret = consumersFuture.get();
-            assertEquals(NB_QUEUE, ret.stream().count());
+            assertEquals(NB_QUEUE, (long) ret.size());
             assertEquals(2, ret.stream().mapToLong(r -> r.committed).sum());
         }
     }
@@ -95,7 +95,7 @@ public class TestQueuingPattern {
             mq.append(0, IdMessage.POISON_PILL);
             mq.append(0, IdMessage.of("no consumer to read this one"));
             List<ConsumerStatus> ret = consumersFuture.get();
-            assertEquals(NB_QUEUE, ret.stream().count());
+            assertEquals(NB_QUEUE, (long) ret.size());
             assertEquals(1, ret.stream().mapToLong(r -> r.batchCommit).sum());
             assertEquals(1, ret.stream().mapToLong(r -> r.committed).sum());
         }
@@ -115,7 +115,7 @@ public class TestQueuingPattern {
 
             // submit messages
             Offset offset1 = mq.append(0, IdMessage.of("id1"));
-            // may be processed but not commited because batch is not full
+            // may be processed but not committed because batch is not full
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
             mq.append(0, IdMessage.ofForceBatch("batch now"));
@@ -129,7 +129,7 @@ public class TestQueuingPattern {
             consumers.close();
 
             List<ConsumerStatus> ret = future.get();
-            assertEquals(NB_QUEUE, ret.stream().count());
+            assertEquals(NB_QUEUE, (long) ret.size());
             assertEquals(2, ret.stream().filter(s -> s.fail).count());
         }
 
@@ -164,7 +164,7 @@ public class TestQueuingPattern {
 
             // submit messages
             Offset offset1 = mq.append(0, IdMessage.of("id1"));
-            // may be processed but not commited because batch is not full
+            // may be processed but not committed because batch is not full
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
             mq.append(0, IdMessage.ofForceBatch("batch now"));

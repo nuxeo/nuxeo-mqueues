@@ -104,7 +104,7 @@ public class IdMessage implements Message {
             this.data = null;
         } else {
             int read = in.read(this.data, 0, dataLength);
-            assert(read == dataLength);
+            assert (read == dataLength);
         }
     }
 

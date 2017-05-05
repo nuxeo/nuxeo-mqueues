@@ -25,14 +25,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationManager;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerImpl;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq.StreamsMQ;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.StreamTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues.StreamsMQ;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -327,12 +327,12 @@ public class TestComputationManager {
         int partitions = streams.getStream(stream).getPartitions();
         int ret = 0;
         for (int i = 0; i < partitions; i++) {
-            ret += readCounterFromPartion(streams, stream, i);
+            ret += readCounterFromPartition(streams, stream, i);
         }
         return ret;
     }
 
-    private int readCounterFromPartion(Streams streams, String stream, int partition) throws InterruptedException {
+    private int readCounterFromPartition(Streams streams, String stream, int partition) throws InterruptedException {
         StreamTailer tailer = streams.getStream(stream).createTailerForPartition("results", partition);
         int result = 0;
         for (Record record = tailer.read(Duration.ofMillis(1)); record != null; record = tailer.read(Duration.ofMillis(1))) {

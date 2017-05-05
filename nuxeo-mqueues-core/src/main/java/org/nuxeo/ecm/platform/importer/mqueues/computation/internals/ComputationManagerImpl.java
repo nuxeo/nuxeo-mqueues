@@ -25,7 +25,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMa
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
 
 import java.time.Duration;
 import java.util.Comparator;
@@ -99,7 +99,7 @@ public class ComputationManagerImpl implements ComputationManager {
         // compute low watermark for each tree of computation
         pools.forEach(pool -> watermarks.put(pool.getComputationName(), pool.getLowWatermark()));
         for (String root : roots) {
-            watermarkTrees.put(root, topology.getDescendantComputationNames(root).stream().map(name -> watermarks.get(name))
+            watermarkTrees.put(root, topology.getDescendantComputationNames(root).stream().map(watermarks::get)
                     .min(Comparator.naturalOrder()).orElse(0L));
         }
         // return the minimum wm for all trees that are not 0
@@ -119,7 +119,7 @@ public class ComputationManagerImpl implements ComputationManager {
         // the low wm for a computation is the minimum watermark for all its ancestors
         Map<String, Long> watermarks = new HashMap<>(pools.size());
         pools.forEach(pool -> watermarks.put(pool.getComputationName(), pool.getLowWatermark()));
-        long ret = topology.getAncestorComputationNames(computationName).stream().map(name -> watermarks.get(name))
+        long ret = topology.getAncestorComputationNames(computationName).stream().map(watermarks::get)
                 .min(Comparator.naturalOrder()).orElse(0L);
         ret = Math.min(ret, watermarks.get(computationName));
         return ret;

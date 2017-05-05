@@ -22,9 +22,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 
 import java.io.File;
 import java.time.Duration;
@@ -348,7 +348,7 @@ public class TestCQMQueues {
             for (int i = 0; i < 10; i++) {
                 mQueues.append(0, IdMessage.of("id" + i));
             }
-            // each tailers have distincts commit offsets
+            // each tailers have distinct commit offsets
             try (MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0, "a");
                  MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "b")) {
 
@@ -390,7 +390,7 @@ public class TestCQMQueues {
     }
 
     @Test
-    public void commitConccurentTailer() throws Exception {
+    public void commitConcurrentTailer() throws Exception {
         final int NB_QUEUE = 1;
         final File basePath = folder.newFolder("cq");
 

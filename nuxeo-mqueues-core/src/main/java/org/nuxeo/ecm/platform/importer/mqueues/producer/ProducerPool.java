@@ -20,9 +20,10 @@ package org.nuxeo.ecm.platform.importer.mqueues.producer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.AbstractCallablePool;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.internals.AbstractCallablePool;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.producer.internals.ProducerRunner;
 
 import java.util.List;
 import java.util.concurrent.Callable;

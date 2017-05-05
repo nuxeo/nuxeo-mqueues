@@ -16,7 +16,7 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.producer;
+package org.nuxeo.ecm.platform.importer.mqueues.producer.internals;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
@@ -26,11 +26,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerIterator;
+import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerStatus;
 
 import java.util.concurrent.Callable;
 
 import static java.lang.Thread.currentThread;
-import static org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerRunner.NUXEO_METRICS_REGISTRY_NAME;
+import static org.nuxeo.ecm.platform.importer.mqueues.consumer.internals.ConsumerRunner.NUXEO_METRICS_REGISTRY_NAME;
 
 /**
  * A callable pulling a producer iterator in loop.

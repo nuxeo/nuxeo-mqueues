@@ -22,12 +22,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq.StreamTailerMQ;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.StreamTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues.StreamTailerMQ;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -59,7 +59,7 @@ public class ComputationRunner implements Runnable {
     private Computation computation;
     private long counter = 0;
     private long inRecords = 0;
-    private long inCommitedRecords = 0;
+    private long inCommittedRecords = 0;
     private long outRecords = 0;
     // private final WatermarkInterval lowWatermark = new WatermarkInterval();
     private final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
@@ -124,7 +124,7 @@ public class ComputationRunner implements Runnable {
     }
 
     private void closeTailers() {
-        Arrays.asList(tailers).stream().forEach(tailer -> {
+        Arrays.stream(tailers).forEach(tailer -> {
             try {
                 if (tailer != null)
                     tailer.close();
@@ -155,7 +155,7 @@ public class ComputationRunner implements Runnable {
             } else {
                 if ((now - lastReadTime) > STARVING_TIMEOUT_MS) {
                     log.info(metadata.name + ": End of drain no more input after " + (now - lastReadTime) +
-                            " ms, " + inRecords + " records readed, " + counter + " reads attempt");
+                            " ms, " + inRecords + " records read, " + counter + " reads attempt");
                     return false;
                 }
             }
@@ -242,7 +242,7 @@ public class ComputationRunner implements Runnable {
             try {
                 checkpoint();
                 completed = true;
-                inCommitedRecords = inRecords;
+                inCommittedRecords = inRecords;
             } finally {
                 if (!completed) {
                     log.error(metadata.name + ": CHECKPOINT FAILURE: Resume may create duplicates.");
@@ -305,7 +305,7 @@ public class ComputationRunner implements Runnable {
     }
 
     private void setThreadName(String message) {
-        String name = threadName + ",in:" + inRecords + ",inCommitted:" + inCommitedRecords + ",out:" + outRecords +
+        String name = threadName + ",in:" + inRecords + ",inCommitted:" + inCommittedRecords + ",out:" + outRecords +
                 ",lastRead:" + lastReadTime +
                 ",lastTimer:" + lastTimerExecution + ",wm:" + lowWatermark.getLow().getValue() +
                 ",loop:" + counter;

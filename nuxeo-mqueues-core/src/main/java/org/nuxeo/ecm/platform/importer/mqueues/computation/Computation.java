@@ -20,6 +20,8 @@
 package org.nuxeo.ecm.platform.importer.mqueues.computation;
 
 
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
+
 /**
  * Computation receive record from input streams one at a time, it can produce record on its output streams.
  * A timer processing can be used to windowing computation.

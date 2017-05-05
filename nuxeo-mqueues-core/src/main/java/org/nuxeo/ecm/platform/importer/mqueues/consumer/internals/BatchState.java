@@ -16,7 +16,9 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.consumer;
+package org.nuxeo.ecm.platform.importer.mqueues.consumer.internals;
+
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
 
 /**
  * Keep state of a batch according to a batch policy.

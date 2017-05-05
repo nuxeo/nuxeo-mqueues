@@ -16,12 +16,14 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
+package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
 
 import java.io.Externalizable;
 import java.io.File;
@@ -37,7 +39,6 @@ import java.util.stream.Stream;
 
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
-import static org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQTailer.DEFAULT_OFFSET_NAMESPACE;
 
 /**
  * Chronicle Queue implementation of MQueues.
@@ -105,7 +106,7 @@ public class CQMQueues<M extends Externalizable> implements MQueues<M> {
         boolean ret;
         long offsetPosition = ((CQOffset) offset).getOffset();
         int queue = ((CQOffset) offset).getQueue();
-        try (CQOffsetTracker offsetTracker = new CQOffsetTracker(basePath.toString(), queue, DEFAULT_OFFSET_NAMESPACE)) {
+        try (CQOffsetTracker offsetTracker = new CQOffsetTracker(basePath.toString(), queue, CQTailer.DEFAULT_OFFSET_NAMESPACE)) {
             ret = isProcessed(offsetTracker, offsetPosition);
             if (ret) {
                 return true;
@@ -198,7 +199,7 @@ public class CQMQueues<M extends Externalizable> implements MQueues<M> {
             try (Stream<Path> paths = Files.list(basePath.toPath())) {
                 int count = (int) paths.filter(path -> (Files.isRegularFile(path) && !path.toString().endsWith(".cq4"))).count();
                 if (count > 0) {
-                    String msg = "CQMQueues basePath: " + basePath + " contains unkown files, please choose another basePath";
+                    String msg = "CQMQueues basePath: " + basePath + " contains unknown files, please choose another basePath";
                     log.error(msg);
                     throw new IllegalArgumentException(msg);
                 }

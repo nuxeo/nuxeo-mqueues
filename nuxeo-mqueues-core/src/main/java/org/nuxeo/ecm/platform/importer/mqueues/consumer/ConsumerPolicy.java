@@ -29,6 +29,7 @@ import java.time.Duration;
  */
 public class ConsumerPolicy {
     public enum StartOffset {BEGIN, END, LAST_COMMITTED}
+
     public static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
     /**
      * Consumer policy that stop on starvation and failure.
@@ -143,7 +144,7 @@ public class ConsumerPolicy {
         }
 
         /**
-         * Consumer will wait some random time before start, to prevent wave of concurency in batch processing.
+         * Consumer will wait some random time before start, to prevent wave of concurrency in batch processing.
          */
         public Builder salted() {
             salted = true;

@@ -23,8 +23,8 @@ import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -151,13 +151,13 @@ public class ComputationPool {
         Set<Watermark> watermarks = runners.stream().map(ComputationRunner::getLowWatermark)
                 .filter(wm -> wm.getValue() > 1).collect(Collectors.toSet());
         // Take the lowest watermark of unprocessed (not completed) records
-        long ret = watermarks.stream().filter(wm -> !wm.isCompleted()).map(wm -> wm.getValue())
+        long ret = watermarks.stream().filter(wm -> !wm.isCompleted()).map(Watermark::getValue)
                 .min(Comparator.naturalOrder()).orElse(0L);
         boolean pending = true;
         if (ret == 0) {
             pending = false;
             // There is no known pending records we take the max completed low watermark
-            ret = watermarks.stream().filter(wm -> wm.isCompleted()).map(wm -> wm.getValue())
+            ret = watermarks.stream().filter(Watermark::isCompleted).map(Watermark::getValue)
                     .max(Comparator.naturalOrder()).orElse(0L);
         }
         if (log.isTraceEnabled() && ret > 0)

@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.consumer;
 
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.internals.ConsumerRunner;
+
 import java.util.List;
 
 /**

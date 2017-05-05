@@ -35,6 +35,7 @@ public class IdMessageFactory implements ConsumerFactory<IdMessage> {
     public static IdMessageFactory BUGGY = new IdMessageFactory(ConsumerType.BUGGY);
 
     protected enum ConsumerType {NOOP, BUGGY}
+
     private final ConsumerType type;
 
     protected IdMessageFactory(ConsumerType type) {

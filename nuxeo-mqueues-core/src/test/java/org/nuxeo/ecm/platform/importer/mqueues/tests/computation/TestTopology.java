@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * @since 9.1
  */
-public class TestToplogy {
+public class TestTopology {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
@@ -81,7 +81,7 @@ public class TestToplogy {
         assertEquals(new HashSet<>(Arrays.asList("C2", "C3", "C4", "C5")),
                 topology.getDescendantComputationNames("s1"));
 
-        assertEquals(new HashSet<>(Arrays.asList("C1")), topology.getRoots());
+        assertEquals(new HashSet<>(Collections.singletonList("C1")), topology.getRoots());
 
         // check plantuml representation
         assertTrue(topology.toPlantuml().startsWith("@startuml"));
@@ -102,7 +102,7 @@ public class TestToplogy {
 
         assertNotNull(topology);
         assertEquals(new HashSet<>(Arrays.asList("R1", "R2", "s30")), topology.getRoots());
-        assertEquals(new HashSet<>(Arrays.asList("R3")),
+        assertEquals(new HashSet<>(Collections.singletonList("R3")),
                 topology.getDescendantComputationNames("s30"));
 
 

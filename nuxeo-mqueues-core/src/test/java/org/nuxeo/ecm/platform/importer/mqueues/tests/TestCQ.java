@@ -133,7 +133,7 @@ public class TestCQ implements StoreFileListener {
         IdMessage srcNode2 = IdMessage.of("node2");
         ExcerptAppender app;
         ExcerptTailer tailer;
-        long index = 0;
+        long index;
         try (ChronicleQueue queue = createQueue()) {
             path = queue.file();
             app = queue.acquireAppender();

@@ -16,7 +16,7 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.consumer;
+package org.nuxeo.ecm.platform.importer.mqueues.consumer.internals;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
@@ -26,6 +26,11 @@ import net.jodah.failsafe.Execution;
 import net.openhft.chronicle.core.util.Time;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.Consumer;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.message.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 
@@ -214,7 +219,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         M message;
         while ((message = tailer.read(policy.getWaitMessageTimeout())) != null) {
             if (message.poisonPill()) {
-                log.warn("Receivce a poison pill: " + message);
+                log.warn("Receive a poison pill: " + message);
                 batch.last();
             } else {
                 try (Timer.Context ignore = acceptTimer.time()) {

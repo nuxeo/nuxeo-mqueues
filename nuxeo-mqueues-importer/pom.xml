@@ -75,7 +75,8 @@
   </dependencies>
 
   <properties>
-    <it.failsafe.argLine>-disableassertions -Xloggc:gc.log -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps</it.failsafe.argLine>
+    <it.failsafe.argLine>-disableassertions -Xloggc:gc.log -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+    </it.failsafe.argLine>
   </properties>
 
 </project>

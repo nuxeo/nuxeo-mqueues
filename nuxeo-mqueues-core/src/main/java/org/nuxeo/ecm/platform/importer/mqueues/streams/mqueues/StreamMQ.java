@@ -16,14 +16,14 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq;
+package org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues;
 
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.StreamTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.StreamTailer;
 
 import java.io.File;
 import java.nio.file.Path;

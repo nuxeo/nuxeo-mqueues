@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.producer;
 
+import org.nuxeo.ecm.platform.importer.mqueues.producer.internals.ProducerRunner;
+
 import java.util.List;
 
 /**

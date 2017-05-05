@@ -19,6 +19,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation;
 
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
+
 /**
  * @since 9.2
  */

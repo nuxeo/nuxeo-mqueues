@@ -90,16 +90,16 @@ public class Topology {
             dag.addVertex(computationVertex);
             if (metadata.ostreams != null) {
                 for (String stream : metadata.ostreams) {
-                    Vertex streamVertext = new Vertex(VertexType.STREAM, stream);
-                    dag.addVertex(streamVertext);
-                    dag.addDagEdge(computationVertex, streamVertext);
+                    Vertex streamVertex = new Vertex(VertexType.STREAM, stream);
+                    dag.addVertex(streamVertex);
+                    dag.addDagEdge(computationVertex, streamVertex);
                 }
             }
             if (metadata.istreams != null) {
                 for (String streamName : metadata.istreams) {
-                    Vertex streamVertext = new Vertex(VertexType.STREAM, streamName);
-                    dag.addVertex(streamVertext);
-                    dag.addDagEdge(streamVertext, computationVertex);
+                    Vertex streamVertex = new Vertex(VertexType.STREAM, streamName);
+                    dag.addVertex(streamVertex);
+                    dag.addDagEdge(streamVertex, computationVertex);
                 }
             }
         }

@@ -27,8 +27,8 @@ import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomDocumentMessageProducerFactory;
 

@@ -27,8 +27,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.consumer.IdMessageFactory;
@@ -63,7 +63,7 @@ public class TestBoundedQueuingPattern {
                      new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS)) {
             pret = producers.start().get();
         }
-        assertEquals(NB_PRODUCERS, pret.stream().count());
+        assertEquals(NB_PRODUCERS, (long) pret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
         // 2. Use the mq and run the consumers
@@ -73,7 +73,7 @@ public class TestBoundedQueuingPattern {
                      IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED)) {
             cret = consumers.start().get();
         }
-        assertEquals(NB_QUEUE, cret.stream().count());
+        assertEquals(NB_QUEUE, (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
     }
 
@@ -97,10 +97,10 @@ public class TestBoundedQueuingPattern {
             cret = cfuture.get();
             pret = pfuture.get();
         }
-        assertEquals(NB_PRODUCERS, pret.stream().count());
+        assertEquals(NB_PRODUCERS, (long) pret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
-        assertEquals(NB_QUEUE, cret.stream().count());
+        assertEquals(NB_QUEUE, (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
 
     }
@@ -124,7 +124,7 @@ public class TestBoundedQueuingPattern {
                      NB_PRODUCERS)) {
             pret = producers.start().get();
         }
-        assertEquals(NB_PRODUCERS, pret.stream().count());
+        assertEquals(NB_PRODUCERS, (long) pret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
         // 2. Use the mq and run the consumers
@@ -136,7 +136,7 @@ public class TestBoundedQueuingPattern {
                              .retryPolicy(new RetryPolicy().withMaxRetries(1000)).build())) {
             cret = consumers.start().get();
         }
-        assertEquals(NB_QUEUE, cret.stream().count());
+        assertEquals(NB_QUEUE, (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
         assertTrue(NB_PRODUCERS * NB_DOCUMENTS < cret.stream().mapToLong(r -> r.accepted).sum());
     }

@@ -16,7 +16,9 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
+package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles;
+
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
 
 /**
  * @since 9.1

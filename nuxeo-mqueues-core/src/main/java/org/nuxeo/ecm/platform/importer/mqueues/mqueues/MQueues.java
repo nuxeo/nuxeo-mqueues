@@ -60,7 +60,7 @@ public interface MQueues<M extends Externalizable> extends AutoCloseable {
     Tailer<M> createTailer(int queue);
 
     /**
-     * Create a new {@link Tailer} associed to a queue index, using a specified offset name space.
+     * Create a new {@link Tailer} associated to a queue index, using a specified offset name space.
      *
      * The committed offset position is shared by all tailers of the same queue with the same name.
      *

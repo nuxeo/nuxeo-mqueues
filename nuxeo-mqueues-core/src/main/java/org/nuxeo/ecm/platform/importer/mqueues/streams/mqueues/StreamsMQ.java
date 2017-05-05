@@ -16,10 +16,10 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.computation.internals.mq;
+package org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues;
 
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.spi.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
 
 import java.io.File;
 import java.nio.file.Path;

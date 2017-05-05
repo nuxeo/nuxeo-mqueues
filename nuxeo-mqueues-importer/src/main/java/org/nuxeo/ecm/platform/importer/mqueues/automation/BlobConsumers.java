@@ -32,8 +32,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.consumer.BlobMessageConsumerFacto
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 
 import java.io.File;
 import java.nio.file.Paths;

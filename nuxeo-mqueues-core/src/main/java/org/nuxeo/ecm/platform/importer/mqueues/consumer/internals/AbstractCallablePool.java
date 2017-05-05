@@ -16,7 +16,7 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.consumer;
+package org.nuxeo.ecm.platform.importer.mqueues.consumer.internals;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,7 +48,7 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
     }
 
     /**
-     * Value to return when there was an exception during excution
+     * Value to return when there was an exception during execution
      */
     protected abstract T getErrorStatus();
 

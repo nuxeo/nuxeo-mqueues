@@ -32,8 +32,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 
 import java.io.File;
 import java.time.Duration;

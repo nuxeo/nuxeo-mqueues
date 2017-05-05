@@ -1,4 +1,4 @@
-package org.nuxeo.ecm.platform.importer.mqueues.mqueues;/*
+package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles;/*
  * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,8 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;/*
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
 
 import java.io.Externalizable;
 import java.time.Duration;

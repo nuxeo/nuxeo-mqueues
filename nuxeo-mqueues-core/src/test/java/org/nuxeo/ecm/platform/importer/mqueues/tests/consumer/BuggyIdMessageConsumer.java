@@ -56,7 +56,7 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<IdMessage> {
         if (getConsumerId() == 0) {
             log.trace(" accept: " + tmp);
         }
-        // ensure that message are always bigger than the last commited one
+        // ensure that message are always bigger than the last committed one
         if (lastCommitted >= 0 && tmp <= lastCommitted) {
             String msg = "Error receive unordered message: " + tmp + " < last committed: " + lastCommitted;
             log.error(msg);
