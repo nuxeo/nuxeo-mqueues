@@ -20,6 +20,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.workmanager;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.core.event.EventServiceComponent;
 import org.nuxeo.ecm.core.work.WorkManagerImpl;
 import org.nuxeo.ecm.core.work.WorkQueueRegistry;
 import org.nuxeo.ecm.core.work.api.Work;
@@ -62,7 +63,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
     protected Settings settings;
     protected ComputationManagerImpl manager;
     protected StreamsMQ streams;
-    protected Set<String> streamIds = new HashSet<>();
+    protected final Set<String> streamIds = new HashSet<>();
 
     public class WorkScheduling implements Synchronization {
         public final Work work;
@@ -124,16 +125,17 @@ public class WorkManagerComputation extends WorkManagerImpl {
         return "default";
     }
 
-    // start after WorkManagerImpl
+    @Override
     public int getApplicationStartedOrder() {
-        return -500;
-    }
-
-    public void applicationStarted(ComponentContext context) {
-        this.init();
+        // start before the WorkManagerImpl
+        return EventServiceComponent.APPLICATION_STARTED_ORDER - 2;
     }
 
     @Override
+    public void applicationStarted(ComponentContext context) {
+        init();
+    }
+
     public void init() {
         if (started) {
             return;
@@ -143,7 +145,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
             if (started) {
                 return;
             }
-            loadRegistry();
+            supplantWorkManagerImpl();
             initTopology();
             initStream();
             startComputation();
@@ -153,9 +155,9 @@ public class WorkManagerComputation extends WorkManagerImpl {
     }
 
     /**
-     * Hack to get work queue contributions from the pristine WorkManagerImpl
+     * Hack to steal the WorkManagerImpl queue contributions.
      */
-    protected void loadRegistry() {
+    protected void supplantWorkManagerImpl() {
         WorkManagerImpl wmi = (WorkManagerImpl) Framework.getRuntime().getComponent("org.nuxeo.ecm.core.work.service");
         Class clazz = WorkManagerImpl.class;
         Field protectedField;
@@ -165,15 +167,19 @@ public class WorkManagerComputation extends WorkManagerImpl {
             throw new RuntimeException(e);
         }
         protectedField.setAccessible(true);
-        WorkQueueRegistry wqr;
+        final WorkQueueRegistry wqr;
         try {
             wqr = (WorkQueueRegistry) protectedField.get(wmi);
+            log.debug("Remove contributions from WorkManagerImpl");
+            // Removes the WorkManagerImpl so it does not create any worker pool
+            protectedField.set(wmi, new WorkQueueRegistry());
+            // TODO: should we remove workQueuingConfig registry as well ?
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
         wqr.getQueueIds().forEach(id -> workQueueConfig.addContribution(wqr.get(id)));
-        wqr.getQueueIds().forEach(id -> streamIds.add(id));
-        wqr.getQueueIds().forEach(id -> log.info("Registering : " + id));
+        streamIds.addAll(workQueueConfig.getQueueIds());
+        workQueueConfig.getQueueIds().forEach(id -> log.info("Registering : " + id));
     }
 
     protected void initStream() {
