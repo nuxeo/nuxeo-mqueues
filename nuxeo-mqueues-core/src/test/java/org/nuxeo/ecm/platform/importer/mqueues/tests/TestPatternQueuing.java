@@ -16,22 +16,17 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
-import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.consumer.IdMessageFactory;
 
-import java.io.File;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -40,19 +35,18 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class TestQueuingPattern {
-    protected static final Log log = LogFactory.getLog(TestQueuingPattern.class);
-    private static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
+public abstract class TestPatternQueuing {
+    protected static final Log log = LogFactory.getLog(TestPatternQueuing.class);
 
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+    public abstract MQueues<IdMessage> createMQ(int partitions) throws Exception;
+
+    public abstract MQueues<IdMessage> reopenMQ();
 
     @Test
     public void endWithPoisonPill() throws Exception {
         final int NB_QUEUE = 2;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE);
+        try (MQueues<IdMessage> mq = createMQ(NB_QUEUE);
              ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
                      IdMessageFactory.NOOP,
                      ConsumerPolicy.UNBOUNDED)) {
@@ -65,7 +59,7 @@ public class TestQueuingPattern {
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
             mq.append(0, IdMessage.ofForceBatch("batch now"));
-            assertTrue(mq.waitFor(offset1, Duration.ofSeconds(1)));
+            assertTrue(mq.waitFor(offset1, Duration.ofSeconds(10)));
 
             // terminate consumers
             mq.append(0, IdMessage.POISON_PILL);
@@ -80,9 +74,8 @@ public class TestQueuingPattern {
     @Test
     public void endWithPoisonPillCommitTheBatch() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE);
+        try (MQueues<IdMessage> mq = createMQ(NB_QUEUE);
              ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
                      IdMessageFactory.NOOP,
                      ConsumerPolicy.UNBOUNDED)) {
@@ -104,9 +97,8 @@ public class TestQueuingPattern {
     @Test
     public void killConsumers() throws Exception {
         final int NB_QUEUE = 2;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE);
+        try (MQueues<IdMessage> mq = createMQ(NB_QUEUE);
              ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
                      IdMessageFactory.NOOP,
                      ConsumerPolicy.UNBOUNDED)) {
@@ -119,7 +111,7 @@ public class TestQueuingPattern {
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
             mq.append(0, IdMessage.ofForceBatch("batch now"));
-            assertTrue(mq.waitFor(offset1, Duration.ofSeconds(1)));
+            assertTrue(mq.waitFor(offset1, Duration.ofSeconds(10)));
 
             // send 2 more messages
             mq.append(0, IdMessage.of("foo"));
@@ -133,7 +125,7 @@ public class TestQueuingPattern {
             assertEquals(2, ret.stream().filter(s -> s.fail).count());
         }
 
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath);
+        try (MQueues<IdMessage> mq = reopenMQ();
              ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
                      IdMessageFactory.NOOP,
                      ConsumerPolicy.UNBOUNDED)) {
@@ -153,9 +145,8 @@ public class TestQueuingPattern {
     @Test
     public void killMQueues() throws Exception {
         final int NB_QUEUE = 2;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mq = createMQ(NB_QUEUE)) {
             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
                     IdMessageFactory.NOOP,
                     ConsumerPolicy.UNBOUNDED);
@@ -168,7 +159,7 @@ public class TestQueuingPattern {
             assertFalse(mq.waitFor(offset1, Duration.ofMillis(0)));
             // send a force batch
             mq.append(0, IdMessage.ofForceBatch("batch now"));
-            assertTrue(mq.waitFor(offset1, Duration.ofSeconds(1)));
+            assertTrue(mq.waitFor(offset1, Duration.ofSeconds(10)));
 
             // send 2 more messages
             mq.append(0, IdMessage.of("foo"));
@@ -177,7 +168,7 @@ public class TestQueuingPattern {
             mq.close();
 
             // open a new mq
-            try (MQueues<IdMessage> mqBis = new CQMQueues<>(basePath)) {
+            try (MQueues<IdMessage> mqBis = reopenMQ()) {
                 mqBis.append(0, IdMessage.ofForceBatch("force batch"));
             }
             // the consumers should be in error because their tailer are associated to a closed mqueues
@@ -187,7 +178,7 @@ public class TestQueuingPattern {
         }
 
         // restart the mq and consumers
-        try (MQueues<IdMessage> mq = new CQMQueues<>(basePath)) {
+        try (MQueues<IdMessage> mq = reopenMQ()) {
             // run the consumers pool again
             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mq,
                     IdMessageFactory.NOOP,

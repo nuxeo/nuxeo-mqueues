@@ -28,14 +28,13 @@ import org.nuxeo.ecm.core.work.api.WorkQueueMetrics;
 import org.nuxeo.ecm.core.work.api.WorkSchedulePath;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerImpl;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerStream;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues.StreamsMQ;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
-import java.io.File;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.Collections;
@@ -56,14 +55,16 @@ import javax.transaction.TransactionManager;
 /**
  * @since 9.2
  */
-public class WorkManagerComputation extends WorkManagerImpl {
+public abstract class WorkManagerComputation extends WorkManagerImpl {
     protected static final Log log = LogFactory.getLog(WorkManagerComputation.class);
     protected static final int DEFAULT_CONCURRENCY = 4;
     protected Topology topology;
     protected Settings settings;
-    protected ComputationManagerImpl manager;
-    protected StreamsMQ streams;
+    protected ComputationManagerStream manager;
+    protected Streams streams;
     protected final Set<String> streamIds = new HashSet<>();
+
+    protected abstract Streams initStream();
 
     public class WorkScheduling implements Synchronization {
         public final Work work;
@@ -147,7 +148,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
             }
             supplantWorkManagerImpl();
             initTopology();
-            initStream();
+            this.streams = initStream();
             startComputation();
             started = true;
             log.info("Initialized");
@@ -182,14 +183,9 @@ public class WorkManagerComputation extends WorkManagerImpl {
         workQueueConfig.getQueueIds().forEach(id -> log.info("Registering : " + id));
     }
 
-    protected void initStream() {
-        File dir = new File(Framework.getRuntime().getHome(), "data/streams");
-        log.info("Init WorkManager Streams in: " + dir.getAbsolutePath());
-        streams = new StreamsMQ(dir.toPath());
-    }
 
     protected void startComputation() {
-        this.manager = new ComputationManagerImpl(streams, topology, settings);
+        this.manager = new ComputationManagerStream(streams, topology, settings);
         manager.start();
     }
 

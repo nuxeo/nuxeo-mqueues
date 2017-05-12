@@ -70,7 +70,7 @@ public class RandomDocumentProducers {
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         queuePath = getQueuePath();
-        try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath), nbThreads)) {
+        try (MQueues<DocumentMessage> mQueues = CQMQueues.openOrCreate(new File(queuePath), nbThreads)) {
             ProducerPool<DocumentMessage> producers;
             if (blobInfoPath != null) {
                 producers = new ProducerPool<>(mQueues,

@@ -75,7 +75,7 @@ public class TestDocumentImport {
         final int NB_DOCUMENTS = 2 * 100;
         final File basePath = folder.newFolder("cq");
 
-        try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
+        try (MQueues<DocumentMessage> mQueues = CQMQueues.create(basePath, NB_QUEUE)) {
             ProducerPool<DocumentMessage> producers = new ProducerPool<>(mQueues,
                     new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US", 2), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
@@ -83,7 +83,7 @@ public class TestDocumentImport {
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
         }
 
-        try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath)) {
+        try (MQueues<DocumentMessage> mQueues = CQMQueues.open(basePath)) {
             DocumentModel root = session.getRootDocument();
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
                     new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString()),
@@ -104,7 +104,7 @@ public class TestDocumentImport {
         final File basePath = folder.newFolder("cq");
 
         // generate blobs
-        try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
+        try (MQueues<BlobMessage> mQueues = CQMQueues.create(basePath, NB_QUEUE)) {
             ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
                     new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 2), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
@@ -114,7 +114,7 @@ public class TestDocumentImport {
         }
         // import blobs
         final Path blobInfoPath = folder.newFolder("blob-info").toPath();
-        try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath)) {
+        try (MQueues<BlobMessage> mQueues = CQMQueues.open(basePath)) {
             String blobProviderName = "test";
             ConsumerFactory<BlobMessage> factory = new BlobMessageConsumerFactory(blobProviderName, blobInfoPath);
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.BOUNDED);
@@ -123,8 +123,9 @@ public class TestDocumentImport {
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.committed).sum());
         }
 
+        final File basePath2 = folder.newFolder("cq2");
         // generate documents with blob reference
-        try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
+        try (MQueues<DocumentMessage> mQueues = CQMQueues.create(basePath2, NB_QUEUE)) {
             ProducerFactory<DocumentMessage> factory = new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US", blobInfoPath);
             ProducerPool<DocumentMessage> producers = new ProducerPool<>(mQueues, factory, NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
@@ -132,7 +133,7 @@ public class TestDocumentImport {
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
         }
         // import documents without creating blobs
-        try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(basePath)) {
+        try (MQueues<DocumentMessage> mQueues = CQMQueues.open(basePath2)) {
             DocumentModel root = session.getRootDocument();
             ConsumerFactory<DocumentMessage> factory = new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString());
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.BOUNDED);

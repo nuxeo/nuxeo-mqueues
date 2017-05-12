@@ -23,9 +23,9 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationContextImpl;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

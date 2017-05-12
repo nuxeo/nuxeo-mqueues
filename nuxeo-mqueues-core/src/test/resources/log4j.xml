@@ -24,6 +24,14 @@
     <priority value="WARN" />
   </category>
 
+  <category name="org.I0Itec.zkclient">
+    <priority value="WARN" />
+  </category>
+
+  <category name="kafka">
+    <priority value="WARN" />
+  </category>
+
   <category name="org.quartz">
     <priority value="WARN" />
   </category>
@@ -39,6 +47,10 @@
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues">
     <priority value="WARN" />
+  </category>
+
+  <category name="org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka">
+    <priority value="INFO" />
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.computation">

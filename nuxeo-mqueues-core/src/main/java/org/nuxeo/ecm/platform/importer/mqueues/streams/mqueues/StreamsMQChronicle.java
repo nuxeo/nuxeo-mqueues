@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues;
 
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
 
@@ -27,25 +28,25 @@ import java.nio.file.Path;
 /**
  * @since 9.2
  */
-public class StreamsMQ extends Streams {
+public class StreamsMQChronicle extends Streams {
     private final Path basePath;
 
-    public StreamsMQ(Path basePath) {
+    public StreamsMQChronicle(Path basePath) {
         this.basePath = basePath;
     }
 
     @Override
     public boolean exists(String name) {
-        return new File(basePath.toFile(), name).exists();
+        return CQMQueues.exists(new File(basePath.toFile(), name));
     }
 
     @Override
     public Stream open(String name) {
-        return new StreamMQ(basePath, name);
+        return StreamMQChronicle.open(basePath, name);
     }
 
     @Override
     public Stream create(String name, int partitions) {
-        return new StreamMQ(basePath, name, partitions);
+        return StreamMQChronicle.create(basePath, name, partitions);
     }
 }

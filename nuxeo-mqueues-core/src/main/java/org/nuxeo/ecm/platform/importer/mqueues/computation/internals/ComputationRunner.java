@@ -22,8 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Computation;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
@@ -59,7 +59,7 @@ public class ComputationRunner implements Runnable {
     private Computation computation;
     private long counter = 0;
     private long inRecords = 0;
-    private long inCommittedRecords = 0;
+    private long inCheckpointRecords = 0;
     private long outRecords = 0;
     // private final WatermarkInterval lowWatermark = new WatermarkInterval();
     private final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
@@ -214,7 +214,8 @@ public class ComputationRunner implements Runnable {
 
     private Duration getTimeoutDuration() {
         // Adapt the duration so we are not throttling when one of the input stream is empty
-        return Duration.ofMillis(Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime));
+        Duration ret = Duration.ofMillis(Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime));
+        return ret;
     }
 
     private void checkSourceLowWatermark() {
@@ -242,7 +243,7 @@ public class ComputationRunner implements Runnable {
             try {
                 checkpoint();
                 completed = true;
-                inCommittedRecords = inRecords;
+                inCheckpointRecords = inRecords;
             } finally {
                 if (!completed) {
                     log.error(metadata.name + ": CHECKPOINT FAILURE: Resume may create duplicates.");
@@ -305,7 +306,7 @@ public class ComputationRunner implements Runnable {
     }
 
     private void setThreadName(String message) {
-        String name = threadName + ",in:" + inRecords + ",inCommitted:" + inCommittedRecords + ",out:" + outRecords +
+        String name = threadName + ",in:" + inRecords + ",inCheckpoint:" + inCheckpointRecords + ",out:" + outRecords +
                 ",lastRead:" + lastReadTime +
                 ",lastTimer:" + lastTimerExecution + ",wm:" + lowWatermark.getLow().getValue() +
                 ",loop:" + counter;

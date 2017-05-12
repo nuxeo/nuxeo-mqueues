@@ -48,9 +48,9 @@ public interface MQueues<M extends Externalizable> extends AutoCloseable {
     Offset append(int queue, M message);
 
     /**
-     * Create a new {@link Tailer} associed with the queue index.
+     * Create a new {@link Tailer} associated with the queue index.
      *
-     * The committed offset is presisted in the default namespace.
+     * The committed offset is persisted in the default namespace.
      *
      * There can be one and only one consumer for queue in a namespace.
      *
@@ -79,6 +79,8 @@ public interface MQueues<M extends Externalizable> extends AutoCloseable {
      * Return true if the message has been consumed, false in case of timeout.
      */
     boolean waitFor(Offset offset, Duration timeout) throws InterruptedException;
+
+    boolean waitFor(Offset offset, String nameSpace, Duration timeout) throws InterruptedException;
 
     /**
      * Sequential reader for a queue.

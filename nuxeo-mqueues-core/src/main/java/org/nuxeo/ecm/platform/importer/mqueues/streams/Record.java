@@ -46,6 +46,10 @@ public class Record implements Externalizable {
         return new Record(key, data, 0, null);
     }
 
+    public Record() {
+
+    }
+
     public Record(String key, byte[] data, long watermark, EnumSet<Flag> flags) {
         this.key = key;
         this.data = data;

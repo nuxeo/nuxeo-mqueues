@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
  * @since 9.2
  */
 public class Topology {
+
     private enum VertexType {
         COMPUTATION, STREAM
     }
@@ -125,11 +126,11 @@ public class Topology {
 
 
     public boolean isSource(String name) {
-        return metadataMap.get(name).istreams.isEmpty();
+        return getParents(name).isEmpty();
     }
 
     public boolean isSink(String name) {
-        return metadataMap.get(name).ostreams.isEmpty();
+        return getChildren(name).isEmpty();
     }
 
     public Set<String> streamsSet() {
@@ -140,6 +141,17 @@ public class Topology {
         }
         return ret;
     }
+
+    public Set<String> streamsSet(String root) {
+        Set<String> ret = new HashSet<>();
+        for (String name : getDescendantComputationNames(root)) {
+            ComputationMetadataMapping meta = getMetadata(name);
+            ret.addAll(meta.istreams);
+            ret.addAll(meta.ostreams);
+        }
+        return ret;
+    }
+
 
     public List<ComputationMetadataMapping> metadataList() {
         return metadataList;
@@ -176,9 +188,31 @@ public class Topology {
         return dag.outgoingEdgesOf(start).stream().map(edge -> dag.getEdgeTarget(edge).getName()).collect(Collectors.toSet());
     }
 
+    public Set<String> getChildrenComputationNames(String name) {
+        Vertex start = getVertex(name);
+        Set<String> children = getChildren(name);
+        if (start.type == VertexType.STREAM) {
+            return children;
+        }
+        Set<String> ret = new HashSet<>();
+        children.forEach(child -> getChildren(child).forEach(ret::add));
+        return ret;
+    }
+
     public Set<String> getParents(String name) {
         Vertex start = getVertex(name);
         return dag.incomingEdgesOf(start).stream().map(edge -> dag.getEdgeSource(edge).getName()).collect(Collectors.toSet());
+    }
+
+    public Set<String> getParentComputationsNames(String name) {
+        Vertex start = getVertex(name);
+        Set<String> parents = getParents(name);
+        if (start.type == VertexType.STREAM) {
+            return parents;
+        }
+        Set<String> ret = new HashSet<>();
+        parents.forEach(parent -> getParents(parent).forEach(ret::add));
+        return ret;
     }
 
     public Set<String> getAncestorComputationNames(String name) {

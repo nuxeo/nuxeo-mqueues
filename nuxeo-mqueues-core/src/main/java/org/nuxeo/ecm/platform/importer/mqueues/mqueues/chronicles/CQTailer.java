@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.OffsetImpl;
 
 import java.io.Externalizable;
 import java.time.Duration;
@@ -119,7 +120,7 @@ public class CQTailer<M extends Externalizable> implements MQueues.Tailer<M> {
         if (log.isTraceEnabled()) {
             log.trace(String.format("queue-%02d commit offset: %d", queueIndex, offset));
         }
-        return new CQOffset(queueIndex, offset);
+        return new OffsetImpl(queueIndex, offset);
     }
 
     @Override

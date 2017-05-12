@@ -77,7 +77,7 @@ public class BlobConsumers {
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         queuePath = getQueuePath();
-        try (MQueues<BlobMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
+        try (MQueues<BlobMessage> mQueues = CQMQueues.open(new File(queuePath))) {
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
                     ConsumerPolicy.builder()

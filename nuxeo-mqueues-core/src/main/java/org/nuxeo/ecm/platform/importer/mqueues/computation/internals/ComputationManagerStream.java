@@ -39,14 +39,14 @@ import java.util.stream.Collectors;
 /**
  * @since 9.2
  */
-public class ComputationManagerImpl implements ComputationManager {
-    private static final Log log = LogFactory.getLog(ComputationManagerImpl.class);
+public class ComputationManagerStream implements ComputationManager {
+    private static final Log log = LogFactory.getLog(ComputationManagerStream.class);
     private final Streams streams;
     private final Topology topology;
     private final Settings settings;
     private final List<ComputationPool> pools;
 
-    public ComputationManagerImpl(Streams streams, Topology topology, Settings settings) {
+    public ComputationManagerStream(Streams streams, Topology topology, Settings settings) {
         this.streams = streams;
         this.topology = topology;
         this.settings = settings;
@@ -63,7 +63,7 @@ public class ComputationManagerImpl implements ComputationManager {
 
     @Override
     public boolean stop(Duration timeout) {
-        log.debug("Stopping");
+        log.debug("Starting ...");
         long failures = pools.parallelStream().filter(comp -> !comp.stop(timeout)).count();
         log.debug(String.format("Stopped %d failure", failures));
         return failures == 0L;

@@ -18,16 +18,12 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues.StreamsMQ;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -42,21 +38,25 @@ import static org.junit.Assert.fail;
 /**
  * @since 9.1
  */
-public class TestStream {
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+public abstract class TestStream {
 
+    public abstract Streams getStreams() throws Exception;
+
+    public abstract Streams getSameStreams() throws Exception;
 
     @Test
     public void testStreams() throws Exception {
-        Streams streams = new StreamsMQ(folder.newFolder().toPath());
-        Stream stream = streams.getOrCreateStream("foo", 10);
-        assertEquals(stream.getName(), "foo");
-        assertEquals(stream.getPartitions(), 10);
+        Streams streams = getStreams();
+        String name1 = "foo";
+        Stream stream = streams.getOrCreateStream(name1, 10);
+        assertEquals(name1, stream.getName());
+        assertEquals(10, stream.getPartitions());
 
-        Stream stream2 = streams.getOrCreateStream("bar", 5);
-
-        Stream stream3 = streams.getStream("bar");
+        String name2 = "bar";
+        Stream stream2 = streams.getOrCreateStream(name2, 5);
+        Stream stream3 = streams.getStream(name2);
+        assertEquals(stream2, stream3);
+        stream3 = streams.getOrCreateStream(name2, 5);
         assertEquals(stream2, stream3);
 
         assertNull(streams.getStream("unknown"));
@@ -65,9 +65,10 @@ public class TestStream {
 
     @Test
     public void testStream() throws Exception {
-        Streams streams = new StreamsMQ(folder.newFolder().toPath());
-        Stream stream = streams.getOrCreateStream("foo", 1);
-        assertEquals(stream.getName(), "foo");
+        Streams streams = getStreams();
+        String name = "foo";
+        Stream stream = streams.getOrCreateStream(name, 1);
+        assertEquals(name, stream.getName());
 
         byte[] data = "some data".getBytes();
         byte[] data2 = "other data".getBytes();
@@ -80,7 +81,7 @@ public class TestStream {
         stream.appendRecord(r3);
 
         try (StreamTailer tailer = stream.createTailerForPartition("consumer1", 0)) {
-            Record record = tailer.read(Duration.ofMillis(1));
+            Record record = tailer.read(Duration.ofMillis(1000));
             assertEquals("key1", record.key);
             assertEquals(Arrays.toString(data), Arrays.toString(record.data));
             assertFalse(record.flags.contains(Record.Flag.DEFAULT));
@@ -105,14 +106,15 @@ public class TestStream {
 
     @Test
     public void testNullRecord() throws Exception {
-        Streams streams = new StreamsMQ(folder.newFolder().toPath());
-        Stream stream = streams.getOrCreateStream("foo", 1);
+        Streams streams = getStreams();
+        String name = "foo";
+        Stream stream = streams.getOrCreateStream(name, 1);
 
-        stream.appendRecord("foo", null);
+        stream.appendRecord(name, null);
         try (StreamTailer tailer = stream.createTailerForPartition("consumer1", 0)) {
             Record record = tailer.read(Duration.ofSeconds(1));
             assertNotNull(record);
-            assertEquals("foo", record.key);
+            assertEquals(name, record.key);
             assertEquals(null, record.data);
             assertTrue(record.watermark > 0);
             assertTrue(record.flags.isEmpty());
@@ -132,14 +134,13 @@ public class TestStream {
     public void testCreateAndOpen() throws Exception {
         final int partitions = 1;
         final String name = "foo";
-        Path base = folder.newFolder().toPath();
-        try (Streams streams = new StreamsMQ(base)) {
+        try (Streams streams = getStreams()) {
             Stream stream = streams.getOrCreateStream(name, partitions);
             assertEquals(name, stream.getName());
             assertEquals(partitions, stream.getPartitions());
             stream.appendRecord(Record.of("key", "value".getBytes()));
         }
-        try (Streams streams = new StreamsMQ(base)) {
+        try (Streams streams = getSameStreams()) {
             Stream stream = streams.getOrCreateStream(name, 2 * partitions);
             assertEquals(name, stream.getName());
             assertEquals(partitions, stream.getPartitions());

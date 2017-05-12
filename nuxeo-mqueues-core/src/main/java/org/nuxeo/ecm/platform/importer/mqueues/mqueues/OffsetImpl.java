@@ -16,18 +16,16 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles;
-
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
+package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 /**
  * @since 9.1
  */
-public class CQOffset implements Offset {
+public class OffsetImpl implements Offset {
     private final long offset;
     private final int queue;
 
-    public CQOffset(int queue, long offset) {
+    public OffsetImpl(int queue, long offset) {
         this.queue = queue;
         this.offset = offset;
     }
@@ -42,7 +40,7 @@ public class CQOffset implements Offset {
 
     @Override
     public String toString() {
-        return String.format("CQOffset(%d, %d)", queue, offset);
+        return String.format("OffsetImpl(%d, %d)", queue, offset);
     }
 
     @Override
@@ -50,10 +48,10 @@ public class CQOffset implements Offset {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        CQOffset cqOffset = (CQOffset) o;
+        OffsetImpl offsetImpl = (OffsetImpl) o;
 
-        if (queue != cqOffset.queue) return false;
-        return offset == cqOffset.offset;
+        if (queue != offsetImpl.queue) return false;
+        return offset == offsetImpl.offset;
     }
 
     @Override
@@ -69,10 +67,10 @@ public class CQOffset implements Offset {
         if (o == null || getClass() != o.getClass()) {
             throw new IllegalArgumentException("Can not compare offsets with different classes");
         }
-        CQOffset cqOffset = (CQOffset) o;
-        if (queue != cqOffset.queue) {
+        OffsetImpl offsetImpl = (OffsetImpl) o;
+        if (queue != offsetImpl.queue) {
             throw new IllegalArgumentException("Can not compare offsets from different queues");
         }
-        return (int) (offset - cqOffset.offset);
+        return (int) (offset - offsetImpl.offset);
     }
 }
