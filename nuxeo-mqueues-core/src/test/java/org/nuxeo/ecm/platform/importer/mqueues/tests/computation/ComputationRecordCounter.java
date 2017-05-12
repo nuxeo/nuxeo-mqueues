@@ -32,6 +32,7 @@ import java.time.Duration;
 public class ComputationRecordCounter extends AbstractComputation {
     private final long intervalMs;
     private int count;
+    private long lastWatermark;
 
     /**
      * Output record counter every interval.
@@ -48,12 +49,13 @@ public class ComputationRecordCounter extends AbstractComputation {
 
     @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-        context.setSourceLowWatermark(record.watermark);
+        lastWatermark = record.watermark;
         count += 1;
     }
 
     @Override
     public void processTimer(ComputationContext context, String key, long time) {
+        context.setSourceLowWatermark(lastWatermark);
         context.produceRecord("o1", Integer.toString(count), null);
         count = 0;
         context.setTimer("sum", System.currentTimeMillis() + intervalMs);

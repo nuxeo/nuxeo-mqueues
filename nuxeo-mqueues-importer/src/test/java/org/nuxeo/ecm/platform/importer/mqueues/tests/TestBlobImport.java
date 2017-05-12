@@ -62,7 +62,7 @@ public class TestBlobImport {
         final int NB_BLOBS = 2 * 1000;
         final File basePath = folder.newFolder("cq");
 
-        try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath, NB_QUEUE)) {
+        try (MQueues<BlobMessage> mQueues = CQMQueues.create(basePath, NB_QUEUE)) {
             ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
                     new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 1), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
@@ -70,7 +70,7 @@ public class TestBlobImport {
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
         }
         final Path output = folder.newFolder("blob-info").toPath();
-        try (MQueues<BlobMessage> mQueues = new CQMQueues<>(basePath)) {
+        try (MQueues<BlobMessage> mQueues = CQMQueues.open(basePath)) {
             String blobProviderName = "test";
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
                     new BlobMessageConsumerFactory(blobProviderName, output),

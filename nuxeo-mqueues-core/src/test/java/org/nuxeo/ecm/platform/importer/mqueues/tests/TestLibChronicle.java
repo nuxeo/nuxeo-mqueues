@@ -47,12 +47,12 @@ import static org.junit.Assert.fail;
 
 
 /**
- * Test the chronicle queue lib.
+ * Unit Test to learn the Chronicle Queue lib.
  *
  * @since 9.1
  */
-public class TestCQ implements StoreFileListener {
-    protected static final Log log = LogFactory.getLog(TestCQ.class);
+public class TestLibChronicle implements StoreFileListener {
+    protected static final Log log = LogFactory.getLog(TestLibChronicle.class);
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();

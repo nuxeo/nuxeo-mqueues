@@ -36,6 +36,9 @@ public class IdMessage implements Message {
     private boolean poisonPill = false;
     private boolean forceBatch = false;
 
+    public IdMessage() {
+    }
+
     protected IdMessage(String id, byte[] data, boolean poisonPill, boolean forceBatch) {
         this.id = Objects.requireNonNull(id);
         this.data = data;
@@ -132,6 +135,6 @@ public class IdMessage implements Message {
 
     @Override
     public String toString() {
-        return String.format("IdMessage(%s, %d, %b, %b", id, (data != null) ? data.length : 0, poisonPill, forceBatch);
+        return String.format("IdMessage(\"%s\", len:%d, poison:%b, batch:%b)", id, (data != null) ? data.length : 0, poisonPill, forceBatch);
     }
 }

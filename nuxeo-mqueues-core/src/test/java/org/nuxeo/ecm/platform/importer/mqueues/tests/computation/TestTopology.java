@@ -83,6 +83,10 @@ public class TestTopology {
 
         assertEquals(new HashSet<>(Collections.singletonList("C1")), topology.getRoots());
 
+        assertEquals(Collections.emptySet(), topology.getParentComputationsNames("C1"));
+        assertEquals(new HashSet<>(Arrays.asList("C3", "C4")), topology.getParentComputationsNames("output"));
+        assertEquals(new HashSet<>(Arrays.asList("C1", "C4")), topology.getParentComputationsNames("C3"));
+
         // check plantuml representation
         assertTrue(topology.toPlantuml().startsWith("@startuml"));
         assertTrue(topology.toPlantuml().endsWith("@enduml\n"));

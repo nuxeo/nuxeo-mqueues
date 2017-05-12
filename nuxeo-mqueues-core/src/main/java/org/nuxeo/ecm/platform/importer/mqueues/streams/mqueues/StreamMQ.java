@@ -18,39 +18,30 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues;
 
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.StreamTailer;
 
-import java.io.File;
-import java.nio.file.Path;
 import java.util.Objects;
 
 /**
  * @since 9.2
  */
-public class StreamMQ implements Stream {
-
-    private final Path basePath;
+public abstract class StreamMQ implements Stream {
     private final String name;
     private final int partitions;
     private final MQueues<Record> mQueues;
 
-    public StreamMQ(Path basePath, String name, int partitions) {
-        this.basePath = basePath;
+    public StreamMQ(MQueues<Record> mQueues, String name, int partitions) {
         this.name = name;
-        this.partitions = partitions;
-        this.mQueues = new CQMQueues<>(new File(basePath.toFile(), name), partitions);
-    }
-
-    public StreamMQ(Path basePath, String name) {
-        this.basePath = basePath;
-        this.name = name;
-        this.mQueues = new CQMQueues<>(new File(basePath.toFile(), name));
-        this.partitions = mQueues.size();
+        this.mQueues = mQueues;
+        if (partitions > 0) {
+            this.partitions = partitions;
+        } else {
+            this.partitions = mQueues.size();
+        }
     }
 
     @Override

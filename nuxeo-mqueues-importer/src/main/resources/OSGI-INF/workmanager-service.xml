@@ -7,7 +7,7 @@
     <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
   </service>
 
-  <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputation" />
+  <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationChronicle" />
 
   <extension-point name="queues">
     <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />

@@ -20,21 +20,16 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationManager;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerImpl;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerStream;
+import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.StreamTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues.StreamsMQ;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,11 +41,12 @@ import static org.junit.Assert.fail;
 /**
  * @since 9.1
  */
-public class TestComputationManager {
+public abstract class TestComputationManager {
     private static final Log log = LogFactory.getLog(TestComputationManager.class);
 
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+    public abstract Streams getStreams() throws Exception;
+
+    public abstract Streams getSameStreams() throws Exception;
 
 
     @Test
@@ -66,9 +62,9 @@ public class TestComputationManager {
                 .setConcurrency("C1", 1)
                 .setConcurrency("C2", 2);
 
-        try (Streams streams = new StreamsMQ(folder.newFolder().toPath())) {
+        try (Streams streams = getStreams()) {
             try {
-                ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
+                ComputationManager manager = getManager(streams, topology, settings);
                 manager.stop();
                 fail("Conflict not detected");
             } catch (IllegalArgumentException e) {
@@ -76,10 +72,12 @@ public class TestComputationManager {
             }
             // fix settings
             settings = new Settings(2);
-            ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
+            ComputationManager manager = new ComputationManagerStream(streams, topology, settings);
             manager.stop();
         }
     }
+
+    protected abstract ComputationManager getManager(Streams streams, Topology topology, Settings settings);
 
     public void testSimpleTopo(int nbRecords, int concurrency) throws Exception {
         final long targetTimestamp = System.currentTimeMillis();
@@ -95,8 +93,8 @@ public class TestComputationManager {
         Settings settings = new Settings(concurrency).setConcurrency("GENERATOR", 1);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
-        try (Streams streams = new StreamsMQ(folder.newFolder().toPath())) {
-            ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
+        try (Streams streams = getStreams()) {
+            ComputationManager manager = getManager(streams, topology, settings);
             manager.start();
             long start = System.currentTimeMillis();
             // this check works only if there is only one record with the target timestamp
@@ -114,7 +112,7 @@ public class TestComputationManager {
             int result = readCounterFrom(streams, "output");
             int expected = nbRecords * settings.getConcurrency("GENERATOR");
             if (result != expected) {
-                manager = new ComputationManagerImpl(streams, topology, settings);
+                manager = getManager(streams, topology, settings);
                 manager.start();
                 int waiter = 200;
                 log.warn("FAILURE DEBUG TRACE ========================");
@@ -126,9 +124,9 @@ public class TestComputationManager {
                 } while (waiter > 0);
                 manager.shutdown();
             }
-            assertEquals(expected, result);
             log.info(String.format("topo: simple, concurrency: %d, records: %s, took: %.2fs, throughput: %.2f records/s",
                     concurrency, result, elapsed, result / elapsed));
+            assertEquals(expected, result);
         }
     }
 
@@ -147,8 +145,7 @@ public class TestComputationManager {
         testSimpleTopo(1003, 1);
     }
 
-    @Ignore
-    @Test
+    // @Test
     public void testSimpleTopoManyRecordsManyThread() throws Exception {
         // because of the concurrency record arrive in disorder in the final counter
         // if the last record is processed by the final counter
@@ -176,8 +173,8 @@ public class TestComputationManager {
         Settings settings = new Settings(concurrency).setExternalStreamPartitions("output", 1);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
-        try (Streams streams = new StreamsMQ(folder.newFolder().toPath())) {
-            ComputationManager manager = new ComputationManagerImpl(streams, topology, settings);
+        try (Streams streams = getStreams()) {
+            ComputationManager manager = getManager(streams, topology, settings);
             long start = System.currentTimeMillis();
             manager.start();
 
@@ -188,9 +185,9 @@ public class TestComputationManager {
             double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;
             // read the results
             int result = readCounterFrom(streams, "output");
-            assertEquals(2 * settings.getConcurrency("GENERATOR") * nbRecords, result);
             log.info(String.format("topo: complex, concurrency: %d, records: %s, took: %.2fs, throughput: %.2f records/s",
                     concurrency, result, elapsed, result / elapsed));
+            assertEquals(2 * settings.getConcurrency("GENERATOR") * nbRecords, result);
         }
     }
 
@@ -230,7 +227,6 @@ public class TestComputationManager {
         final long targetWatermark = Watermark.ofTimestamp(targetTimestamp).getValue();
         final int nbRecords = 1001;
         final int concurrent = 32;
-        final Path base = folder.newFolder().toPath();
         Topology topology1 = Topology.builder()
                 .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Collections.singletonList("o1:s1"))
                 .build();
@@ -251,8 +247,8 @@ public class TestComputationManager {
         // System.out.println(topology.toPlantuml(settings));
 
         // 1. run generators
-        try (Streams streams = new StreamsMQ(base)) {
-            ComputationManager manager = new ComputationManagerImpl(streams, topology1, settings1);
+        try (Streams streams = getStreams()) {
+            ComputationManager manager = getManager(streams, topology1, settings1);
             long start = System.currentTimeMillis();
             manager.start();
             // no record are processed so far
@@ -264,8 +260,8 @@ public class TestComputationManager {
         int result = 0;
         // 2. resume and kill loop
         for (int i = 0; i < 10; i++) {
-            try (Streams streams = new StreamsMQ(base)) {
-                ComputationManager manager = new ComputationManagerImpl(streams, topology2, settings2);
+            try (Streams streams = getSameStreams()) {
+                ComputationManager manager = getManager(streams, topology2, settings2);
                 long start = System.currentTimeMillis();
                 log.info("RESUME computations");
                 manager.start();
@@ -278,8 +274,8 @@ public class TestComputationManager {
             }
         }
         // 3. run the rest
-        try (Streams streams = new StreamsMQ(base)) {
-            ComputationManager manager = new ComputationManagerImpl(streams, topology2, settings2);
+        try (Streams streams = getSameStreams()) {
+            ComputationManager manager = getManager(streams, topology2, settings2);
             long start = System.currentTimeMillis();
             manager.start();
             assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));
@@ -290,9 +286,9 @@ public class TestComputationManager {
             // the number of results can be bigger than expected, in the case of checkpoint failure
             // some records can be reprocessed (duplicate), this is a delivery at least one, not exactly one.
             long expected = 2 * settings1.getConcurrency("GENERATOR") * nbRecords;
-            assertTrue(expected <= result);
             log.info(String.format("count: %s, expected: %s, in %.2fs, throughput: %.2f records/s",
                     result, expected, elapsed, result / elapsed));
+            assertTrue(expected <= result);
         }
 
     }
@@ -302,23 +298,22 @@ public class TestComputationManager {
         final long targetTimestamp = System.currentTimeMillis();
         final int nbRecords = 1;
         final int concurrent = 10;
-        final Path base = folder.newFolder().toPath();
         Topology topology1 = Topology.builder()
                 .addComputation(() -> new ComputationSource("GENERATOR", 1, nbRecords, 5, targetTimestamp), Collections.singletonList("o1:s1"))
                 .build();
 
         Settings settings1 = new Settings(concurrent);
 
-        try (Streams streams = new StreamsMQ(base)) {
-            ComputationManager manager = new ComputationManagerImpl(streams, topology1, settings1);
+        try (Streams streams = getStreams()) {
+            ComputationManager manager = getManager(streams, topology1, settings1);
             long start = System.currentTimeMillis();
             manager.start();
             // no record are processed so far
             assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));
             double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;
             int result = countRecordIn(streams, "s1");
-            assertEquals(settings1.getConcurrency("GENERATOR") * nbRecords, result);
             log.info(String.format("count: %s in %.2fs, throughput: %.2f records/s", result, elapsed, result / elapsed));
+            assertEquals(settings1.getConcurrency("GENERATOR") * nbRecords, result);
         }
 
     }
@@ -335,7 +330,7 @@ public class TestComputationManager {
     private int readCounterFromPartition(Streams streams, String stream, int partition) throws InterruptedException {
         StreamTailer tailer = streams.getStream(stream).createTailerForPartition("results", partition);
         int result = 0;
-        for (Record record = tailer.read(Duration.ofMillis(1)); record != null; record = tailer.read(Duration.ofMillis(1))) {
+        for (Record record = tailer.read(Duration.ofMillis(1000)); record != null; record = tailer.read(Duration.ofMillis(1))) {
             result += Integer.valueOf(record.key);
         }
         tailer.commit();
@@ -354,7 +349,7 @@ public class TestComputationManager {
     private int countRecordInPartition(Streams streams, String stream, int partition) throws Exception {
         try (StreamTailer tailer = streams.getStream(stream).createTailerForPartition("results", partition)) {
             int result = 0;
-            for (Record record = tailer.read(Duration.ofMillis(1)); record != null; record = tailer.read(Duration.ofMillis(1))) {
+            for (Record record = tailer.read(Duration.ofMillis(100)); record != null; record = tailer.read(Duration.ofMillis(1))) {
                 result += 1;
             }
             return result;

@@ -69,7 +69,7 @@ public class RandomBlobProducers {
     public void run() {
         checkAccess(ctx);
         queuePath = getQueuePath();
-        try (MQueues<BlobMessage> mQueues = new CQMQueues<>(new File(queuePath), nbThreads)) {
+        try (MQueues<BlobMessage> mQueues = CQMQueues.openOrCreate(new File(queuePath), nbThreads)) {
             ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
                     new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads);
             producers.start().get();

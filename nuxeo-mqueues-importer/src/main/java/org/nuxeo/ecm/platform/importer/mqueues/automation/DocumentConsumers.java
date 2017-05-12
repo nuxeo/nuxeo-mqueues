@@ -77,7 +77,7 @@ public class DocumentConsumers {
         RandomBlobProducers.checkAccess(ctx);
         queuePath = getQueuePath();
         repositoryName = getRepositoryName();
-        try (MQueues<DocumentMessage> mQueues = new CQMQueues<>(new File(queuePath))) {
+        try (MQueues<DocumentMessage> mQueues = CQMQueues.open(new File(queuePath))) {
             DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mQueues,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
                     ConsumerPolicy.builder()

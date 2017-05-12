@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.OffsetImpl;
 
 import java.io.Externalizable;
 import java.io.File;
@@ -59,20 +60,38 @@ public class CQMQueues<M extends Externalizable> implements MQueues<M> {
     // keep track of created tailers to make sure they are closed before the mq
     private final ConcurrentLinkedQueue<CQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
 
+    static public boolean exists(File basePath) {
+        return basePath.isDirectory() && basePath.list().length > 0;
+    }
+
+    static public boolean delete(File basePath) {
+        if (basePath.isDirectory()) {
+            deleteQueueBasePath(basePath);
+            return true;
+        }
+        return false;
+    }
+
     /**
-     * Create a new mqueues. Warning this will ERASE the basePath if not empty.
+     * Create a new mqueues.
      */
-    public CQMQueues(File basePath, int size) {
-        this(basePath, size, false);
+    static public <M extends Externalizable> CQMQueues<M> create(File basePath, int size) {
+        return new CQMQueues<>(basePath, size);
+    }
+
+    static public <M extends Externalizable> CQMQueues<M> openOrCreate(File basePath, int size) {
+        if (exists(basePath)) {
+            return open(basePath);
+        }
+        return create(basePath, size);
     }
 
     /**
      * Open an existing mqueues.
      */
-    public CQMQueues(File basePath) {
-        this(basePath, 0, true);
+    static public <M extends Externalizable> CQMQueues<M> open(File basePath) {
+        return new CQMQueues<>(basePath, 0);
     }
-
 
     @Override
     public int size() {
@@ -80,10 +99,10 @@ public class CQMQueues<M extends Externalizable> implements MQueues<M> {
     }
 
     @Override
-    public CQOffset append(int queue, M message) {
+    public OffsetImpl append(int queue, M message) {
         ExcerptAppender appender = queues.get(queue).acquireAppender();
         appender.writeDocument(w -> w.write("msg").object(message));
-        return new CQOffset(queue, appender.lastIndexAppended());
+        return new OffsetImpl(queue, appender.lastIndexAppended());
     }
 
     @Override
@@ -103,10 +122,15 @@ public class CQMQueues<M extends Externalizable> implements MQueues<M> {
 
     @Override
     public boolean waitFor(Offset offset, Duration timeout) throws InterruptedException {
+        return waitFor(offset, CQTailer.DEFAULT_OFFSET_NAMESPACE, timeout);
+    }
+
+    @Override
+    public boolean waitFor(Offset offset, String nameSpace, Duration timeout) throws InterruptedException {
         boolean ret;
-        long offsetPosition = ((CQOffset) offset).getOffset();
-        int queue = ((CQOffset) offset).getQueue();
-        try (CQOffsetTracker offsetTracker = new CQOffsetTracker(basePath.toString(), queue, CQTailer.DEFAULT_OFFSET_NAMESPACE)) {
+        long offsetPosition = ((OffsetImpl) offset).getOffset();
+        int queue = ((OffsetImpl) offset).getQueue();
+        try (CQOffsetTracker offsetTracker = new CQOffsetTracker(basePath.toString(), queue, nameSpace)) {
             ret = isProcessed(offsetTracker, offsetPosition);
             if (ret) {
                 return true;
@@ -143,18 +167,35 @@ public class CQMQueues<M extends Externalizable> implements MQueues<M> {
         queues.clear();
     }
 
-    private CQMQueues(File basePath, int size, boolean append) {
-        if (!append) {
-            resetBasePath(basePath);
-            this.nbQueues = size;
-        } else {
+    private CQMQueues(File basePath, int size) {
+        if (size == 0) {
+            // open
+            if (!exists(basePath)) {
+                String msg = "Can not open Chronicle Queues, invalid path: " + basePath;
+                log.error(msg);
+                throw new IllegalArgumentException(msg);
+            }
             this.nbQueues = findNbQueues(basePath);
+        } else {
+            // creation
+            if (exists(basePath)) {
+                String msg = "Can not create Chronicle Queues, already exists: " + basePath;
+                log.error(msg);
+                throw new IllegalArgumentException(msg);
+            }
+            if (!basePath.exists() && !basePath.mkdirs()) {
+                String msg = "Can not create Chronicle Queues in: " + basePath;
+                log.error(msg);
+                throw new IllegalArgumentException(msg);
+            }
+            this.nbQueues = size;
         }
+
         this.basePath = basePath;
         queues = new ArrayList<>(this.nbQueues);
-        log.info("Using chronicle queues in: " + basePath);
+        log.info("Creating chronicle queues in: " + basePath);
 
-        for (int i = 0; i < this.nbQueues; i++) {
+        for (int i = 0; i < nbQueues; i++) {
             File path = new File(basePath, String.format("%s%02d", QUEUE_PREFIX, i));
             ChronicleQueue queue = binary(path).build();
             queues.add(queue);
@@ -181,18 +222,7 @@ public class CQMQueues<M extends Externalizable> implements MQueues<M> {
         return ret;
     }
 
-    private void resetBasePath(File basePath) {
-        if (basePath.isDirectory()) {
-            deleteQueueBasePath(basePath);
-        }
-        if (!basePath.mkdirs()) {
-            String msg = "Can not create Chronicle Queues in: " + basePath;
-            log.error(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }
-
-    private void deleteQueueBasePath(File basePath) {
+    private static void deleteQueueBasePath(File basePath) {
         try {
             log.info("Removing Chronicle Queues directory: " + basePath);
             // Performs a recursive delete if the directory contains only chronicles files

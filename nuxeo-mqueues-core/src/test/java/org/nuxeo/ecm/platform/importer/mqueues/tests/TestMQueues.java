@@ -18,15 +18,11 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.Offset;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
 
-import java.io.File;
 import java.time.Duration;
 
 import static org.junit.Assert.assertEquals;
@@ -35,54 +31,39 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class TestCQMQueues {
+public abstract class TestMQueues {
+    protected static final Log log = LogFactory.getLog(TestMQueues.class);
 
-    protected static final Log log = LogFactory.getLog(TestCQMQueues.class);
+    public abstract Duration getMinDuration();
 
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+    public abstract MQueues<IdMessage> createMQ(int partitions) throws Exception;
 
-    public CQMQueues<IdMessage> createMQ(File basePath, int NB_QUEUES) {
-        return new CQMQueues<>(basePath, NB_QUEUES);
-    }
+    public abstract MQueues<IdMessage> createSameMQ(int partitions) throws Exception;
 
-    public CQMQueues<IdMessage> openMQ(File basePath) {
-        return new CQMQueues<>(basePath);
-    }
-
+    public abstract MQueues<IdMessage> reopenMQ();
 
     @Test
     public void open() throws Exception {
-        final File basePath = folder.newFolder("cq");
         final int NB_QUEUES = 5;
 
         // check that the number of queues is persisted even if we don't write anything
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUES)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUES)) {
             assertEquals(NB_QUEUES, mQueues.size());
         }
-        try (MQueues<IdMessage> mQueues = openMQ(basePath)) {
+        try (MQueues<IdMessage> mQueues = reopenMQ()) {
             assertEquals(NB_QUEUES, mQueues.size());
         }
 
         // same with another size
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, 1)) {
-            assertEquals(1, mQueues.size());
-        }
-        try (MQueues<IdMessage> mQueues = openMQ(basePath)) {
-            assertEquals(1, mQueues.size());
-        }
-
-        // add a file in the basePath
-        File aFile = new File(basePath, "foo.txt");
-        aFile.createNewFile();
-
-        // create a new mqueues but fails because it does not looks like a mqueues
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, 1)) {
-            fail("Create a mqueue on an existing folder with extra data is not allowed");
+        try {
+            MQueues<IdMessage> mQueues = createSameMQ(1);
+            fail("Exception should be raise because the queue already exists");
         } catch (IllegalArgumentException e) {
             // expected
         }
-
+        try (MQueues<IdMessage> mQueues = reopenMQ()) {
+            assertEquals(NB_QUEUES, mQueues.size());
+        }
 
     }
 
@@ -91,38 +72,37 @@ public class TestCQMQueues {
         final int NB_QUEUE = 10;
         IdMessage msg1 = IdMessage.of("id1");
         IdMessage msg2 = IdMessage.of("id2");
-        File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mq = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mq = createMQ(NB_QUEUE)) {
 
             mq.append(1, msg1);
 
             try (MQueues.Tailer<IdMessage> tailer1 = mq.createTailer(1)) {
-                assertEquals(msg1, tailer1.read(Duration.ofMillis(1)));
-                assertEquals(null, tailer1.read(Duration.ofMillis(1)));
+                assertEquals(msg1, tailer1.read(getMinDuration()));
+                assertEquals(null, tailer1.read(getMinDuration()));
 
                 mq.append(2, msg2);
-                assertEquals(null, tailer1.read(Duration.ofMillis(1)));
+                assertEquals(null, tailer1.read(getMinDuration()));
 
                 mq.append(1, msg2);
-                assertEquals(msg2, tailer1.read(Duration.ofMillis(1)));
+                assertEquals(msg2, tailer1.read(getMinDuration()));
                 try (MQueues.Tailer<IdMessage> tailer2 = mq.createTailer(2)) {
-                    assertEquals(msg2, tailer2.read(Duration.ofMillis(1)));
+                    assertEquals(msg2, tailer2.read(getMinDuration()));
                 }
             }
         }
 
         // open the mqueue offset consumer starts at the beginning because tailer have not committed.
-        try (MQueues<IdMessage> mq = openMQ(basePath)) {
+        try (MQueues<IdMessage> mq = reopenMQ()) {
             try (MQueues.Tailer<IdMessage> tailer1 = mq.createTailer(1);
                  MQueues.Tailer<IdMessage> tailer2 = mq.createTailer(2)) {
 
-                assertEquals(msg1, tailer1.read(Duration.ofMillis(1)));
-                assertEquals(msg2, tailer1.read(Duration.ofMillis(1)));
-                assertEquals(null, tailer1.read(Duration.ofMillis(1)));
+                assertEquals(msg1, tailer1.read(getMinDuration()));
+                assertEquals(msg2, tailer1.read(getMinDuration()));
+                assertEquals(null, tailer1.read(getMinDuration()));
 
-                assertEquals(msg2, tailer2.read(Duration.ofMillis(1)));
-                assertEquals(null, tailer2.read(Duration.ofMillis(1)));
+                assertEquals(msg2, tailer2.read(getMinDuration()));
+                assertEquals(null, tailer2.read(getMinDuration()));
             }
         }
 
@@ -132,10 +112,9 @@ public class TestCQMQueues {
     @Test
     public void commitOffset() throws Exception {
         final int NB_QUEUE = 10;
-        final File basePath = folder.newFolder("cq");
 
         // Create a queue
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             mQueues.append(1, IdMessage.of("id1"));
             mQueues.append(1, IdMessage.of("id2"));
             mQueues.append(1, IdMessage.of("id3"));
@@ -145,37 +124,38 @@ public class TestCQMQueues {
 
             // process 2 messages and commit
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(1)) {
-                assertEquals("id1", tailer.read(Duration.ofMillis(0)).getId());
+                assertEquals("id1", tailer.read(getMinDuration()).getId());
                 tailer.commit();
-                assertEquals("id2", tailer.read(Duration.ofMillis(0)).getId());
+                //Thread.sleep(10000);
+                assertEquals("id2", tailer.read(getMinDuration()).getId());
                 tailer.commit();
             }
 
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(2)) {
-                assertEquals("id4", tailer.read(Duration.ofMillis(0)).getId());
+                assertEquals("id4", tailer.read(getMinDuration()).getId());
                 tailer.commit();
                 tailer.commit();
             }
         }
 
         // open the queue
-        try (MQueues<IdMessage> mQueues = openMQ(basePath)) {
+        try (MQueues<IdMessage> mQueues = reopenMQ()) {
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(1)) {
                 tailer.toStart();
-                assertEquals("id1", tailer.read(Duration.ofMillis(0)).getId());
+                assertEquals("id1", tailer.read(getMinDuration()).getId());
 
                 tailer.toEnd();
-                assertEquals(null, tailer.read(Duration.ofMillis(0)));
+                assertEquals(null, tailer.read(getMinDuration()));
 
                 tailer.toLastCommitted();
-                assertEquals("id3", tailer.read(Duration.ofMillis(0)).getId());
+                assertEquals("id3", tailer.read(getMinDuration()).getId());
             }
             // by default the tailer is open on the last committed message
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(2)) {
-                assertEquals("id5", tailer.read(Duration.ofMillis(0)).getId());
+                assertEquals("id5", tailer.read(getMinDuration()).getId());
 
                 tailer.toStart();
-                assertEquals("id4", tailer.read(Duration.ofMillis(0)).getId());
+                assertEquals("id4", tailer.read(getMinDuration()).getId());
             }
         }
 
@@ -184,32 +164,31 @@ public class TestCQMQueues {
     @Test
     public void commitOffset2() throws Exception {
         final int NB_QUEUE = 10;
-        final File basePath = folder.newFolder("cq");
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             mQueues.append(1, IdMessage.of("id1"));
             mQueues.append(1, IdMessage.of("id2"));
             mQueues.append(1, IdMessage.of("id3"));
             mQueues.append(1, IdMessage.of("id4"));
 
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(1)) {
-                assertEquals("id1", tailer.read(Duration.ofMillis(1)).getId());
+                assertEquals("id1", tailer.read(getMinDuration()).getId());
                 tailer.commit();
-                assertEquals("id2", tailer.read(Duration.ofMillis(1)).getId());
+                assertEquals("id2", tailer.read(getMinDuration()).getId());
                 tailer.commit();
 
                 // restart from the beginning and commit after the first message
                 tailer.toStart();
-                assertEquals("id1", tailer.read(Duration.ofMillis(1)).getId());
+                assertEquals("id1", tailer.read(getMinDuration()).getId());
                 tailer.commit();
             }
         }
 
         // reopen
-        try (MQueues<IdMessage> mQueues = openMQ(basePath)) {
+        try (MQueues<IdMessage> mQueues = reopenMQ()) {
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(1)) {
                 tailer.toLastCommitted();
                 // the last committed message was id1
-                assertEquals("id2", tailer.read(Duration.ofMillis(1)).getId());
+                assertEquals("id2", tailer.read(getMinDuration()).getId());
             }
         }
 
@@ -218,14 +197,13 @@ public class TestCQMQueues {
     @Test
     public void canNotAppendOnClosedMQueues() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             mQueues.close();
             try {
                 mQueues.append(0, IdMessage.of("foo"));
                 fail("Can not append on closed mqueues");
-            } catch (IndexOutOfBoundsException e) {
+            } catch (IndexOutOfBoundsException | NullPointerException e) {
                 // expected
             }
         }
@@ -234,9 +212,8 @@ public class TestCQMQueues {
     @Test
     public void canNotOpeningTwiceTheSameTailer() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0)) {
                 try {
                     MQueues.Tailer<IdMessage> tailerBis = mQueues.createTailer(0);
@@ -256,10 +233,9 @@ public class TestCQMQueues {
     @Test
     public void canNotOpeningTwiceTheSameTailerEvenOnDifferentMQueues() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE);
-             MQueues<IdMessage> mQueuesBis = openMQ(basePath)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE);
+             MQueues<IdMessage> mQueuesBis = reopenMQ()) {
 
             MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
             try {
@@ -282,18 +258,17 @@ public class TestCQMQueues {
     @Test
     public void closingMQueuesShouldCloseItsTailers() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             mQueues.append(0, IdMessage.of("foo"));
             MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
-            assertNotNull(tailer.read(Duration.ofMillis(1)));
+            assertNotNull(tailer.read(getMinDuration()));
             // here we close the mq not the tailer
         }
 
-        try (MQueues<IdMessage> mQueues = openMQ(basePath)) {
+        try (MQueues<IdMessage> mQueues = reopenMQ()) {
             MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
-            assertNotNull(tailer.read(Duration.ofMillis(1)));
+            assertNotNull(tailer.read(getMinDuration()));
         }
     }
 
@@ -301,15 +276,14 @@ public class TestCQMQueues {
     @Test
     public void canNotReuseAClosedMQueues() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             mQueues.append(0, IdMessage.of("foo"));
             mQueues.close();
             try {
                 mQueues.append(0, IdMessage.of("bar"));
                 fail("Should raise an exception");
-            } catch (IndexOutOfBoundsException e) {
+            } catch (IndexOutOfBoundsException | NullPointerException e) {
                 // expected
             }
         }
@@ -318,18 +292,17 @@ public class TestCQMQueues {
     @Test
     public void canNotReuseAClosedTailer() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             mQueues.append(0, IdMessage.of("foo"));
             MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
-            assertNotNull(tailer.read(Duration.ofMillis(0)));
+            assertNotNull(tailer.read(getMinDuration()));
             tailer.close();
-            tailer.toStart();
             try {
-                tailer.read(Duration.ofMillis(0));
+                tailer.toStart();
+                tailer.read(getMinDuration());
                 fail("It is not possible to read on a closed tailer");
-            } catch (IllegalStateException e) {
+            } catch (IllegalStateException | NullPointerException e) {
                 // expected
             }
 
@@ -340,49 +313,48 @@ public class TestCQMQueues {
     @Test
     public void commitOffsetNameSpace() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
         final IdMessage msg1 = IdMessage.of("id1");
         final IdMessage msg2 = IdMessage.of("id2");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             for (int i = 0; i < 10; i++) {
                 mQueues.append(0, IdMessage.of("id" + i));
             }
             // each tailers have distinct commit offsets
-            try (MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0, "a");
-                 MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "b")) {
+            try (MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0, "group-a");
+                 MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "group-b")) {
 
-                assertEquals("id0", tailerA.read(Duration.ofMillis(0)).getId());
-                assertEquals("id1", tailerA.read(Duration.ofMillis(0)).getId());
+                assertEquals("id0", tailerA.read(getMinDuration()).getId());
+                assertEquals("id1", tailerA.read(getMinDuration()).getId());
                 tailerA.commit();
-                assertEquals("id2", tailerA.read(Duration.ofMillis(0)).getId());
-                assertEquals("id3", tailerA.read(Duration.ofMillis(0)).getId());
+                assertEquals("id2", tailerA.read(getMinDuration()).getId());
+                assertEquals("id3", tailerA.read(getMinDuration()).getId());
                 tailerA.toLastCommitted();
-                assertEquals("id2", tailerA.read(Duration.ofMillis(0)).getId());
-                assertEquals("id3", tailerA.read(Duration.ofMillis(0)).getId());
+                assertEquals("id2", tailerA.read(getMinDuration()).getId());
+                assertEquals("id3", tailerA.read(getMinDuration()).getId());
 
 
-                assertEquals("id0", tailerB.read(Duration.ofMillis(0)).getId());
+                assertEquals("id0", tailerB.read(getMinDuration()).getId());
                 tailerB.commit();
-                assertEquals("id1", tailerB.read(Duration.ofMillis(0)).getId());
-                assertEquals("id2", tailerB.read(Duration.ofMillis(0)).getId());
+                assertEquals("id1", tailerB.read(getMinDuration()).getId());
+                assertEquals("id2", tailerB.read(getMinDuration()).getId());
 
                 tailerB.toLastCommitted();
-                assertEquals("id1", tailerB.read(Duration.ofMillis(0)).getId());
+                assertEquals("id1", tailerB.read(getMinDuration()).getId());
 
                 tailerA.toLastCommitted();
-                assertEquals("id2", tailerA.read(Duration.ofMillis(0)).getId());
+                assertEquals("id2", tailerA.read(getMinDuration()).getId());
             }
         }
 
         // reopen
-        try (MQueues<IdMessage> mQueues = openMQ(basePath)) {
+        try (MQueues<IdMessage> mQueues = reopenMQ()) {
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0);
-                 MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0, "a");
-                 MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "b")) {
-                assertEquals("id0", tailer.read(Duration.ofMillis(0)).getId());
-                assertEquals("id2", tailerA.read(Duration.ofMillis(0)).getId());
-                assertEquals("id1", tailerB.read(Duration.ofMillis(0)).getId());
+                 MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0, "group-a");
+                 MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "group-b")) {
+                assertEquals("id0", tailer.read(getMinDuration()).getId());
+                assertEquals("id2", tailerA.read(getMinDuration()).getId());
+                assertEquals("id1", tailerB.read(getMinDuration()).getId());
             }
         }
 
@@ -392,36 +364,35 @@ public class TestCQMQueues {
     @Test
     public void commitConcurrentTailer() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             for (int i = 0; i < 10; i++) {
                 mQueues.append(0, IdMessage.of("id" + i));
             }
             MQueues.Tailer<IdMessage> tailerA = mQueues.createTailer(0);
-            MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "foo");
+            MQueues.Tailer<IdMessage> tailerB = mQueues.createTailer(0, "b");
 
-            assertEquals("id0", tailerA.read(Duration.ofMillis(0)).getId());
-            assertEquals("id0", tailerB.read(Duration.ofMillis(0)).getId());
+            assertEquals("id0", tailerA.read(getMinDuration()).getId());
+            assertEquals("id0", tailerB.read(getMinDuration()).getId());
 
-            assertEquals("id1", tailerA.read(Duration.ofMillis(0)).getId());
+            assertEquals("id1", tailerA.read(getMinDuration()).getId());
             tailerA.commit();
             tailerB.commit();
 
-            assertEquals("id1", tailerB.read(Duration.ofMillis(0)).getId());
-            assertEquals("id2", tailerA.read(Duration.ofMillis(0)).getId());
-            assertEquals("id2", tailerB.read(Duration.ofMillis(0)).getId());
-            assertEquals("id3", tailerB.read(Duration.ofMillis(0)).getId());
-            assertEquals("id4", tailerB.read(Duration.ofMillis(0)).getId());
+            assertEquals("id1", tailerB.read(getMinDuration()).getId());
+            assertEquals("id2", tailerA.read(getMinDuration()).getId());
+            assertEquals("id2", tailerB.read(getMinDuration()).getId());
+            assertEquals("id3", tailerB.read(getMinDuration()).getId());
+            assertEquals("id4", tailerB.read(getMinDuration()).getId());
             tailerB.commit();
 
             tailerA.toLastCommitted();
             tailerB.toStart();
-            assertEquals("id2", tailerA.read(Duration.ofMillis(0)).getId());
-            assertEquals("id0", tailerB.read(Duration.ofMillis(0)).getId());
+            assertEquals("id2", tailerA.read(getMinDuration()).getId());
+            assertEquals("id0", tailerB.read(getMinDuration()).getId());
 
             tailerB.toLastCommitted();
-            assertEquals("id5", tailerB.read(Duration.ofMillis(0)).getId());
+            assertEquals("id5", tailerB.read(getMinDuration()).getId());
 
             tailerA.close();
             tailerB.close();
@@ -432,12 +403,11 @@ public class TestCQMQueues {
     @Test
     public void waitForConsumer() throws Exception {
         final int NB_QUEUE = 1;
-        final File basePath = folder.newFolder("cq");
 
         Offset offset = null;
         Offset offset0 = null;
         Offset offset5 = null;
-        try (MQueues<IdMessage> mQueues = createMQ(basePath, NB_QUEUE)) {
+        try (MQueues<IdMessage> mQueues = createMQ(NB_QUEUE)) {
             // appends some msg and keep some offsets
             for (int i = 0; i < 10; i++) {
                 offset = mQueues.append(0, IdMessage.of("id" + i));
@@ -448,32 +418,32 @@ public class TestCQMQueues {
                 }
             }
             // nothing committed
-            assertFalse(mQueues.waitFor(offset, Duration.ofMillis(0)));
-            assertFalse(mQueues.waitFor(offset0, Duration.ofMillis(0)));
-            assertFalse(mQueues.waitFor(offset5, Duration.ofMillis(0)));
+            assertFalse(mQueues.waitFor(offset, getMinDuration()));
+            assertFalse(mQueues.waitFor(offset0, getMinDuration()));
+            assertFalse(mQueues.waitFor(offset5, getMinDuration()));
 
             try (MQueues.Tailer<IdMessage> tailer = mQueues.createTailer(0)) {
-                tailer.read(Duration.ofMillis(0));
+                tailer.read(getMinDuration());
                 tailer.commit();
 
                 // msg 0 is processed and committed
-                assertTrue(mQueues.waitFor(offset0, Duration.ofMillis(0)));
+                assertTrue(mQueues.waitFor(offset0, getMinDuration()));
                 // msg 5 and last is processed and committed
-                assertFalse(mQueues.waitFor(offset5, Duration.ofMillis(0)));
-                assertFalse(mQueues.waitFor(offset, Duration.ofMillis(0)));
+                assertFalse(mQueues.waitFor(offset5, getMinDuration()));
+                assertFalse(mQueues.waitFor(offset, getMinDuration()));
 
                 // drain
-                while (tailer.read(Duration.ofMillis(0)) != null) ;
+                while (tailer.read(getMinDuration()) != null) ;
 
                 // message is processed but not yet committed
-                assertFalse(mQueues.waitFor(offset, Duration.ofMillis(0)));
+                assertFalse(mQueues.waitFor(offset, getMinDuration()));
                 tailer.commit();
             }
 
             // message is processed and committed
-            assertTrue(mQueues.waitFor(offset0, Duration.ofMillis(0)));
-            assertTrue(mQueues.waitFor(offset5, Duration.ofMillis(0)));
-            assertTrue(mQueues.waitFor(offset, Duration.ofMillis(0)));
+            assertTrue(mQueues.waitFor(offset0, getMinDuration()));
+            assertTrue(mQueues.waitFor(offset5, getMinDuration()));
+            assertTrue(mQueues.waitFor(offset, getMinDuration()));
 
         }
     }

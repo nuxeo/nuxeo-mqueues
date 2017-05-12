@@ -1,4 +1,4 @@
-package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;/*
+/*
  * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;/*
  * Contributors:
  *     bdelbosc
  */
+package org.nuxeo.ecm.platform.importer.mqueues.computation.internals;
 
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMapping;
