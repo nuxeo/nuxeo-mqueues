@@ -26,11 +26,12 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomDocumentMessageProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomDocumentMessageProducerFactory;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -70,13 +71,14 @@ public class RandomDocumentProducers {
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         queuePath = getQueuePath();
-        try (MQueues<DocumentMessage> mQueues = CQMQueues.openOrCreate(new File(queuePath), nbThreads)) {
+        try (MQManager<DocumentMessage> manager = new ChronicleMQManager<>(new File(queuePath).getParentFile().toPath())) {
+            MQueue<DocumentMessage> mQueue = manager.openOrCreate((new File(queuePath)).getName(), nbThreads);
             ProducerPool<DocumentMessage> producers;
             if (blobInfoPath != null) {
-                producers = new ProducerPool<>(mQueues,
+                producers = new ProducerPool<>(mQueue,
                         new RandomDocumentMessageProducerFactory(nbDocuments, lang, Paths.get(blobInfoPath)), nbThreads);
             } else {
-                producers = new ProducerPool<>(mQueues,
+                producers = new ProducerPool<>(mQueue,
                         new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads);
             }
             producers.start().get();

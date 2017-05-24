@@ -21,8 +21,9 @@ package org.nuxeo.ecm.platform.importer.mqueues.workmanager;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.mqueues.StreamsMQChronicle;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQManager;
 import org.nuxeo.runtime.api.Framework;
 
 import java.io.File;
@@ -35,9 +36,9 @@ public class WorkManagerComputationChronicle extends WorkManagerComputation {
     protected static final Log log = LogFactory.getLog(WorkManagerComputationChronicle.class);
 
     @Override
-    protected Streams initStream() {
+    protected MQManager<Record> initStream() {
         File dir = new File(Framework.getRuntime().getHome(), "data/streams");
-        log.info("Init WorkManagerComputation with Chronicle MQueues in: " + dir.getAbsolutePath());
-        return new StreamsMQChronicle(dir.toPath());
+        log.info("Init WorkManagerComputation with Chronicle MQueue in: " + dir.getAbsolutePath());
+        return new ChronicleMQManager<>(dir.toPath());
     }
 }

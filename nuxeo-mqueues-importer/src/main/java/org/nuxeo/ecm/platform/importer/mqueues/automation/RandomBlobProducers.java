@@ -27,11 +27,12 @@ import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
-import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomStringBlobMessageProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.api.Framework;
 
 import java.io.File;
@@ -69,8 +70,9 @@ public class RandomBlobProducers {
     public void run() {
         checkAccess(ctx);
         queuePath = getQueuePath();
-        try (MQueues<BlobMessage> mQueues = CQMQueues.openOrCreate(new File(queuePath), nbThreads)) {
-            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
+        try (MQManager<BlobMessage> manager = new ChronicleMQManager<>(new File(queuePath).getParentFile().toPath())) {
+            MQueue<BlobMessage> mQueue = manager.openOrCreate((new File(queuePath)).getName(), nbThreads);
+            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueue,
                     new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads);
             producers.start().get();
         } catch (Exception e) {

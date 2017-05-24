@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.nuxeo.ecm.platform.importer.mqueues.message.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
 import java.io.File;
 import java.io.IOException;

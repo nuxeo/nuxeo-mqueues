@@ -19,7 +19,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
 import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 
 /**
  * Same as {@link ComputationForward} but add latency on processing.

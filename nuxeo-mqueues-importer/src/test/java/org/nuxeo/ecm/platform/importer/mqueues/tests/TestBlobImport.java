@@ -25,17 +25,17 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.BlobMessageConsumerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
-import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerStatus;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomStringBlobMessageProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BlobMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerStatus;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerStatus;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
@@ -62,17 +62,17 @@ public class TestBlobImport {
         final int NB_BLOBS = 2 * 1000;
         final File basePath = folder.newFolder("cq");
 
-        try (MQueues<BlobMessage> mQueues = CQMQueues.create(basePath, NB_QUEUE)) {
-            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
+        try (MQueue<BlobMessage> mQueue = ChronicleMQueue.create(basePath, NB_QUEUE)) {
+            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueue,
                     new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 1), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
         }
         final Path output = folder.newFolder("blob-info").toPath();
-        try (MQueues<BlobMessage> mQueues = CQMQueues.open(basePath)) {
+        try (MQueue<BlobMessage> mQueue = ChronicleMQueue.open(basePath)) {
             String blobProviderName = "test";
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueue,
                     new BlobMessageConsumerFactory(blobProviderName, output),
                     ConsumerPolicy.builder().batchPolicy(BatchPolicy.NO_BATCH).build());
             List<ConsumerStatus> ret = consumers.start().get();

@@ -19,8 +19,6 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.computation;
 
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Record;
-
 /**
  * @since 9.2
  */
@@ -62,12 +60,12 @@ public interface ComputationContext {
     void produceRecord(final String streamName, final Record record);
 
     /**
-     * Set the low watermark, useful for source computation.
+     * Set the low watermark for a source computation.
      */
     void setSourceLowWatermark(long watermark);
 
     /**
-     * Ask for checkpoint to send records, save input stream offset position.
+     * Ask for checkpoint in order to send records, save input stream offset positions.
      */
     void askForCheckpoint();
 }

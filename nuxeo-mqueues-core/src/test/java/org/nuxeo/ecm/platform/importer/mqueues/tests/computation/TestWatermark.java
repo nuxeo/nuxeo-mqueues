@@ -177,7 +177,7 @@ public class TestWatermark {
         assertTrue(wmi.getLow().getValue() > w3);
         assertEquals(t3, wmi.getLow().getTimestamp());
 
-        // we can not go lower than the last checkpointed value
+        // we can not go lower than the last checkpoint value
         wmi.mark(w0);
         assertEquals(t3, wmi.getLow().getTimestamp());
         assertTrue(wmi.isDone(t3));
@@ -216,7 +216,7 @@ public class TestWatermark {
         assertFalse(wmi.isDone(t1));
         assertEquals(w3 + 1, wmi.getLow().getValue());
 
-        // mark with a smaller wm, but low stay on last checkpointed
+        // mark with a smaller wm, but low stay on last checkpoint
         wmi.mark(w1);
         assertEquals(w3 + 1, wmi.getLow().getValue());
 
@@ -311,7 +311,7 @@ public class TestWatermark {
         wmi.mark(w3);
         wmi.mark(w2);
         wmi.mark(w1);
-        // discard w1 and w2 because they are lower than checkpointed wm
+        // discard w1 and w2 because they are lower than checkpoint wm
         assertEquals(Watermark.completedOf(w2), wmi.getLow());
 
         wmi.checkpoint();

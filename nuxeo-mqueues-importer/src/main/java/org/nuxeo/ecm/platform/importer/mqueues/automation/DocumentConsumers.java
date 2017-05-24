@@ -27,13 +27,13 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentConsumerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentMessageConsumerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentConsumerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQueue;
 
 import java.io.File;
 import java.time.Duration;
@@ -77,8 +77,8 @@ public class DocumentConsumers {
         RandomBlobProducers.checkAccess(ctx);
         queuePath = getQueuePath();
         repositoryName = getRepositoryName();
-        try (MQueues<DocumentMessage> mQueues = CQMQueues.open(new File(queuePath))) {
-            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mQueues,
+        try (MQueue<DocumentMessage> mQueue = ChronicleMQueue.open(new File(queuePath))) {
+            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mQueue,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
                     ConsumerPolicy.builder()
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)

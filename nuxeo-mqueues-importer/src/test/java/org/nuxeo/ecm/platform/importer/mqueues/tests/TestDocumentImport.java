@@ -27,21 +27,21 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.BlobMessageConsumerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerStatus;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.DocumentMessageConsumerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.message.DocumentMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.ProducerStatus;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomDocumentMessageProducerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.producer.RandomStringBlobMessageProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BlobMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerStatus;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerStatus;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomDocumentMessageProducerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -75,17 +75,17 @@ public class TestDocumentImport {
         final int NB_DOCUMENTS = 2 * 100;
         final File basePath = folder.newFolder("cq");
 
-        try (MQueues<DocumentMessage> mQueues = CQMQueues.create(basePath, NB_QUEUE)) {
-            ProducerPool<DocumentMessage> producers = new ProducerPool<>(mQueues,
+        try (MQueue<DocumentMessage> mQueue = ChronicleMQueue.create(basePath, NB_QUEUE)) {
+            ProducerPool<DocumentMessage> producers = new ProducerPool<>(mQueue,
                     new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US", 2), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
         }
 
-        try (MQueues<DocumentMessage> mQueues = CQMQueues.open(basePath)) {
+        try (MQueue<DocumentMessage> mQueue = ChronicleMQueue.open(basePath)) {
             DocumentModel root = session.getRootDocument();
-            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues,
+            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueue,
                     new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString()),
                     ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret = consumers.start().get();
@@ -104,8 +104,8 @@ public class TestDocumentImport {
         final File basePath = folder.newFolder("cq");
 
         // generate blobs
-        try (MQueues<BlobMessage> mQueues = CQMQueues.create(basePath, NB_QUEUE)) {
-            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueues,
+        try (MQueue<BlobMessage> mQueue = ChronicleMQueue.create(basePath, NB_QUEUE)) {
+            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueue,
                     new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 2), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, ret.stream().count());
@@ -114,10 +114,10 @@ public class TestDocumentImport {
         }
         // import blobs
         final Path blobInfoPath = folder.newFolder("blob-info").toPath();
-        try (MQueues<BlobMessage> mQueues = CQMQueues.open(basePath)) {
+        try (MQueue<BlobMessage> mQueue = ChronicleMQueue.open(basePath)) {
             String blobProviderName = "test";
             ConsumerFactory<BlobMessage> factory = new BlobMessageConsumerFactory(blobProviderName, blobInfoPath);
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.BOUNDED);
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueue, factory, ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret = consumers.start().get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.committed).sum());
@@ -125,18 +125,18 @@ public class TestDocumentImport {
 
         final File basePath2 = folder.newFolder("cq2");
         // generate documents with blob reference
-        try (MQueues<DocumentMessage> mQueues = CQMQueues.create(basePath2, NB_QUEUE)) {
+        try (MQueue<DocumentMessage> mQueue = ChronicleMQueue.create(basePath2, NB_QUEUE)) {
             ProducerFactory<DocumentMessage> factory = new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US", blobInfoPath);
-            ProducerPool<DocumentMessage> producers = new ProducerPool<>(mQueues, factory, NB_PRODUCERS);
+            ProducerPool<DocumentMessage> producers = new ProducerPool<>(mQueue, factory, NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
         }
         // import documents without creating blobs
-        try (MQueues<DocumentMessage> mQueues = CQMQueues.open(basePath2)) {
+        try (MQueue<DocumentMessage> mQueue = ChronicleMQueue.open(basePath2)) {
             DocumentModel root = session.getRootDocument();
             ConsumerFactory<DocumentMessage> factory = new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString());
-            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueues, factory, ConsumerPolicy.BOUNDED);
+            ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>(mQueue, factory, ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret = consumers.start().get();
             assertEquals(NB_QUEUE, ret.stream().count());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.committed).sum());
