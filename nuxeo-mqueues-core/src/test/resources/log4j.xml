@@ -62,7 +62,7 @@
   </category>
 
   <!-- hide the warn and stack on retry -->
-  <category name="org.nuxeo.ecm.platform.importer.mqueues.consumer.internals.ConsumerRunner">
+  <category name="org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.ConsumerRunner">
     <priority value="ERROR" />
   </category>
 

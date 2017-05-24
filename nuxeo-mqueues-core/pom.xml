@@ -9,7 +9,7 @@
 
   <artifactId>nuxeo-mqueues-core</artifactId>
   <name>Nuxeo MQueues Core</name>
-  <description>MultiQueues producers/consumers Core API</description>
+  <description>MQueue Core API for Consumer Producer pattern and Computation</description>
 
   <dependencies>
     <dependency>

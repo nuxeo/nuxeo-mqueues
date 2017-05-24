@@ -195,7 +195,7 @@ public class Topology {
             return children;
         }
         Set<String> ret = new HashSet<>();
-        children.forEach(child -> getChildren(child).forEach(ret::add));
+        children.forEach(child -> ret.addAll(getChildren(child)));
         return ret;
     }
 
@@ -211,7 +211,7 @@ public class Topology {
             return parents;
         }
         Set<String> ret = new HashSet<>();
-        parents.forEach(parent -> getParents(parent).forEach(ret::add));
+        parents.forEach(parent -> ret.addAll(getParents(parent)));
         return ret;
     }
 

@@ -26,11 +26,12 @@ import org.nuxeo.ecm.core.work.WorkQueueRegistry;
 import org.nuxeo.ecm.core.work.api.Work;
 import org.nuxeo.ecm.core.work.api.WorkQueueMetrics;
 import org.nuxeo.ecm.core.work.api.WorkSchedulePath;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationManagerStream;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Stream;
-import org.nuxeo.ecm.platform.importer.mqueues.streams.Streams;
+import org.nuxeo.ecm.platform.importer.mqueues.computation.mqueue.MQComputationManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
 import org.nuxeo.runtime.transaction.TransactionHelper;
@@ -60,11 +61,11 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
     protected static final int DEFAULT_CONCURRENCY = 4;
     protected Topology topology;
     protected Settings settings;
-    protected ComputationManagerStream manager;
-    protected Streams streams;
+    protected MQComputationManager manager;
+    protected MQManager<Record> streams;
     protected final Set<String> streamIds = new HashSet<>();
 
-    protected abstract Streams initStream();
+    protected abstract MQManager<Record> initStream();
 
     public class WorkScheduling implements Synchronization {
         public final Work work;
@@ -110,13 +111,13 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
         // TODO: may be choose a key with a transaction id so all jobs from the same tx are ordered ?
         String key = work.getId();
-        Stream stream = streams.getStream(getStreamForCategory(work.getCategory()));
+        MQueue<Record> stream = streams.get(getStreamForCategory(work.getCategory()));
         if (stream == null) {
             log.error(String.format("Not scheduled work, unknown category: %s, mapped to %s", work.getCategory(),
                     getStreamForCategory(work.getCategory())));
             return;
         }
-        stream.appendRecord(key, ComputationWork.serialize(work));
+        stream.append(key, Record.of(key, ComputationWork.serialize(work)));
     }
 
     public String getStreamForCategory(String category) {
@@ -185,7 +186,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
 
     protected void startComputation() {
-        this.manager = new ComputationManagerStream(streams, topology, settings);
+        this.manager = new MQComputationManager(streams, topology, settings);
         manager.start();
     }
 

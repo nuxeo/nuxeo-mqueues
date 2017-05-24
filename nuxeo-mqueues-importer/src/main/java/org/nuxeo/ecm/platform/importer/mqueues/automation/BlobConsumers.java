@@ -27,13 +27,13 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.BatchPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.BlobMessageConsumerFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPolicy;
-import org.nuxeo.ecm.platform.importer.mqueues.consumer.ConsumerPool;
-import org.nuxeo.ecm.platform.importer.mqueues.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueues;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.CQMQueues;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BlobMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQueue;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -77,8 +77,8 @@ public class BlobConsumers {
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         queuePath = getQueuePath();
-        try (MQueues<BlobMessage> mQueues = CQMQueues.open(new File(queuePath))) {
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueues,
+        try (MQueue<BlobMessage> mQueue = ChronicleMQueue.open(new File(queuePath))) {
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueue,
                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
                     ConsumerPolicy.builder()
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)

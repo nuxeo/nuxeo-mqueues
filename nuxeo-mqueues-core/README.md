@@ -3,63 +3,92 @@ nuxeo-mqueues-core
 
 ## About
 
-This module implements a generic message queue (MQueues) used to implement different producer/consumer patterns.
+ This module implements an asynchronous message passing system called MQueue. 
+ 
+ A MQueue acts as a partitioned queue. MQueue stands for Multi Queue.
+ 
+ MQueue is used in different producer consumer patterns described below.
 
-
+ This module also contains a Computation pattern not tied to MQueues (even if one possible impl is done using MQueues).
+ 
 ## Warning
 
 This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
-## MQueues features
+## MQueue 
 
-A MQueues (Multiple Queues) is a bounded array of queues, each queue is referenced by an index.
+### MQueue features
+
+A MQueue is a partitioned queue, this can be seen as an array of queues. 
+Each queue being unbounded and persisted.
 
 A producer is responsible for choosing which message to assign to which queue:
 
 * Using a round robin algorithm a producer can balance messages between queues.
-* Producer can also use a shard key to group message by queue following its own semantic.
+* Using a shard key it can group message by queue following its own semantic.
 
-Each queue is an ordered immutable sequence of messages that are appended:
+There is no back pressure on producer because the queues are unbounded (persisted outside of JVM memory),
+so the producer is never blocked when appending a message.
 
-* The producer will never be blocked when appending a message.
+A consumer reads message using a tailer, the tailer don't destroy messages while reading from a queue.
+Each queue of an MQueue is an ordered immutable sequence of messages that are appended. 
 
-Consumers read messages from a queue using a tailer, the current read position (aka offset) can be persisted.
+The maximum consumer concurrency is fixed by the size of the MQueues (the number of its partition) 
 
-* Consumer don't destroy messages while reading from a queue.
-* Consumer can stop and restart without losing its place by choosing the last persisted offset.
-* Consumer can also choose to read message from the beginning or end of a queue.
+Tailer position (aka offset) can be persisted, this enable to have consumer that stop and resume processing without loosing message.
+Tailer can also read message from the beginning or end of a queue.
 
-Consumers can choose a namespace to persist its offset:
+Tailer offsets are persisted in a namespace, this enable to create group of consumers that process concurrently 
+the same mqueues at their own speed.
 
-* Each consumer for a queue see the same messages in the same order
-* There is only one tailer per queue in a namespace to prevent conflict in commit.
+### MQueue Implementations
 
-This is enough to implement two main patterns of producer/consumer:
+#### Chronicle Queue
+ 
+  [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is an off-Heap queue implementation.
+
+  A MQueue is composed of multiple Chronicle Queues (one for each queue).
+  There is an additional Chronicle Queue created for each consumer offset namespace.
+
+  This implementation is limited to a single node because the Chronicle Queue can not be distributed,
+  in its open source version.
+  
+  The queue are persisted on disk but at the moment there is no retention policy so everything is kept for ever until [NXP-22113](https://jira.nuxeo.com/browse/NXP-22113)
+  
+  
+#### Kafka
+
+  [Kafka](http://kafka.apache.org/) is a distributed streaming app framework.
+  
+  A MQueue is simply a Topic and each queue is partitioned log.
+  
+  Tailer is assigned to a TopicPartition manually. Offset are also saved manually. 
+ 
+  Kafka does not manage the consumer distribution in this implementation.
+  This limits the distribution, all consumer of a namespace (a group) must run
+  on the same node.
+  
+  Still it is possible to distribute producer and consumer group around nodes.  
+
+
+### Producer/Consumer Patterns
+
+Based on MQueue API we can implement multiple patterns of producer/consumer:
 
 1. Queuing (aka work queue): a message is delivered to one and only one consumer
-  * producers dispatch messages in queues
-  * there is a single consumer per queue: the number of consumers is equal to the number of queues
+  * producers append messages to a MQueue
+  * there is a single consumer per partitioned queue: the number of consumers is equal to the number of queues
+  
 2. Pub/Sub (aka event bus): an event is publish on a channel, multiple listeners can subscribe to a channel
-  * a publisher append messages to a queue (channel)
-  * subscribers read messages from a queue, each subscriber has its own offset namespace
+  * a publisher append messages to a MQueue (channel)
+  * subscribers read messages from a queue, each subscriber has its own tailer namespace
 
+The first Queuing pattern has an API available to provide easy to implement producer and consumer,
+it comes with a batching and retry policy (see below).
 
-## Default MQueues implementation
+The pub/sub does not requires extra API than the MQueue API. 
 
-The default queues implementation is using [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) which is an Off-Heap implementation.
-
-A MQueues of size N will creates N Chronicle Queues, one for each queue.
-There is an additional Chronicle Queue created for each consumer offset namespace.
-
-The only limitation is the available disk storage, there is no retention policy so everything is kept for ever.
-
-That being said Chronicle Queue by default creates a single file per queue and per day, so it is possible to script some retention policy like keeping messages for the last D days.
-(It is also possible to change the cycle to create a file every hours).
-
-## Patterns
-
-
-### Pattern 1: Queuing with a limited amount of messages
+### Queuing with a limited amount of messages
 
 Typical usage can be a mass import process where producers extract documents and consumer import documents:
 
@@ -76,7 +105,7 @@ This is a one time process:
 The proposed solution takes care of:
 
 * Driving producers/consumers thread pools
-* Following a [consumer policy](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/consumer/ConsumerPolicy.java) that defines:
+* Following a [consumer policy](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/pattern/consumer/ConsumerPolicy.java) that defines:
     - the batch policy: capacity and timeout
     - the retry policy: which exceptions to catch, number of retry, backoff and much more see [failsafe](https://github.com/jhalterman/failsafe) library for more info
     - when to stop and what to do in case of failure
@@ -84,15 +113,15 @@ The proposed solution takes care of:
 * Starting consumers from the last successfully processed message
 * Exposing metrics for producers and consumers
 
-To use this pattern one must implement a [ProducerIterator](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/producer/ProducerIterator.java) and a [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/consumer/Consumer.java) with factories.
+To use this pattern one must implement a [ProducerIterator](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/producer/ProducerIterator.java) and a [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/pattern/consumer/Consumer.java) with factories.
 Both the producer and consumer implementation are driven (pulled) by the module.
 
-See [TestBoundedQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/TestBoundedQueuingPattern.java) for basic examples.
+See [TestBoundedQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/pattern/TestPatternBoundedQueuing.java) for basic examples.
 
-### Pattern 2: Queuing unlimited
+### Queuing unlimited
 
 Almost the same as pattern as above but producers and consumers are always up processing an infinite flow of messages.
-There is no Producer interface, a producer just use a [MQueues](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/mqueues/MQueues.java) to append messages.
+There is no Producer interface, a producer just use a [MQueue](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/mqueues/MQueue.java) to append messages.
 
 The Consumer is driven the same way but its policy is different:
 
@@ -102,25 +131,19 @@ The Consumer is driven the same way but its policy is different:
 
 A producer can wait for a message to be consumed, this can simulate an async call.
 
-See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/TestQueuingPattern.java) for basic examples.
+See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/pattern/TestPatternQueuing.java) for basic examples.
 
 
-### Pattern 3: Publish subscribe (Event bus)
-
-Publishing is done by appending message to mqueues.
-
-Multiple Consumers using different offset namespace can tail on the mqueues.
-
-### Pattern 4: Stream and Computations
+## Stream and Computations
  
 This pattern is taken from [Google MillWheel](https://research.google.com/pubs/pub41378.html) and is implemented in [Concord.io](http://concord.io/docs/guides/architecture.html
-) or [Kafka Stream Processor](https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/Processor.java).
+) and not far from  [Kafka Stream Processor](https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/Processor.java).
 
 Instead of message we have record that hold some specific fields like the key and a watermark in addition to the payload.
 
 The key is used to route the record. Records with the same key are always routed to the same computation instance.
 
-The computation is defined almost like in [concord][http://concord.io/docs/guides/concepts.html].
+The computation is defined almost like in [concord](http://concord.io/docs/guides/concepts.html).
  
 The Topology represent a DAG of computations, that can be executed using a ComputationManager.
 Computation read from 0 to n streams and write from 0 to n streams.
@@ -129,13 +152,28 @@ Here is an example of the DAG used in UT:
 
 ![dag](dag1.png)  
   
-TODO: more 
+
+### Computation implementation
+
+A default implementation of Computation is provided based on MQueue.
+
+XXX
+
 
 ## Building
 
 To build and run the tests, simply start the Maven build:
 
     mvn clean install
+
+### Run a Kafka cluster
+
+To run unit test under Kafka implementation you need to have access to a Kafka cluster:
+
+    cd kafka-docker
+    docker-compose up -d
+    # to stop
+    docker-compose down
 
 ### Following Project QA Status
 [![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=master/addon_nuxeo-mqueues-master)](https://qa.nuxeo.org/jenkins/job/master/job/addon_nuxeo-mqueues-master/)
