@@ -36,12 +36,16 @@ import java.util.Map;
  * @since 9.1
  */
 public class DocumentMessage implements Message {
+    static final long serialVersionUID = 20170529L;
     private String type;
     private String parentPath;
     private String name;
     private Map<String, Serializable> properties;
     private Blob blob;
     private BlobInfo blobInfo;
+
+    public DocumentMessage() {
+    }
 
     private DocumentMessage(Builder builder) {
         type = builder.type;

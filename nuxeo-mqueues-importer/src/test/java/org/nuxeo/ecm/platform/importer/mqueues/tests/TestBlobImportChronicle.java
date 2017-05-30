@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
+ * Contributors:
+ *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
 
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+package org.nuxeo.ecm.platform.importer.mqueues.tests;
+
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
-public class TestPatternQueuingChronicle extends TestPatternQueuing {
-
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+/**
+ * @since 9.2
+ */
+public class TestBlobImportChronicle extends TestBlobImport {
 
     @Override
-    public MQManager<IdMessage> createManager() throws Exception {
-        return new ChronicleMQManager<>(folder.newFolder().toPath());
+    public MQManager getManager() throws Exception {
+        return new ChronicleMQManager<>(folder.newFolder("mqueue").toPath());
     }
 }

@@ -4,5 +4,5 @@ Bundle-Name: MQueues Importer
 Bundle-SymbolicName: org.nuxeo.ecm.mqueues.importer;singleton:=true
 Bundle-Vendor: Nuxeo
 Nuxeo-Component: OSGI-INF/operations-contrib.xml,
- OSGI-INF/workmanager-service.xml
+ OSGI-INF/kafka-config-service.xml
 

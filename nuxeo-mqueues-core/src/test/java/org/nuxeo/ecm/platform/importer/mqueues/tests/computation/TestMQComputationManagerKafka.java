@@ -47,7 +47,7 @@ public class TestMQComputationManagerKafka extends TestComputationManager {
     public TestName testName = new TestName();
 
     public String getTopicPrefix(String mark) {
-        return "nuxeo-test-" + testName.getMethodName() + "-" + System.currentTimeMillis() + "-";
+        return "nuxeo-test-" + System.currentTimeMillis() + "-" + testName.getMethodName() + "-" ;
     }
 
     @Override

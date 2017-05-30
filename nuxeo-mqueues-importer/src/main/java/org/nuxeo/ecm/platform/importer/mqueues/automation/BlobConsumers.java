@@ -27,15 +27,19 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
+import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
+import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQueue;
+import org.nuxeo.runtime.api.Framework;
 
-import java.io.File;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -70,15 +74,18 @@ public class BlobConsumers {
     @Param(name = "retryDelayS", required = false)
     protected Integer retryDelayS = 2;
 
-    @Param(name = "queuePath", required = false)
-    protected String queuePath;
+    @Param(name = "mqName", required = false)
+    protected String mqName;
+
+    @Param(name = "kafkaConfig", required = false)
+    protected String kafkaConfig;
 
     @OperationMethod
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
-        queuePath = getQueuePath();
-        try (MQueue<BlobMessage> mQueue = ChronicleMQueue.open(new File(queuePath))) {
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueue,
+        try (MQManager<BlobMessage> manager = getManager()) {
+            MQueue<BlobMessage> mq = manager.open(getMQName());
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mq,
                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
                     ConsumerPolicy.builder()
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)
@@ -90,12 +97,22 @@ public class BlobConsumers {
         }
     }
 
-    private String getQueuePath() {
-        if (queuePath != null && !queuePath.isEmpty()) {
-            return queuePath;
+    protected String getMQName() {
+        if (mqName != null) {
+            return mqName;
         }
-        return RandomBlobProducers.getDefaultBlobQueuePath();
+        return RandomBlobProducers.DEFAULT_MQ_NAME;
     }
 
+    protected MQManager<BlobMessage> getManager() {
+        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
+            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"));
+        }
+        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
+        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
+                service.getTopicPrefix(kafkaConfig),
+                service.getProducerProperties(kafkaConfig),
+                service.getConsumerProperties(kafkaConfig));
+    }
 
 }

@@ -128,7 +128,8 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
             throw new RuntimeException("Unable to send record: " + record, e);
         }
         if (log.isDebugEnabled()) {
-            log.debug("append to " + topic + ":" + queue + ":+" + ret.offset() + ", msg: " + message);
+            int len = record.value().get().length;
+            log.debug("append to " + topic + ":" + queue + ":+" + ret.offset() + ", msg: " + message + " length: " + len);
         }
         return new MQOffsetImpl(queue, ret.offset());
     }
@@ -147,10 +148,8 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
 
     @Override
     public MQTailer<M> createTailer(int queue, String nameSpace) {
-        Properties props = (Properties) consumerProps.clone();
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, nameSpace);
-        KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props);
-        KafkaMQTailer<M> ret = new KafkaMQTailer<>(name, consumer, new TopicPartition(topic, queue), nameSpace);
+        KafkaMQTailer ret = new KafkaMQTailer<>(name, topic, queue, nameSpace,
+                (Properties) consumerProps.clone());
         tailers.add(ret);
         return ret;
     }
@@ -161,12 +160,8 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
         long offsetPosition = ((MQOffsetImpl) offset).getOffset();
         int partition = ((MQOffsetImpl) offset).getQueue();
         TopicPartition topicPartition = new TopicPartition(topic, partition);
-        Properties props = (Properties) consumerProps.clone();
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, nameSpace);
-        KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props);
         try {
-            consumer.assign(Collections.singletonList(topicPartition));
-            ret = isProcessed(consumer, nameSpace, topicPartition, offsetPosition);
+            ret = isProcessed(nameSpace, topicPartition, offsetPosition);
             if (ret) {
                 return true;
             }
@@ -175,13 +170,10 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
             final long delay = Math.min(100, timeoutMs);
             while (!ret && System.currentTimeMillis() < deadline) {
                 Thread.sleep(delay);
-                ret = isProcessed(consumer, nameSpace, topicPartition, offsetPosition);
+                ret = isProcessed(nameSpace, topicPartition, offsetPosition);
             }
             return ret;
         } finally {
-            if (consumer != null) {
-                consumer.close();
-            }
             if (log.isDebugEnabled()) {
                 log.debug("waitFor " + topicPartition.topic() + ":" + topicPartition.partition() + "/" + nameSpace
                         + ":+" + offsetPosition + " returns: " + ret);
@@ -189,15 +181,28 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
         }
     }
 
-    private boolean isProcessed(KafkaConsumer<String, Bytes> consumer, String group, TopicPartition topicPartition, long offset) {
-        long last = consumer.position(topicPartition);
-        boolean ret = (last > 0) && (last > offset);
-        if (log.isDebugEnabled()) {
-            log.debug("isProcessed " + topicPartition.topic() + ":" + topicPartition.partition() + "/" + group
-                    + ":+" + offset + "? " + ret + ", current position: " + last);
+    private boolean isProcessed(String group, TopicPartition topicPartition, long offset) {
+        // TODO: find a better way, this is expensive to create a consumer each time
+        // but this is needed, an open consumer is not properly updated
+        Properties props = (Properties) consumerProps.clone();
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
+        KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props);
+        consumer.assign(Collections.singletonList(topicPartition));
+        try {
+            long last = consumer.position(topicPartition);
+            boolean ret = (last > 0) && (last > offset);
+            if (log.isDebugEnabled()) {
+                log.debug("isProcessed " + topicPartition.topic() + ":" + topicPartition.partition() + "/" + group
+                        + ":+" + offset + "? " + ret + ", current position: " + last);
+            }
+            return ret;
+        } finally {
+            if (consumer != null) {
+                consumer.close();
+            }
         }
-        return ret;
     }
+
 
     @Override
     public void close() throws Exception {

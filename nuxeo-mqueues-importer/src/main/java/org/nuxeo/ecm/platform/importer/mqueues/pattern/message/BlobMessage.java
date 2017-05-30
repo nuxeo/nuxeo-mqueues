@@ -30,11 +30,15 @@ import java.io.ObjectOutput;
  * @since 9.1
  */
 public class BlobMessage implements Message {
+    static final long serialVersionUID = 20170529L;
     private String mimetype;
     private String encoding;
     private String filename;
     private String path;
     private String content;
+
+    public BlobMessage() {
+    }
 
     private BlobMessage(StringMessageBuilder builder) {
         mimetype = builder.mimetype;

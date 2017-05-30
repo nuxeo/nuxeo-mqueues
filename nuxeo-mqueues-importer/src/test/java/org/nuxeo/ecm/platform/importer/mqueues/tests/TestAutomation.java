@@ -40,7 +40,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +67,10 @@ public class TestAutomation {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
+    public void addExtraParams(Map<String, Object> params) {
+        // for overriding
+    }
+
     @Test
     public void testBlobImport() throws Exception {
         final int nbThreads = 4;
@@ -75,12 +79,14 @@ public class TestAutomation {
         Map<String, Object> params = new HashMap<>();
         params.put("nbBlobs", 100);
         params.put("nbThreads", nbThreads);
+        addExtraParams(params);
         automationService.run(ctx, RandomBlobProducers.ID, params);
 
         File blobInfo = folder.newFolder("blob-info");
         params.clear();
         params.put("blobProviderName", "test");
         params.put("blobInfoPath", blobInfo.toString());
+        addExtraParams(params);
         automationService.run(ctx, BlobConsumers.ID, params);
 
         try (Stream<Path> paths = Files.walk(blobInfo.toPath())) {
@@ -100,10 +106,12 @@ public class TestAutomation {
         Map<String, Object> params = new HashMap<>();
         params.put("nbDocuments", nbDocuments);
         params.put("nbThreads", nbThreads);
+        addExtraParams(params);
         automationService.run(ctx, RandomDocumentProducers.ID, params);
 
         params.clear();
         params.put("rootFolder", "/");
+        addExtraParams(params);
         automationService.run(ctx, DocumentConsumers.ID, params);
 
         DocumentModelList ret = session.query("SELECT * FROM Document WHERE ecm:primaryType IN ('File', 'Folder')");
@@ -121,6 +129,7 @@ public class TestAutomation {
         Map<String, Object> params = new HashMap<>();
         params.put("nbBlobs", nbBlobs);
         params.put("nbThreads", nbThreads);
+        addExtraParams(params);
         automationService.run(ctx, RandomBlobProducers.ID, params);
 
         File blobInfo = folder.newFolder("blob-info");
@@ -128,6 +137,7 @@ public class TestAutomation {
         params.clear();
         params.put("blobProviderName", "test");
         params.put("blobInfoPath", blobInfo.toString());
+        addExtraParams(params);
         automationService.run(ctx, BlobConsumers.ID, params);
 
         // 3. generates random document messages with blob references
@@ -135,11 +145,13 @@ public class TestAutomation {
         params.put("nbDocuments", nbDocuments);
         params.put("nbThreads", nbThreads);
         params.put("blobInfoPath", blobInfo.toString());
+        addExtraParams(params);
         automationService.run(ctx, RandomDocumentProducers.ID, params);
 
         // 4. import document into the repository
         params.clear();
         params.put("rootFolder", "/");
+        addExtraParams(params);
         automationService.run(ctx, DocumentConsumers.ID, params);
 
         DocumentModelList ret = session.query("SELECT * FROM Document WHERE ecm:primaryType IN ('File', 'Folder')");
@@ -158,7 +170,7 @@ public class TestAutomation {
         List<Path> files;
         try (Stream<Path> paths = Files.walk(blobInfo.toPath())) {
             files = paths.filter(path -> (Files.isRegularFile(path) && path.toString().endsWith("csv"))).collect(Collectors.toList());
-            Collections.sort(files, (p1, p2) -> p1.getFileName().compareTo(p2.getFileName()));
+            files.sort(Comparator.comparing(Path::getFileName));
         }
         BufferedReader reader = new BufferedReader(new FileReader(files.get(0).toFile()));
         reader.readLine(); // skip the csv header

@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.ecm.mqueues.kafka.tests.contrib">
+
+  <extension target="org.nuxeo.ecm.mqueues.importer.kafka.service" point="kafkaConfig">
+    <!-- the RANDOM() topicPrefix will change on each server start, this is useful for unit testing -->
+    <kafkaConfig name="default" zkServers="localhost:2181" topicPrefix="RANDOM()">
+      <producerProperties>
+        <property name="bootstrap.servers">localhost:9092</property>
+      </producerProperties>
+      <consumerProperties>
+        <property name="bootstrap.servers">localhost:9092</property>
+      </consumerProperties>
+    </kafkaConfig>
+
+    <kafkaConfig name="config2" zkServers="remote:2181" topicPrefix="foo">
+      <producerProperties>
+        <property name="bootstrap.servers">remote:9092</property>
+      </producerProperties>
+    </kafkaConfig>
+
+  </extension>
+</component>

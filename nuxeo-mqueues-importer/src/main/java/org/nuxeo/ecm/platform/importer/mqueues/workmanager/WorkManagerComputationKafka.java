@@ -21,24 +21,29 @@ package org.nuxeo.ecm.platform.importer.mqueues.workmanager;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
+import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
-
-import java.nio.file.Path;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
+import org.nuxeo.runtime.api.Framework;
 
 
 /**
  * @since 9.2
  */
-public class WorkManagerComputationChronicle extends WorkManagerComputation {
-    protected static final Log log = LogFactory.getLog(WorkManagerComputationChronicle.class);
+public class WorkManagerComputationKafka extends WorkManagerComputation {
+    protected static final Log log = LogFactory.getLog(WorkManagerComputationKafka.class);
+    public static final String NUXEO_WORKMANAGER_KAFKA_CONFIG_PROP = "nuxeo.mqueue.work.kafka.config";
+    public static final String DEFAULT_CONFIG = "default";
 
     @Override
     protected MQManager<Record> initStream() {
-        Path basePath = ChronicleConfig.getBasePath("work");
-        log.info("Init WorkManagerComputation using Chronicle MQueue impl, basePath: " + basePath);
-        return new ChronicleMQManager<>(basePath);
+        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
+        String kafkaConfig = Framework.getProperty(NUXEO_WORKMANAGER_KAFKA_CONFIG_PROP, DEFAULT_CONFIG);
+        log.info("Init WorkManagerComputation with Kafka MQueue: " + kafkaConfig);
+        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
+                service.getTopicPrefix(kafkaConfig),
+                service.getProducerProperties(kafkaConfig),
+                service.getConsumerProperties(kafkaConfig));
     }
 }

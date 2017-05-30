@@ -3,10 +3,10 @@ nuxeo-mqueues
 
 ## About
 
-This module implements a generic message queue used to implement different producers/consumers patterns: visit [nuxeo-mqueues-core](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/README.md) for more information.
+  This module implements an asynchronous message passing system called MQueue,
+  it comes with different producer/consumer patterns, visit [nuxeo-mqueues-core](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/README.md) for more information.
 
-The initial purpose of the mqueues is to perform mass import, this addon comes with some implementations to produce/consume Nuxeo Document and Nuxeo Blob. Visit [nuxeo-mqueues-importer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-importer/README.md) for more information.
-
+  The integration with Nuxeo gives reliable mass importer and workmanager, visit [nuxeo-mqueues-importer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-importer/README.md) for more information.
 
 ## Warning
 

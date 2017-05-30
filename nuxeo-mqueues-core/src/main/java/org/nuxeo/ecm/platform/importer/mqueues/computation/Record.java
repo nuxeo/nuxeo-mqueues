@@ -103,8 +103,11 @@ public class Record implements Externalizable {
             this.data = null;
         } else {
             this.data = new byte[dataLength];
-            int read = in.read(this.data, 0, dataLength);
-            assert (read == dataLength);
+            // not using in.readFully because it is not impl by Chronicle WireObjectInput
+            int pos = 0;
+            while (pos < dataLength) {
+                pos += in.read(this.data, pos, dataLength - pos);
+            }
         }
     }
 

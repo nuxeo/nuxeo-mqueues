@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
+ * Contributors:
+ *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
+package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import org.junit.After;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
-public class TestPatternQueuingChronicle extends TestPatternQueuing {
+import java.nio.file.Path;
 
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+/**
+ * @since 9.2
+ */
+public class TestDocumentImportChronicle extends TestDocumentImport {
+
+    private Path basePath;
+
+    @After
+    public void resetBasePath() throws Exception {
+        basePath = null;
+    }
 
     @Override
-    public MQManager<IdMessage> createManager() throws Exception {
-        return new ChronicleMQManager<>(folder.newFolder().toPath());
+    public MQManager getManager() throws Exception {
+        if (basePath == null) {
+            basePath = folder.newFolder("mqueue").toPath();
+        }
+        return new ChronicleMQManager<>(basePath);
     }
 }

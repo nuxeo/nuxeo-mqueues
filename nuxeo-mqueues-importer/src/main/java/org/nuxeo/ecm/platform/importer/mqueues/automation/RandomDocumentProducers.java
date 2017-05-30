@@ -26,14 +26,17 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
+import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
+import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomDocumentMessageProducerFactory;
+import org.nuxeo.runtime.api.Framework;
 
-import java.io.File;
 import java.nio.file.Paths;
 
 /**
@@ -44,7 +47,7 @@ import java.nio.file.Paths;
 public class RandomDocumentProducers {
     private static final Log log = LogFactory.getLog(RandomDocumentProducers.class);
     public static final String ID = "MQImporter.runRandomDocumentProducers";
-    public static final String DEFAULT_DOC_QUEUE_NAME = "mq-doc";
+    public static final String DEFAULT_MQ_NAME = "mq-doc";
 
     @Context
     protected OperationContext ctx;
@@ -61,18 +64,20 @@ public class RandomDocumentProducers {
     @Param(name = "lang", required = false)
     protected String lang = "en_US";
 
-    @Param(name = "queuePath", required = false)
-    protected String queuePath;
+    @Param(name = "mqName", required = false)
+    protected String mqName;
 
     @Param(name = "blobInfoPath", required = false)
     protected String blobInfoPath;
 
+    @Param(name = "kafkaConfig", required = false)
+    protected String kafkaConfig;
+
     @OperationMethod
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
-        queuePath = getQueuePath();
-        try (MQManager<DocumentMessage> manager = new ChronicleMQManager<>(new File(queuePath).getParentFile().toPath())) {
-            MQueue<DocumentMessage> mQueue = manager.openOrCreate((new File(queuePath)).getName(), nbThreads);
+        try (MQManager<DocumentMessage> manager = getManager()) {
+            MQueue<DocumentMessage> mQueue = manager.openOrCreate(getMQName(), nbThreads);
             ProducerPool<DocumentMessage> producers;
             if (blobInfoPath != null) {
                 producers = new ProducerPool<>(mQueue,
@@ -87,15 +92,22 @@ public class RandomDocumentProducers {
         }
     }
 
-    private String getQueuePath() {
-        if (queuePath != null && !queuePath.isEmpty()) {
-            return queuePath;
+    protected String getMQName() {
+        if (mqName != null) {
+            return mqName;
         }
-        return getDefaultDocumentQueuePath();
+        return DEFAULT_MQ_NAME;
     }
 
-    public static String getDefaultDocumentQueuePath() {
-        return RandomBlobProducers.getDefaultQueuePath(DEFAULT_DOC_QUEUE_NAME);
+    protected MQManager<DocumentMessage> getManager() {
+        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
+            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"));
+        }
+        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
+        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
+                service.getTopicPrefix(kafkaConfig),
+                service.getProducerProperties(kafkaConfig),
+                service.getConsumerProperties(kafkaConfig));
     }
 
 }
