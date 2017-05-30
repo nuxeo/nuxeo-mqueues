@@ -27,16 +27,16 @@ import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
+import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
+import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.api.Framework;
-
-import java.io.File;
-import java.nio.file.Paths;
 
 /**
  * @since 9.1
@@ -46,7 +46,7 @@ import java.nio.file.Paths;
 public class RandomBlobProducers {
     private static final Log log = LogFactory.getLog(RandomBlobProducers.class);
     public static final String ID = "MQImporter.runRandomBlobProducers";
-    public static final String DEFAULT_BLOB_QUEUE_NAME = "mq-blob";
+    public static final String DEFAULT_MQ_NAME = "mq-blob";
 
     @Context
     protected OperationContext ctx;
@@ -63,16 +63,19 @@ public class RandomBlobProducers {
     @Param(name = "lang", required = false)
     protected String lang = "en_US";
 
-    @Param(name = "queuePath", required = false)
-    protected String queuePath;
+    @Param(name = "mqName", required = false)
+    protected String mqName;
+
+    @Param(name = "kafkaConfig", required = false)
+    protected String kafkaConfig;
+
 
     @OperationMethod
     public void run() {
         checkAccess(ctx);
-        queuePath = getQueuePath();
-        try (MQManager<BlobMessage> manager = new ChronicleMQManager<>(new File(queuePath).getParentFile().toPath())) {
-            MQueue<BlobMessage> mQueue = manager.openOrCreate((new File(queuePath)).getName(), nbThreads);
-            ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueue,
+        try (MQManager<BlobMessage> manager = getManager()) {
+            MQueue<BlobMessage> mq = manager.openOrCreate(getMQName(), nbThreads);
+            ProducerPool<BlobMessage> producers = new ProducerPool<>(mq,
                     new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads);
             producers.start().get();
         } catch (Exception e) {
@@ -80,22 +83,25 @@ public class RandomBlobProducers {
         }
     }
 
-    public String getQueuePath() {
-        if (queuePath != null && !queuePath.isEmpty()) {
-            return queuePath;
+    protected String getMQName() {
+        if (mqName != null) {
+            return mqName;
         }
-        return getDefaultBlobQueuePath();
+        return DEFAULT_MQ_NAME;
     }
 
-    public static String getDefaultBlobQueuePath() {
-        return getDefaultQueuePath(DEFAULT_BLOB_QUEUE_NAME);
+    protected MQManager<BlobMessage> getManager() {
+        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
+            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"));
+        }
+        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
+        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
+                service.getTopicPrefix(kafkaConfig),
+                service.getProducerProperties(kafkaConfig),
+                service.getConsumerProperties(kafkaConfig));
     }
 
-    public static String getDefaultQueuePath(String name) {
-        return Paths.get(Framework.getRuntime().getHome().toString(), "tmp", name).toString();
-    }
-
-    public static void checkAccess(OperationContext context) {
+    protected static void checkAccess(OperationContext context) {
         NuxeoPrincipal principal = (NuxeoPrincipal) context.getPrincipal();
         if (principal == null || !principal.isAdministrator()) {
             throw new RuntimeException("Unauthorized access: " + principal);

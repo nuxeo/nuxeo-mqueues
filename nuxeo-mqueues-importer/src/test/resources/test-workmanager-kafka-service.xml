@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.ecm.mqueues.work.service" version="1.0">
+
+  <require>org.nuxeo.ecm.core.work.service</require>
+
+  <service>
+    <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
+  </service>
+
+  <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationKafka" />
+
+  <extension-point name="queues">
+    <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />
+  </extension-point>
+
+</component>

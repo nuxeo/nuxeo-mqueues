@@ -20,7 +20,9 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.security.UpdateACEStatusWork;
+import org.nuxeo.ecm.core.storage.FulltextUpdaterWork;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.work.SleepWork;
 import org.nuxeo.ecm.core.work.api.Work;
@@ -32,7 +34,11 @@ import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.inject.Inject;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -41,14 +47,20 @@ import static org.junit.Assert.assertTrue;
 /**
  * @since 9.2
  */
-@Deploy({"org.nuxeo.ecm.mqueues.importer", "org.nuxeo.ecm.mqueues.importer.test"})
+
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-// @LocalDeploy("org.nuxeo.ecm.mqueues.importer.test:test-workmanagercomputation-config.xml")
-public class TestWorkManager {
+@Deploy({"org.nuxeo.ecm.mqueues.importer", "org.nuxeo.ecm.mqueues.importer.test"})
+public abstract class TestWorkManager {
+
+    public abstract WorkManagerComputation getService() throws Exception;
+
+    @Inject
+    protected CoreSession session;
+
     @Test
-    public void testService() {
-        WorkManagerComputation service = (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
+    public void testService() throws Exception {
+        WorkManagerComputation service = getService();
         assertNotNull(service);
     }
 
@@ -61,6 +73,19 @@ public class TestWorkManager {
 
         UpdateACEStatusWork work2 = new UpdateACEStatusWork();
         checkSerialization(work2);
+
+        FulltextUpdaterWork work3 = getFulltextUpdaterWork();
+        checkSerialization(work3);
+    }
+
+    protected FulltextUpdaterWork getFulltextUpdaterWork() {
+        session.getRootDocument();
+        List<FulltextUpdaterWork.IndexAndText> indexAndTexts = new ArrayList<>();
+        indexAndTexts.add(new FulltextUpdaterWork.IndexAndText("default",
+                "long string one " + new String(new char[24000]).replace('\0', 'a')));
+        return new FulltextUpdaterWork(session.getRepositoryName(),
+                session.getRootDocument().getId(), true,
+                false, indexAndTexts);
     }
 
     protected void checkSerialization(Work work) {
@@ -81,10 +106,14 @@ public class TestWorkManager {
 
     @Test
     public void testSchedule() throws InterruptedException {
+        // TODO: related with computationwork that wait on startup NXP-21969
+        Thread.sleep(10000);
         WorkManagerComputation service = (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
         assertNotNull(service);
         SleepWork work = new SleepWork(1);
         service.schedule(work);
+        FulltextUpdaterWork work2 = getFulltextUpdaterWork();
+        service.schedule(work2);
         assertTrue(service.awaitCompletion(10, TimeUnit.SECONDS));
     }
 

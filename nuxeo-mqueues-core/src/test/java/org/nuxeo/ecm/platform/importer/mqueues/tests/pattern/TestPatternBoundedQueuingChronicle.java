@@ -19,7 +19,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
 public class TestPatternBoundedQueuingChronicle extends TestPatternBoundedQueuing {

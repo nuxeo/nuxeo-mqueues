@@ -16,7 +16,7 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles;
+package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

@@ -56,7 +56,8 @@ public class ComputationWork extends AbstractComputation {
     public void init(ComputationContext context) {
         super.init(context);
         try {
-            // test to prevent conflict on startup
+            // TODO: check if NXP-21969 provide a way to start computation only once framework is started
+            // until then wait to prevent conflict during startup
             Thread.sleep(10000);
         } catch (InterruptedException e) {
             Thread.interrupted();

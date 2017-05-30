@@ -3,25 +3,61 @@ nuxeo-mqueues-importer
 
 ## About
 
-The mqueues here are used to perform mass import.
+This module contains Producer/Consumer pattern and Computation integration into Nuxeo.
 
-The mqueues decouple the Extraction/Transformation from the Load (using the [ETL](https://en.wikipedia.org/wiki/Extract-transform-load) terminology).
-
-The extraction and transformation is done by a document message producer with custom logic.
-
-The load into Nuxeo is done by a generic document message consumer.  
-
-This module provides producers to generate random blobs and document messages.
-
-Automation operations are exposed to run producers and consumers.
+Producer/consumer pattern are exposed as Nuxeo automation operation and enable to do 
+ mass import.
+ 
+A WorkManager implementation based on Computation is also available.
 
 ## Warning
 
 This module is under developpent and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
-## Testing automation operations with curl
+## Producer/Consumer pattern with automation operations 
 
-### Basic import
+The MQueue here are used to perform mass import.
+
+It decouples the Extraction/Transformation from the Load (using the [ETL](https://en.wikipedia.org/wiki/Extract-transform-load) terminology).
+
+The extraction and transformation is done by a document message producer with custom logic, 
+this module comes with a random document and blob generator.
+
+The load into Nuxeo is done by a generic document message consumer.  
+
+Automation operations are exposed to run producers and consumers.
+
+
+### Choose the MQueue implementation
+
+You can use Chronicle or Kafka MQueue implementation.
+
+The default is Chronicle implementation, the `.cq4` files are stored under `${nuxeo.data.dir}/data/mqueue`.
+  You can override this default using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.dir`.
+
+To use Kafka implementation you need to contribute a configuration for instance:
+
+      <?xml version="1.0"?>
+      <component name="my.project.kafka.contrib">
+      
+        <extension target="org.nuxeo.ecm.mqueues.importer.kafka.service" point="kafkaConfig">
+          
+          <kafkaConfig name="default" zkServers="localhost:2181" topicPrefix="my-app-">
+            <producerProperties>
+              <property name="bootstrap.servers">localhost:9092</property>
+            </producerProperties>
+            <consumerProperties>
+              <property name="bootstrap.servers">localhost:9092</property>
+            </consumerProperties>
+          </kafkaConfig>
+      
+        </extension>
+      </component>
+
+Then you can refer to this configuration by passing the configuration name in your
+automation call using`"kafkaConfig": "default"` parameter.
+
+### Two steps import: generate and import document with blobs
 
 1. Run producers of document messages (file blob are part of the message)
   ```
@@ -33,7 +69,8 @@ Params description:
     "nbThreads": the number of threads for the producers and for the consumers
     "avgBlobSizeKB": the average blob size fo each file documents.
     "lang": the locale used for the generated document ("fr_FR" or "en_US")
-    "queuePath": the path of the mqueue
+    "mqName": the name of the MQueue
+    "kafkaConfig": the name of the Kafka configuration to use
 ```
 2. Run consumers of document messages creating Nuxeo documents, the concurrency will match the previous nbThreads producers parameters
   ```
@@ -47,10 +84,11 @@ Params description:
     "batchThresholdS": the consumer commit documents if the transaction is longer that this threshold
     "retryMax": number of time a consumer retry to import in case of failure
     "retryDelayS": delay between retry
-    "queuePath": the path of the mqueue, created by runRandoDocumentProducers
+    "mqName": the name of the MQueue (use the same name as in previous runRandoDocumentProducers operation)
+    "kafkaConfig": the name of the Kafka configuration to use
 ```
 
-### Import blobs then documents
+### 4 steps import: generate and import blobs then generate and import documents
 
 1. Run producers of blob messages
   ```
@@ -62,7 +100,8 @@ Params description:
     "nbThreads": the number of threads for the producers and for the consumers
     "avgBlobSizeKB": the average blob size
     "lang": the locale used for the generated blob content ("fr_FR" or "en_US")
-    "queuePath": the path of the mqueue
+    "mqName": the name of the MQueue
+    "kafkaConfig": the name of the Kafka configuration to use
 ```
 2. Run consumers of blob messages importing into the Nuxeo binary store.
   ```
@@ -75,7 +114,8 @@ Params description:
     "blobInfoPath": the path to store blob information csv files, this will be used to link documents with blobs later
     "retryMax": number of time a consumer retry to import the blob
     "retryDelayS": delay between retry
-    "queuePath": the path of the mqueue created by runRandomBlobProducers
+    "mqName": the same name as in the previous operation
+    "kafkaConfig": the name of the Kafka configuration to use
 ```
 3. Run producers of document messages which refer to produced blobs created in step 2
   ```
@@ -87,7 +127,8 @@ Params description:
       "nbThreads": the number of threads for the producers and for the consumers
       "blobInfoPath": the blob information csv files path generated by runBlobConsumers
       "lang": the locale used for the generated document ("fr_FR" or "en_US")
-      "queuePath": the path of the mqueue
+      "mqName": the name of the MQueue
+      "kafkaConfig": the name of the Kafka configuration to use
 ```
 4. Run consumers of document messages
   ```
@@ -97,6 +138,37 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runDocument
 Same params listed in the previous previous runDocumentConsumers call.
 ```
 
+
+## WorkManagerComputation implementation
+
+Instead of queueing work into memory or into Redis (which is also in memory), 
+you can queue job in a MQueue.
+
+To do so add the following contribution to override the default WorkManagerImpl:
+
+    <?xml version="1.0"?>
+    <component name="my.project.work.service" version="1.0">
+    
+      <require>org.nuxeo.ecm.core.work.service</require>
+    
+      <service>
+        <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
+      </service>
+    
+      <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationChronicle" />
+      <!-- implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationKafka" /-->
+    
+      <extension-point name="queues">
+        <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />
+      </extension-point>
+    
+    </component>
+
+
+When using the Kafka implementation you need to contribute a configuration (see above).
+
+The Kafka default configuration used is named "default", you can choose another one using
+using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.config`.
 
 ## Building
 

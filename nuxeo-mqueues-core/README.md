@@ -9,15 +9,17 @@ nuxeo-mqueues-core
  
  MQueue is used in different producer consumer patterns described below.
 
- This module also contains a Computation pattern not tied to MQueues (even if one possible impl is done using MQueues).
+ This module also contains a Computation pattern not tied to MQueue (even if one possible impl is done using MQueue).
  
+ This module has no dependency on Nuxeo framework to ease integration with third party.
+
 ## Warning
 
-This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
+  This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
 ## MQueue 
 
-### MQueue features
+### Features
 
 A MQueue is a partitioned queue, this can be seen as an array of queues. 
 Each queue being unbounded and persisted.
@@ -35,7 +37,7 @@ Each queue of an MQueue is an ordered immutable sequence of messages that are ap
 
 The maximum consumer concurrency is fixed by the size of the MQueues (the number of its partition) 
 
-Tailer position (aka offset) can be persisted, this enable to have consumer that stop and resume processing without loosing message.
+Tailer position (aka offset) can be persisted, this enable to have consumer that stop and resume processing without loosing messages.
 Tailer can also read message from the beginning or end of a queue.
 
 Tailer offsets are persisted in a namespace, this enable to create group of consumers that process concurrently 
@@ -43,30 +45,29 @@ the same mqueues at their own speed.
 
 ### MQueue Implementations
 
-#### Chronicle Queue
+#### Chronicle Queue
  
-  [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is an off-Heap queue implementation.
+  [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is a high performance off-Heap queue implementation.
 
   A MQueue is composed of multiple Chronicle Queues (one for each queue).
   There is an additional Chronicle Queue created for each consumer offset namespace.
 
-  This implementation is limited to a single node because the Chronicle Queue can not be distributed,
-  in its open source version.
+  This implementation is limited to a single node because the Chronicle Queue can not be distributed
+  with the open source version.
   
-  The queue are persisted on disk but at the moment there is no retention policy so everything is kept for ever until [NXP-22113](https://jira.nuxeo.com/browse/NXP-22113)
+  The queues are persisted on disk, at the moment there is no retention policy so everything is kept for ever until [NXP-22113](https://jira.nuxeo.com/browse/NXP-22113)
   
   
 #### Kafka
 
   [Kafka](http://kafka.apache.org/) is a distributed streaming app framework.
   
-  A MQueue is simply a Topic and each queue is partitioned log.
+  A MQueue is simply a Topic with partitions equals to the MQueue size.
   
-  Tailer is assigned to a TopicPartition manually. Offset are also saved manually. 
+  Tailer is assigned to a topic/partition manually. Offset are also managed (committed) manually. 
  
-  Kafka does not manage the consumer distribution in this implementation.
-  This limits the distribution, all consumer of a namespace (a group) must run
-  on the same node.
+  As a result Kafka does not manage the consumer distribution in this implementation.
+  All consumer of a namespace (a group) must run on the same node.
   
   Still it is possible to distribute producer and consumer group around nodes.  
 
@@ -86,7 +87,7 @@ Based on MQueue API we can implement multiple patterns of producer/consumer:
 The first Queuing pattern has an API available to provide easy to implement producer and consumer,
 it comes with a batching and retry policy (see below).
 
-The pub/sub does not requires extra API than the MQueue API. 
+The pub/sub does not require extra API than the MQueue API. 
 
 ### Queuing with a limited amount of messages
 
@@ -150,15 +151,17 @@ Computation read from 0 to n streams and write from 0 to n streams.
 
 Here is an example of the DAG used in UT:
 
-![dag](dag1.png)  
-  
+![dag](dag1.png)
 
-### Computation implementation
 
-A default implementation of Computation is provided based on MQueue.
 
-XXX
+### Computation implementation
 
+A default implementation of Computation is provided based on MQueue, stream are simply a MQueue of Record.
+
+Using MQueue brings MQueue limitation: a computation group must run on the same node.
+
+Alternative implementations are in progress [NXP-22397](https://jira.nuxeo.com/browse/NXP-22397)
 
 ## Building
 
@@ -166,11 +169,13 @@ To build and run the tests, simply start the Maven build:
 
     mvn clean install
 
-### Run a Kafka cluster
+### Run Unit Tests with Kafka
 
-To run unit test under Kafka implementation you need to have access to a Kafka cluster:
+ Test with kafka implementation rely on an assumption, if the Kafka cluster is not accessible tests are not launched.
+ 
+ The easiest way to run a Kafka cluster is using [docker-compose](https://docs.docker.com/compose/install/):
 
-    cd kafka-docker
+    cd ./kafka-docker/
     docker-compose up -d
     # to stop
     docker-compose down

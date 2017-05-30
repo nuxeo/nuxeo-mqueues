@@ -6,7 +6,11 @@ services:
       - "2181:2181"
   kafka:
     image: wurstmeister/kafka
-    build: .
+    build:
+      context: .
+      args:
+        kafka_version: "0.10.2.1"
+        scala_version: "2.11"
     ports:
       - "9092:9092"
     environment:

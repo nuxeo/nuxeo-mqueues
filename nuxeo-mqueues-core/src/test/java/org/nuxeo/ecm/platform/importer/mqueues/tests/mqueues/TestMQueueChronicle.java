@@ -23,8 +23,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
 import java.io.File;

@@ -27,15 +27,19 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
+import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
+import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicles.ChronicleMQueue;
+import org.nuxeo.runtime.api.Framework;
 
-import java.io.File;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
@@ -69,16 +73,19 @@ public class DocumentConsumers {
     @Param(name = "retryDelayS", required = false)
     protected Integer retryDelayS = 2;
 
-    @Param(name = "queuePath", required = false)
-    protected String queuePath;
+    @Param(name = "mqName", required = false)
+    protected String mqName;
+
+    @Param(name = "kafkaConfig", required = false)
+    protected String kafkaConfig;
 
     @OperationMethod
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
-        queuePath = getQueuePath();
         repositoryName = getRepositoryName();
-        try (MQueue<DocumentMessage> mQueue = ChronicleMQueue.open(new File(queuePath))) {
-            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mQueue,
+        try (MQManager<DocumentMessage> manager = getManager()) {
+            MQueue<DocumentMessage> mq = manager.open(getMQName());
+            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mq,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
                     ConsumerPolicy.builder()
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)
@@ -94,18 +101,28 @@ public class DocumentConsumers {
         }
     }
 
-    private String getRepositoryName() {
+    protected String getRepositoryName() {
         if (repositoryName != null && !repositoryName.isEmpty()) {
             return repositoryName;
         }
         return ctx.getCoreSession().getRepositoryName();
     }
 
-    private String getQueuePath() {
-        if (queuePath != null && !queuePath.isEmpty()) {
-            return queuePath;
+    protected String getMQName() {
+        if (mqName != null) {
+            return mqName;
         }
-        return RandomDocumentProducers.getDefaultDocumentQueuePath();
+        return RandomDocumentProducers.DEFAULT_MQ_NAME;
     }
 
+    protected MQManager<DocumentMessage> getManager() {
+        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
+            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"));
+        }
+        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
+        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
+                service.getTopicPrefix(kafkaConfig),
+                service.getProducerProperties(kafkaConfig),
+                service.getConsumerProperties(kafkaConfig));
+    }
 }

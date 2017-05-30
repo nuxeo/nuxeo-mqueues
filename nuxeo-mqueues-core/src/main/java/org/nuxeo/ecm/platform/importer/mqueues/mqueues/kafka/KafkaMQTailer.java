@@ -20,6 +20,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -28,6 +29,7 @@ import org.apache.kafka.common.utils.Bytes;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
+import scala.collection.immutable.StringOps;
 
 import java.io.ByteArrayInputStream;
 import java.io.Externalizable;
@@ -38,6 +40,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,13 +61,15 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     // keep track of all tailers on the same namespace index even from different mq
     private static final Set<String> indexNamespace = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
-    public KafkaMQTailer(String mqName, KafkaConsumer<String, Bytes> consumer, TopicPartition topicPartition, String nameSpace) {
+    public KafkaMQTailer(String mqName, String topic, int partition, String nameSpace, Properties props) {
         Objects.requireNonNull(nameSpace);
-        this.consumer = consumer;
-        this.nameSpace = nameSpace;
-        this.topicPartition = topicPartition;
         this.mqName = mqName;
-        consumer.assign(Collections.singletonList(topicPartition));
+        this.topicPartition = new TopicPartition(topic, partition);
+        this.nameSpace = nameSpace;
+
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, nameSpace);
+        this.consumer = new KafkaConsumer<>(props);
+        this.consumer.assign(Collections.singletonList(topicPartition));
         this.lastCommittedOffset = consumer.position(topicPartition);
         registerTailer();
         log.debug("Create tailer " + getTailerKey() + ":+" + lastCommittedOffset);
@@ -74,8 +79,8 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     public M read(Duration timeout) throws InterruptedException {
         if (records.isEmpty()) {
             if (poll(timeout) == 0) {
-                if (log.isDebugEnabled()) {
-                    log.debug("No data " + getTailerKey() + " after " + timeout.toMillis() + " ms");
+                if (log.isTraceEnabled()) {
+                    log.trace("No data " + getTailerKey() + " after " + timeout.toMillis() + " ms");
                 }
                 return null;
             }
@@ -120,7 +125,14 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
             Thread.interrupted();
             throw new InterruptedException(e.getMessage());
         }
-        log.debug("Polling " + getTailerKey() + " returns " + records.size() + " records");
+        if (log.isDebugEnabled()) {
+            String msg = "Polling " + getTailerKey() + " returns " + records.size() + " records";
+            if (records.size() > 0) {
+                log.debug(msg);
+            } else {
+                log.trace(msg);
+            }
+        }
         return records.size();
     }
 
@@ -153,7 +165,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         consumer.commitSync(Collections.singletonMap(topicPartition,
                 new OffsetAndMetadata(lastCommittedOffset)));
         if (log.isDebugEnabled()) {
-            log.debug("Commit partition: " + getTailerKey() + ":+" + lastOffset);
+            log.debug("Commit position: " + getTailerKey() + ":+" + lastCommittedOffset);
         }
         return new MQOffsetImpl(topicPartition.partition(), lastOffset);
     }
