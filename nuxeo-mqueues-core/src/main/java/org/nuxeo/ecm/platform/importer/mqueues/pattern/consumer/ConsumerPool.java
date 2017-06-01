@@ -65,7 +65,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
 
     @Override
     protected Callable<ConsumerStatus> getCallable(int i) {
-        MQTailer<M> tailer = manager.createTailer(MQPartition.of(mqName, i), policy.getName());
+        MQTailer<M> tailer = manager.createTailer(policy.getName(), MQPartition.of(mqName, i));
         tailers.add(tailer);
         return new ConsumerRunner<>(factory, policy, tailer);
     }

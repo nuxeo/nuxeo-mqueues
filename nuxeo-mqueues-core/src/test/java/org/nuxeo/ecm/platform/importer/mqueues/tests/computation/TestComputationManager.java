@@ -28,6 +28,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 
 import java.time.Duration;
@@ -328,10 +329,10 @@ public abstract class TestComputationManager {
     }
 
     private int readCounterFromPartition(MQManager<Record> manager, String stream, int partition) throws InterruptedException {
-        MQTailer<Record> tailer = manager.createTailer(MQPartition.of(stream, partition), "results");
+        MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition));
         int result = 0;
-        for (Record record = tailer.read(Duration.ofMillis(1000)); record != null; record = tailer.read(Duration.ofMillis(1))) {
-            result += Integer.valueOf(record.key);
+        for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(1000)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(1))) {
+            result += Integer.valueOf(mqRecord.value.key);
         }
         tailer.commit();
         return result;
@@ -347,9 +348,9 @@ public abstract class TestComputationManager {
     }
 
     private int countRecordInPartition(MQManager<Record> manager, String stream, int partition) throws Exception {
-        try (MQTailer<Record> tailer = manager.createTailer(MQPartition.of(stream, partition), "results")) {
+        try (MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition))) {
             int result = 0;
-            for (Record record = tailer.read(Duration.ofMillis(100)); record != null; record = tailer.read(Duration.ofMillis(1))) {
+            for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(100)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(1))) {
                 result += 1;
             }
             return result;

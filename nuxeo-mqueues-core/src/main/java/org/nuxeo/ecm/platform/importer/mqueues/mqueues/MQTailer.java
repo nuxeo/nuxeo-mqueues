@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
+import java.io.Externalizable;
 import java.time.Duration;
 
 /**
@@ -26,14 +27,14 @@ import java.time.Duration;
  * A tailer is not thread safe and should not be shared by multiple threads.
  *
  */
-public interface MQTailer<M> extends AutoCloseable {
+public interface MQTailer<M extends Externalizable> extends AutoCloseable {
 
     /**
      * Read a message from the queue within the timeout.
      *
      * @return null if there is no message in the queue after the timeout.
      */
-    M read(Duration timeout) throws InterruptedException;
+    MQRecord<M> read(Duration timeout) throws InterruptedException;
 
     /**
      * Commit the offset of the last message returned by read.
@@ -57,6 +58,7 @@ public interface MQTailer<M> extends AutoCloseable {
 
 
     /**
+     * TODO: remove
      * Returns the associated queue index.
      */
     int getQueue();

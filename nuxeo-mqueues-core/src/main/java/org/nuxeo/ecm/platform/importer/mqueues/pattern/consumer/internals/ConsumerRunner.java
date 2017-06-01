@@ -26,6 +26,7 @@ import net.jodah.failsafe.Execution;
 import net.openhft.chronicle.core.util.Time;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
@@ -216,8 +217,10 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     private BatchState acceptBatch() throws InterruptedException {
         BatchState batch = new BatchState(currentBatchPolicy);
         batch.start();
+        MQRecord<M> record;
         M message;
-        while ((message = tailer.read(policy.getWaitMessageTimeout())) != null) {
+        while ((record = tailer.read(policy.getWaitMessageTimeout())) != null) {
+            message = record.value;
             if (message.poisonPill()) {
                 log.warn("Receive a poison pill: " + message);
                 batch.last();

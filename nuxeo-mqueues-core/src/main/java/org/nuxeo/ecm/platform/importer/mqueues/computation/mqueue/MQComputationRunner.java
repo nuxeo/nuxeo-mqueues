@@ -28,6 +28,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.Computation
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkMonotonicInterval;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 
@@ -80,7 +81,7 @@ public class MQComputationRunner implements Runnable {
         this.tailers = new MQTailer[metadata.istreams.size()];
         int i = 0;
         for (String streamName : metadata.istreams) {
-            tailers[i++] = mqManager.createTailer(MQPartition.of(streamName, partition), metadata.name);
+            tailers[i++] = mqManager.createTailer(metadata.name, MQPartition.of(streamName, partition));
         }
     }
 
@@ -200,8 +201,10 @@ public class MQComputationRunner implements Runnable {
         MQTailer<Record> tailer = tailers[(int) (counter++ % tailers.length)];
 
         Duration timeoutRead = getTimeoutDuration();
-        Record record = tailer.read(timeoutRead);
-        if (record != null) {
+        MQRecord<Record> mqRecord = tailer.read(timeoutRead);
+        Record record;
+        if (mqRecord != null) {
+            record = mqRecord.value;
             lastReadTime = System.currentTimeMillis();
             inRecords++;
             lowWatermark.mark(record.watermark);

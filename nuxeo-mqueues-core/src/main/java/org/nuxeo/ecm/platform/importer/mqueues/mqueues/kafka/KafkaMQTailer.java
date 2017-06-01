@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka;
 
+import kafka.cluster.Partition;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -28,6 +29,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQPartitionGroup;
@@ -81,7 +83,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     }
 
     @Override
-    public M read(Duration timeout) throws InterruptedException {
+    public MQRecord<M> read(Duration timeout) throws InterruptedException {
         if (closed) {
             throw new IllegalStateException("The tailer has been closed.");
         }
@@ -95,12 +97,13 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         }
         ConsumerRecord<String, Bytes> record = records.poll();
         lastOffset = record.offset();
-        M ret = messageOf(record.value());
+        M value = messageOf(record.value());
         if (log.isDebugEnabled()) {
             log.debug("Read " + id + ":+" + record.offset() + " returns key: "
-                    + record.key() + ", msg: " + ret);
+                    + record.key() + ", msg: " + value);
         }
-        return ret;
+        return new MQRecord(new MQPartition(id.name, record.partition()), value,
+                new MQOffsetImpl(record.partition(), record.offset()));
     }
 
     @SuppressWarnings("unchecked")

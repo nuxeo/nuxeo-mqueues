@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQPartitionGroup;
@@ -71,8 +72,8 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     }
 
     @Override
-    public M read(Duration timeout) throws InterruptedException {
-        M ret = read();
+    public MQRecord<M> read(Duration timeout) throws InterruptedException {
+        MQRecord<M> ret = read();
         if (ret != null) {
             return ret;
         }
@@ -87,15 +88,18 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     }
 
     @SuppressWarnings("unchecked")
-    private M read() {
+    private MQRecord<M> read() {
         if (closed) {
             throw new IllegalStateException("The tailer has been closed.");
         }
-        final List<M> ret = new ArrayList<>(1);
-        if (tailer.readDocument(w -> ret.add((M) w.read("msg").object()))) {
-            return ret.get(0);
+        final List<M> value = new ArrayList<>(1);
+        if (!tailer.readDocument(w -> value.add((M) w.read("msg").object()))) {
+            return null;
+
         }
-        return null;
+        MQRecord<M> ret = new MQRecord<>(new MQPartition(id.name, id.partition), value.get(0),
+                new MQOffsetImpl(id.partition, tailer.index()));
+        return ret;
     }
 
     @Override

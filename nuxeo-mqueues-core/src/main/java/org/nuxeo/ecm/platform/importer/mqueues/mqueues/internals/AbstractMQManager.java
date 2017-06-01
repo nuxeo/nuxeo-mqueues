@@ -55,7 +55,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
     }
 
     @Override
-    public MQTailer<M> createTailer(MQPartition partition, String group) {
+    public MQTailer<M> createTailer(String group, MQPartition partition) {
         MQPartitionGroup key = new MQPartitionGroup(group, partition);
         MQTailer<M> ret = tailers.get(key);
         if (ret != null && !ret.closed()) {
