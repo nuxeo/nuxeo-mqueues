@@ -42,13 +42,13 @@ import java.util.stream.Collectors;
  */
 public class MQComputationManager implements ComputationManager {
     private static final Log log = LogFactory.getLog(MQComputationManager.class);
-    private final MQManager<Record> mqManager;
+    private final MQManager<Record> manager;
     private final Topology topology;
     private final Settings settings;
     private final List<MQComputationPool> pools;
 
-    public MQComputationManager(MQManager<Record> mqManager, Topology topology, Settings settings) {
-        this.mqManager = mqManager;
+    public MQComputationManager(MQManager<Record> manager, Topology topology, Settings settings) {
+        this.manager = manager;
         this.topology = topology;
         this.settings = settings;
         initStreams();
@@ -135,14 +135,14 @@ public class MQComputationManager implements ComputationManager {
         log.debug("Initializing pools");
         return topology.metadataList().stream()
                 .map(meta -> new MQComputationPool(topology.getSupplier(meta.name), meta,
-                        settings.getConcurrency(meta.name), mqManager))
+                        settings.getConcurrency(meta.name), manager))
                 .collect(Collectors.toList());
     }
 
     private void initStreams() {
         log.debug("Initializing streams");
         Map<String, Integer> streamPartitions = computePartitions();
-        topology.streamsSet().forEach(name -> mqManager.openOrCreate(name, streamPartitions.get(name)));
+        topology.streamsSet().forEach(name -> manager.createIfNotExists(name, streamPartitions.get(name)));
     }
 
     private Map<String, Integer> computePartitions() {

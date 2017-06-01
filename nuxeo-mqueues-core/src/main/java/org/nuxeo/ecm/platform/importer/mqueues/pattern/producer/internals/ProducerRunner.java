@@ -24,7 +24,8 @@ import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.Timer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerIterator;
@@ -43,7 +44,7 @@ import static org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals
 public class ProducerRunner<M extends Message> implements Callable<ProducerStatus> {
     private static final Log log = LogFactory.getLog(ProducerRunner.class);
     private final int producerId;
-    private final MQueue<M> mq;
+    private final MQAppender<M> mq;
     private final ProducerFactory<M> factory;
     private String threadName;
 
@@ -51,7 +52,7 @@ public class ProducerRunner<M extends Message> implements Callable<ProducerStatu
     protected final Timer producerTimer;
     protected final Counter producersCount;
 
-    public ProducerRunner(ProducerFactory<M> factory, MQueue<M> mQueue, int producerId) {
+    public ProducerRunner(ProducerFactory<M> factory, MQAppender<M> mQueue, int producerId) {
         this.factory = factory;
         this.producerId = producerId;
         this.mq = mQueue;

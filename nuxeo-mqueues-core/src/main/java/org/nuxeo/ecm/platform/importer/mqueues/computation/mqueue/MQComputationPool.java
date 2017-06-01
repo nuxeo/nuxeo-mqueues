@@ -25,7 +25,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMa
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -50,14 +50,14 @@ public class MQComputationPool {
     private static final Log log = LogFactory.getLog(MQComputationPool.class);
     private final ComputationMetadataMapping metadata;
     private final int threads;
-    private final MQManager<Record> mqManager;
+    private final MQManager<Record> manager;
     private final Supplier<Computation> supplier;
     private ExecutorService threadPool;
     private final List<MQComputationRunner> runners;
 
-    public MQComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, int defaultThreads, MQManager<Record> mqManager) {
+    public MQComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, int defaultThreads, MQManager<Record> manager) {
         this.supplier = supplier;
-        this.mqManager = mqManager;
+        this.manager = manager;
         this.metadata = metadata;
         this.threads = getNumberOfThreads(defaultThreads);
         this.runners = new ArrayList<>(defaultThreads);
@@ -76,8 +76,8 @@ public class MQComputationPool {
 
     private int getPartitionsOfInputStreams() {
         for (String streamName : metadata.istreams) {
-            MQueue<Record> stream = mqManager.get(streamName);
-            return stream.size();
+            MQAppender<Record> appender = manager.getAppender(streamName);
+            return appender.size();
         }
         throw new IllegalArgumentException("No input stream");
     }
@@ -86,7 +86,7 @@ public class MQComputationPool {
         log.info(metadata.name + ": Starting pool");
         threadPool = newFixedThreadPool(threads, new NamedThreadFactory(metadata.name + "Pool"));
         for (int i = 0; i < threads; i++) {
-            MQComputationRunner runner = new MQComputationRunner(supplier, metadata, i, mqManager);
+            MQComputationRunner runner = new MQComputationRunner(supplier, metadata, i, manager);
             threadPool.submit(runner);
             runners.add(runner);
         }

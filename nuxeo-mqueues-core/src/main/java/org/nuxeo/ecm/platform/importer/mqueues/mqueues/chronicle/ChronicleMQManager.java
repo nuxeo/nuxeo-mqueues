@@ -20,8 +20,10 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.AbstractMQManager;
 
 import java.io.Externalizable;
 import java.io.File;
@@ -35,12 +37,16 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 /**
  * @since 9.2
  */
-public class ChronicleMQManager<M extends Externalizable> extends MQManager<M> {
+public class ChronicleMQManager<M extends Externalizable> extends AbstractMQManager<M> {
     private static final Log log = LogFactory.getLog(ChronicleMQManager.class);
     private final Path basePath;
 
     public ChronicleMQManager(Path basePath) {
         this.basePath = basePath;
+    }
+
+    public String getBasePath() {
+        return basePath.toAbsolutePath().toString();
     }
 
     @Override
@@ -50,22 +56,36 @@ public class ChronicleMQManager<M extends Externalizable> extends MQManager<M> {
     }
 
     @Override
-    public MQueue<M> open(String name) {
-        return ChronicleMQueue.open(new File(basePath.toFile(), name));
+    public void create(String name, int size) {
+        ChronicleMQAppender<M> cq = ChronicleMQAppender.create(new File(basePath.toFile(), name), size);
+        try {
+            cq.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Can not create and close " + name, e);
+        }
     }
 
     @Override
-    public MQueue<M> create(String name, int size) {
-        return ChronicleMQueue.create(new File(basePath.toFile(), name), size);
-    }
-
-    static public boolean delete(File basePath) {
-        if (basePath.isDirectory()) {
-            deleteQueueBasePath(basePath);
+    public boolean delete(String name) {
+        File path = new File(basePath.toFile(), name);
+        if (path.isDirectory()) {
+            deleteQueueBasePath(path);
             return true;
         }
         return false;
     }
+
+
+    @Override
+    public MQAppender<M> createAppender(String name) {
+        return ChronicleMQAppender.open(new File(basePath.toFile(), name));
+    }
+
+    @Override
+    protected MQTailer<M> acquireTailer(MQPartition partition, String group) {
+        return ((ChronicleMQAppender) getAppender(partition.name())).createTailer(partition, group);
+    }
+
 
     private static void deleteQueueBasePath(File basePath) {
         try {

@@ -20,11 +20,11 @@ import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
@@ -44,26 +44,21 @@ import static org.junit.Assert.assertEquals;
 public abstract class TestPatternBoundedQueuing {
     protected static final Log log = LogFactory.getLog(TestPatternBoundedQueuing.class);
 
+    protected static final String MQ_NAME = "queueName";
+    protected static final int MQ_SIZE = 10;
+
     @Rule
     public TestName name = new TestName();
 
-    private MQManager<IdMessage> manager;
+    protected MQManager<IdMessage> manager;
 
     public abstract MQManager<IdMessage> createManager() throws Exception;
 
-    public MQManager<IdMessage> getManager() throws Exception {
+    @Before
+    public void initManager() throws Exception {
         if (manager == null) {
             manager = createManager();
         }
-        return manager;
-    }
-
-    public MQueue<IdMessage> createMQ(int size) throws Exception {
-        return getManager().create(name.getMethodName(), size);
-    }
-
-    public MQueue<IdMessage> reopenMQ() throws Exception {
-        return getManager().open(name.getMethodName());
     }
 
     @After
@@ -77,56 +72,49 @@ public abstract class TestPatternBoundedQueuing {
 
     @Test
     public void producersThenConsumers() throws Exception {
-        final int NB_QUEUE = 10;
         final int NB_PRODUCERS = 15;
         final int NB_DOCUMENTS = 1 * 1000;
 
         // 1. Create a mq and run the producers
-        List<ProducerStatus> pret;
-        try (MQueue<IdMessage> mQueue = createMQ(NB_QUEUE);
-             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueue,
-                     new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS)) {
-            pret = producers.start().get();
-        }
+        manager.createIfNotExists(MQ_NAME, MQ_SIZE);
+        ProducerPool<IdMessage> producers = new ProducerPool<>(MQ_NAME, manager,
+                new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
+        List<ProducerStatus> pret = producers.start().get();
+
         assertEquals(NB_PRODUCERS, (long) pret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
-        // 2. Use the mq and run the consumers
-        List<ConsumerStatus> cret;
-        try (MQueue<IdMessage> mQueue = reopenMQ();
-             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueue,
-                     IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED)) {
-            cret = consumers.start().get();
-        }
-        assertEquals(NB_QUEUE, (long) cret.size());
+        // 2 run the consumers
+        ConsumerPool<IdMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
+                IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED);
+        List<ConsumerStatus> cret = consumers.start().get();
+
+        assertEquals(MQ_SIZE, (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
     }
 
     @Test
     public void producersAndConsumersConcurrently() throws Exception {
-        final int NB_QUEUE = 10;
         final int NB_PRODUCERS = 15;
         final int NB_DOCUMENTS = 1000;
-        List<ProducerStatus> pret;
-        List<ConsumerStatus> cret;
+
         // Create a mq, producer and consumer pool
-        try (MQueue<IdMessage> mQueue = createMQ(NB_QUEUE);
-             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueue,
-                     new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
-             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueue,
-                     IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED)) {
-            CompletableFuture<List<ProducerStatus>> pfuture = producers.start();
-            CompletableFuture<List<ConsumerStatus>> cfuture = consumers.start();
-            // wait for the completion
-            cret = cfuture.get();
-            pret = pfuture.get();
-        }
+        manager.createIfNotExists(MQ_NAME, MQ_SIZE);
+
+        ProducerPool<IdMessage> producers = new ProducerPool<>(MQ_NAME, manager,
+                new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
+        ConsumerPool<IdMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
+                IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED);
+        CompletableFuture<List<ProducerStatus>> pfuture = producers.start();
+        CompletableFuture<List<ConsumerStatus>> cfuture = consumers.start();
+        List<ConsumerStatus> cret = cfuture.get();  // wait for the completion
+        List<ProducerStatus> pret = pfuture.get();
+
         assertEquals(NB_PRODUCERS, (long) pret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
-        assertEquals(NB_QUEUE, (long) cret.size());
+        assertEquals(MQ_SIZE, (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
-
     }
 
     @Test
@@ -137,28 +125,26 @@ public abstract class TestPatternBoundedQueuing {
         final int NB_DOCUMENTS = getNbDocumentForBuggyConsumerTest();
         // final int NB_DOCUMENTS = 499999;
         final int BATCH_SIZE = 13;
-        List<ProducerStatus> pret;
-        List<ConsumerStatus> cret;
 
-        try (MQueue<IdMessage> mQueue = createMQ(NB_QUEUE);
-             ProducerPool<IdMessage> producers = new ProducerPool<>(mQueue,
-                     new RandomIdMessageProducerFactory(NB_DOCUMENTS,
-                             RandomIdMessageProducerFactory.ProducerType.ORDERED),
-                     NB_PRODUCERS)) {
-            pret = producers.start().get();
-        }
+        manager.createIfNotExists(MQ_NAME, NB_QUEUE);
+        ProducerPool<IdMessage> producers = new ProducerPool<>(MQ_NAME, manager,
+                new RandomIdMessageProducerFactory(NB_DOCUMENTS,
+                        RandomIdMessageProducerFactory.ProducerType.ORDERED),
+                NB_PRODUCERS);
+        List<ProducerStatus> pret = producers.start().get();
+
         assertEquals(NB_PRODUCERS, (long) pret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
         // 2. Use the mq and run the consumers
-        try (MQueue<IdMessage> mQueue = reopenMQ();
-             ConsumerPool<IdMessage> consumers = new ConsumerPool<>(mQueue,
-                     IdMessageFactory.BUGGY,
-                     ConsumerPolicy.builder()
-                             .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
-                             .retryPolicy(new RetryPolicy().withMaxRetries(1000)).build())) {
-            cret = consumers.start().get();
-        }
+        ConsumerPool<IdMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
+                IdMessageFactory.BUGGY,
+                ConsumerPolicy.builder()
+                        .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
+                        .retryPolicy(new RetryPolicy().withMaxRetries(1000)).build());
+
+        List<ConsumerStatus> cret = consumers.start().get();
+
         assertEquals(NB_QUEUE, (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
         assertTrue(NB_PRODUCERS * NB_DOCUMENTS < cret.stream().mapToLong(r -> r.accepted).sum());

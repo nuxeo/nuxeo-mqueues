@@ -20,8 +20,9 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.AbstractCallablePool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.ConsumerRunner;
@@ -38,17 +39,23 @@ import java.util.concurrent.Callable;
  */
 public class ConsumerPool<M extends Message> extends AbstractCallablePool<ConsumerStatus> {
     private static final Log log = LogFactory.getLog(ConsumerPool.class);
-    private final MQueue<M> qm;
+    private final MQManager<M> manager;
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
     private final List<MQTailer<M>> tailers;
+    private final String mqName;
 
-    public ConsumerPool(MQueue<M> qm, ConsumerFactory<M> factory, ConsumerPolicy policy) {
-        super(qm.size());
-        this.qm = qm;
+    public ConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy policy) {
+        super(manager.getAppender(mqName).size());
+        this.mqName = mqName;
+        this.manager = manager;
         this.factory = factory;
         this.policy = policy;
-        this.tailers = new ArrayList<>(qm.size());
+        this.tailers = new ArrayList<>(manager.getAppender(mqName).size());
+    }
+
+    public String getConsumerGroupName() {
+        return policy.getName();
     }
 
     @Override
@@ -58,7 +65,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
 
     @Override
     protected Callable<ConsumerStatus> getCallable(int i) {
-        MQTailer<M> tailer = qm.createTailer(i);
+        MQTailer<M> tailer = manager.createTailer(MQPartition.of(mqName, i), policy.getName());
         tailers.add(tailer);
         return new ConsumerRunner<>(factory, policy, tailer);
     }

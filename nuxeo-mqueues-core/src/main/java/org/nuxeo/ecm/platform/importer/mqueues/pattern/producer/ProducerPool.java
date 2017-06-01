@@ -20,7 +20,8 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.producer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.AbstractCallablePool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.internals.ProducerRunner;
@@ -35,12 +36,14 @@ import java.util.concurrent.Callable;
  */
 public class ProducerPool<M extends Message> extends AbstractCallablePool<ProducerStatus> {
     private static final Log log = LogFactory.getLog(ProducerPool.class);
-    private final MQueue<M> mq;
+    private final MQManager<M> manager;
     private final ProducerFactory<M> factory;
+    private final String mqName;
 
-    public ProducerPool(MQueue<M> mq, ProducerFactory<M> factory, int nbThreads) {
+    public ProducerPool(String mqName, MQManager<M> manager, ProducerFactory<M> factory, int nbThreads) {
         super(nbThreads);
-        this.mq = mq;
+        this.mqName = mqName;
+        this.manager = manager;
         this.factory = factory;
     }
 
@@ -51,7 +54,7 @@ public class ProducerPool<M extends Message> extends AbstractCallablePool<Produc
 
     @Override
     protected Callable<ProducerStatus> getCallable(int i) {
-        return new ProducerRunner<>(factory, mq, i);
+        return new ProducerRunner<>(factory, manager.getAppender(mqName), i);
     }
 
     @Override

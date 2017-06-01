@@ -16,6 +16,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
 
+import org.junit.After;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
@@ -26,6 +27,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
 
 public class TestPatternBoundedQueuingKafka extends TestPatternBoundedQueuing {
 
+    private String prefix;
+
     @BeforeClass
     public static void assumeKafkaEnabled() {
         Assume.assumeTrue(KafkaUtils.kafkaDetected());
@@ -33,14 +36,15 @@ public class TestPatternBoundedQueuingKafka extends TestPatternBoundedQueuing {
 
     @Override
     public MQManager<IdMessage> createManager() throws Exception {
-        String prefix = getPrefix(name.getMethodName());
+        prefix = TestMQueueKafka.getPrefix();
         return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),
                 TestMQueueKafka.getConsumerProps());
     }
 
-    public static String getPrefix(String name) {
-        return TestMQueueKafka.TOPIC_PREFIX + "-" + System.currentTimeMillis() + "-";
+    @After
+    public void resetPrefix() {
+        prefix = null;
     }
 
     @Override

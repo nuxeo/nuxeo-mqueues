@@ -27,8 +27,9 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationContextImpl;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkMonotonicInterval;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -79,7 +80,7 @@ public class MQComputationRunner implements Runnable {
         this.tailers = new MQTailer[metadata.istreams.size()];
         int i = 0;
         for (String streamName : metadata.istreams) {
-            tailers[i++] = mqManager.get(streamName).createTailer(partition, metadata.name);
+            tailers[i++] = mqManager.createTailer(MQPartition.of(streamName, partition), metadata.name);
         }
     }
 
@@ -289,14 +290,14 @@ public class MQComputationRunner implements Runnable {
 
     private void sendRecords() {
         for (String ostream : metadata.ostreams) {
-            MQueue<Record> stream = mqManager.get(ostream);
+            MQAppender<Record> appender = mqManager.getAppender(ostream);
             for (Record record : context.getRecords(ostream)) {
                 // System.out.println(metadata.name + " send record to " + ostream + " lowwm " + lowWatermark);
                 if (record.watermark == 0) {
                     // use low watermark when not set
                     record.watermark = lowWatermark.getLow().getValue();
                 }
-                stream.append(record.key, record);
+                appender.append(record.key, record);
                 outRecords++;
             }
             context.getRecords(ostream).clear();

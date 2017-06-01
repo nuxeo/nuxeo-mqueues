@@ -30,7 +30,6 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
@@ -84,8 +83,7 @@ public class DocumentConsumers {
         RandomBlobProducers.checkAccess(ctx);
         repositoryName = getRepositoryName();
         try (MQManager<DocumentMessage> manager = getManager()) {
-            MQueue<DocumentMessage> mq = manager.open(getMQName());
-            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mq,
+            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
                     ConsumerPolicy.builder()
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)

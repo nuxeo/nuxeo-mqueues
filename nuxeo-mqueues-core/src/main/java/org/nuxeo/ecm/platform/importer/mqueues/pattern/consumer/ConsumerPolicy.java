@@ -28,6 +28,8 @@ import java.time.Duration;
  * @since 9.1
  */
 public class ConsumerPolicy {
+    public static final String DEFAULT_NAME = "default";
+
     public enum StartOffset {BEGIN, END, LAST_COMMITTED}
 
     public static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
@@ -50,6 +52,7 @@ public class ConsumerPolicy {
     private final Duration waitMessageTimeout;
     private final StartOffset startOffset;
     private final boolean salted;
+    private final String name;
 
     public ConsumerPolicy(Builder builder) {
         batchPolicy = builder.batchPolicy;
@@ -58,6 +61,11 @@ public class ConsumerPolicy {
         waitMessageTimeout = builder.waitMessageTimeout;
         startOffset = builder.startOffset;
         salted = builder.salted;
+        if (builder.name != null) {
+            name = builder.name;
+        } else {
+            name = DEFAULT_NAME;
+        }
     }
 
     public BatchPolicy getBatchPolicy() {
@@ -84,6 +92,9 @@ public class ConsumerPolicy {
         return salted;
     }
 
+    public String getName() {
+        return name;
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -96,6 +107,7 @@ public class ConsumerPolicy {
         private Duration waitMessageTimeout = Duration.ofSeconds(2);
         private StartOffset startOffset = StartOffset.LAST_COMMITTED;
         private boolean salted = false;
+        private String name;
 
         protected Builder() {
 
@@ -151,6 +163,13 @@ public class ConsumerPolicy {
             return this;
         }
 
+        /**
+         * Consumer group name.
+         */
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
         public ConsumerPolicy build() {
             return new ConsumerPolicy(this);
         }

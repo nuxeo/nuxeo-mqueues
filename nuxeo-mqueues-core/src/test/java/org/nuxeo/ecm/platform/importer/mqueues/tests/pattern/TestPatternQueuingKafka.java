@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
 
+import org.junit.After;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -32,6 +33,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
  * @since 9.2
  */
 public class TestPatternQueuingKafka extends TestPatternQueuing {
+    private String prefix;
 
     @BeforeClass
     public static void assumeKafkaEnabled() {
@@ -40,14 +42,17 @@ public class TestPatternQueuingKafka extends TestPatternQueuing {
 
     @Override
     public MQManager<IdMessage> createManager() throws Exception {
-        String prefix = getPrefix(name.getMethodName());
+        if (prefix == null) {
+            prefix = TestMQueueKafka.getPrefix();
+        }
         return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),
                 TestMQueueKafka.getConsumerProps());
     }
 
-    public static String getPrefix(String name) {
-        return TestMQueueKafka.TOPIC_PREFIX + "-" + System.currentTimeMillis() + "-";
+    @After
+    public void resetPrefix() {
+        prefix = null;
     }
 
     @Override

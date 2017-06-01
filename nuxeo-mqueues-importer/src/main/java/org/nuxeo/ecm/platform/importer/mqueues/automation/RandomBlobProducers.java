@@ -29,11 +29,10 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.api.Framework;
@@ -74,8 +73,8 @@ public class RandomBlobProducers {
     public void run() {
         checkAccess(ctx);
         try (MQManager<BlobMessage> manager = getManager()) {
-            MQueue<BlobMessage> mq = manager.openOrCreate(getMQName(), nbThreads);
-            ProducerPool<BlobMessage> producers = new ProducerPool<>(mq,
+            manager.createIfNotExists(getMQName(), nbThreads);
+            ProducerPool<BlobMessage> producers = new ProducerPool<>(getMQName(), manager,
                     new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads);
             producers.start().get();
         } catch (Exception e) {

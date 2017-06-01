@@ -27,6 +27,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 
 import java.time.Duration;
@@ -47,7 +48,7 @@ public abstract class TestComputationManager {
 
     public abstract MQManager<Record> getSameStreams() throws Exception;
 
-    public abstract ComputationManager getManager(MQManager<Record> streams, Topology topology, Settings settings);
+    public abstract ComputationManager getManager(MQManager<Record> mqManager, Topology topology, Settings settings);
 
     @Test
     public void testConflictSettings() throws Exception {
@@ -285,7 +286,7 @@ public abstract class TestComputationManager {
             // the number of results can be bigger than expected, in the case of checkpoint failure
             // some records can be reprocessed (duplicate), this is a delivery at least one, not exactly one.
             long expected = 2 * settings1.getConcurrency("GENERATOR") * nbRecords;
-            log.info(String.format("count: %s, expected: %s, in %.2fs, throughput: %.2f records/s",
+            log.error(String.format("count: %s, expected: %s, in %.2fs, throughput: %.2f records/s",
                     result, expected, elapsed, result / elapsed));
             assertTrue(expected <= result);
         }
@@ -317,17 +318,17 @@ public abstract class TestComputationManager {
 
     }
 
-    private int readCounterFrom(MQManager<Record> streams, String stream) throws InterruptedException {
-        int partitions = streams.get(stream).size();
+    private int readCounterFrom(MQManager<Record> manager, String stream) throws InterruptedException {
+        int partitions = manager.getAppender(stream).size();
         int ret = 0;
         for (int i = 0; i < partitions; i++) {
-            ret += readCounterFromPartition(streams, stream, i);
+            ret += readCounterFromPartition(manager, stream, i);
         }
         return ret;
     }
 
-    private int readCounterFromPartition(MQManager<Record> streams, String stream, int partition) throws InterruptedException {
-        MQTailer<Record> tailer = streams.get(stream).createTailer(partition, "results");
+    private int readCounterFromPartition(MQManager<Record> manager, String stream, int partition) throws InterruptedException {
+        MQTailer<Record> tailer = manager.createTailer(MQPartition.of(stream, partition), "results");
         int result = 0;
         for (Record record = tailer.read(Duration.ofMillis(1000)); record != null; record = tailer.read(Duration.ofMillis(1))) {
             result += Integer.valueOf(record.key);
@@ -337,16 +338,16 @@ public abstract class TestComputationManager {
     }
 
 
-    private int countRecordIn(MQManager<Record> streams, String stream) throws Exception {
+    private int countRecordIn(MQManager<Record> manager, String stream) throws Exception {
         int ret = 0;
-        for (int i = 0; i < streams.get(stream).size(); i++) {
-            ret += countRecordInPartition(streams, stream, i);
+        for (int i = 0; i < manager.getAppender(stream).size(); i++) {
+            ret += countRecordInPartition(manager, stream, i);
         }
         return ret;
     }
 
-    private int countRecordInPartition(MQManager<Record> streams, String stream, int partition) throws Exception {
-        try (MQTailer<Record> tailer = streams.get(stream).createTailer(partition, "results")) {
+    private int countRecordInPartition(MQManager<Record> manager, String stream, int partition) throws Exception {
+        try (MQTailer<Record> tailer = manager.createTailer(MQPartition.of(stream, partition), "results")) {
             int result = 0;
             for (Record record = tailer.read(Duration.ofMillis(100)); record != null; record = tailer.read(Duration.ofMillis(1))) {
                 result += 1;

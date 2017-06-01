@@ -19,7 +19,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
 
 import org.nuxeo.ecm.core.event.EventServiceAdmin;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.runtime.api.Framework;
 
@@ -38,8 +38,8 @@ public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
     protected static final String BINARY_LISTENER = "binaryMetadataSyncListener";
     protected static final String UID_LISTENER = "uidlistener";
 
-    public DocumentConsumerPool(MQueue<M> qm, ConsumerFactory<M> factory, ConsumerPolicy policy) {
-        super(qm, factory, policy);
+    public DocumentConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy policy) {
+        super(mqName, manager, factory, policy);
         EventServiceAdmin eventAdmin = Framework.getLocalService(EventServiceAdmin.class);
         if (eventAdmin == null) {
             return;

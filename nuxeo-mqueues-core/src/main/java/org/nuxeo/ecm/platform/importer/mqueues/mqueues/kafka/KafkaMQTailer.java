@@ -60,6 +60,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     private final Queue<ConsumerRecord<String, Bytes>> records = new LinkedList<>();
     // keep track of all tailers on the same namespace index even from different mq
     private static final Set<String> indexNamespace = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private boolean closed = false;
 
     public KafkaMQTailer(String mqName, String topic, int partition, String nameSpace, Properties props) {
         Objects.requireNonNull(nameSpace);
@@ -82,6 +83,9 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
 
     @Override
     public M read(Duration timeout) throws InterruptedException {
+        if (closed) {
+            throw new IllegalStateException("The tailer has been closed.");
+        }
         if (records.isEmpty()) {
             if (poll(timeout) == 0) {
                 if (log.isTraceEnabled()) {
@@ -191,12 +195,18 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     }
 
     @Override
+    public boolean closed() {
+        return closed;
+    }
+
+    @Override
     public void close() throws Exception {
         unregisterTailer();
         if (consumer != null) {
             consumer.close();
             consumer = null;
         }
+        closed = true;
     }
 
     private void registerTailer() {

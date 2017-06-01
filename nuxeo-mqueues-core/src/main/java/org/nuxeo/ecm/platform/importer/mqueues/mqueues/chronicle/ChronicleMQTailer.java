@@ -162,4 +162,9 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         unregisterTailer();
         closed = true;
     }
+
+    @Override
+    public boolean closed() {
+        return closed;
+    }
 }

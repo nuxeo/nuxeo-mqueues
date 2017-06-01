@@ -22,9 +22,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
 
 import java.io.Externalizable;
@@ -42,14 +43,14 @@ import java.util.stream.Stream;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
 /**
- * Chronicle Queue implementation of MQueue.
+ * Chronicle Queue implementation of MQAppender.
  *
  * Note that for performance reason the class loader assertion are disabled.
  *
  * @since 9.1
  */
-public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
-    private static final Log log = LogFactory.getLog(ChronicleMQueue.class);
+public class ChronicleMQAppender<M extends Externalizable> implements MQAppender<M> {
+    private static final Log log = LogFactory.getLog(ChronicleMQAppender.class);
     private static final String QUEUE_PREFIX = "Q-";
     private static final int POLL_INTERVAL_MS = 100;
 
@@ -72,15 +73,15 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
     /**
      * Create a new mqueues.
      */
-    static public <M extends Externalizable> ChronicleMQueue<M> create(File basePath, int size) {
-        return new ChronicleMQueue<>(basePath, size);
+    static public <M extends Externalizable> ChronicleMQAppender<M> create(File basePath, int size) {
+        return new ChronicleMQAppender<>(basePath, size);
     }
 
     /**
      * Open an existing mqueues.
      */
-    static public <M extends Externalizable> ChronicleMQueue<M> open(File basePath) {
-        return new ChronicleMQueue<>(basePath, 0);
+    static public <M extends Externalizable> ChronicleMQAppender<M> open(File basePath) {
+        return new ChronicleMQAppender<>(basePath, 0);
     }
 
     @Override
@@ -100,9 +101,9 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
         return new MQOffsetImpl(queue, appender.lastIndexAppended());
     }
 
-    @Override
-    public MQTailer<M> createTailer(int queue, String nameSpace) {
-        return addTailer(new ChronicleMQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue, nameSpace));
+    public MQTailer<M> createTailer(MQPartition partition, String group) {
+        return addTailer(new ChronicleMQTailer<>(basePath.toString(),
+                queues.get(partition.partition()).createTailer(), partition.partition(), group));
     }
 
     private MQTailer<M> addTailer(ChronicleMQTailer<M> tailer) {
@@ -152,7 +153,7 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
         queues.clear();
     }
 
-    private ChronicleMQueue(File basePath, int size) {
+    private ChronicleMQAppender(File basePath, int size) {
         if (size == 0) {
             // open
             if (!exists(basePath)) {

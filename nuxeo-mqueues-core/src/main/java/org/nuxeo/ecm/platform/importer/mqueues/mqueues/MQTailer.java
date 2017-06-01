@@ -72,4 +72,6 @@ public interface MQTailer<M> extends AutoCloseable {
      *
      */
     String getNameSpace();
+
+    boolean closed();
 }

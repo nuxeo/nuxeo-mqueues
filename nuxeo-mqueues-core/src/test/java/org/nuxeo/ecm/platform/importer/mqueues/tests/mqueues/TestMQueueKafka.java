@@ -17,6 +17,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.junit.After;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
@@ -27,10 +28,13 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 import java.time.Duration;
 import java.util.Properties;
 
+import static org.jboss.netty.handler.codec.http.multipart.DiskFileUpload.prefix;
+
 public class TestMQueueKafka extends TestMQueue {
     public static final String DEFAULT_BOOTSTRAP_SERVER = "localhost:9092";
     public static final String TOPIC_PREFIX = "nuxeo-test";
     public final static Duration MIN_DURATION = Duration.ofSeconds(1);
+    protected String prefix;
 
     @BeforeClass
     public static void assumeKafkaEnabled() {
@@ -44,11 +48,18 @@ public class TestMQueueKafka extends TestMQueue {
 
     @Override
     public MQManager<IdMessage> createManager() throws Exception {
-        String prefix = getPrefix(name.getMethodName());
+        if (prefix == null) {
+            prefix = getPrefix();
+        }
         return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix, getProducerProps(), getConsumerProps());
     }
 
-    public static String getPrefix(String name) {
+    @After
+    public void resetPrefix() {
+        prefix = null;
+    }
+
+    public static String getPrefix() {
         return TOPIC_PREFIX + "-" + System.currentTimeMillis() + "-";
     }
 

@@ -23,16 +23,10 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * A MQueue (for Multi-Queue) is an array of unbounded persisted queues, that acts as a partitioned queue.
- * <p/>
- * Producers dispatch messages (any {@link Externalizable} object) on the array of queues, using {@link #append(int, Externalizable)} method.
- * <p/>
- * Consumer read message from a queue using a {@link MQTailer}.
- * The consumer position {@link MQOffset} can be persisted to enable stop and resume operation.
  *
- * @since 9.1
+ * @since 9.2
  */
-public interface MQueue<M extends Externalizable> extends AutoCloseable {
+public interface MQAppender<M extends Externalizable> extends AutoCloseable {
 
     /**
      * Returns the MQueue name.
@@ -68,26 +62,6 @@ public interface MQueue<M extends Externalizable> extends AutoCloseable {
         return append(queue, message);
     }
 
-
-    /**
-     * Create a new {@link MQTailer} associated to a queue index, using a specified {@param nameSpace}.
-     * <p/>
-     * The name space is used as a consumer group, consumer offset are persisted in a name space.
-     * <p/>
-     * There should be only one tailer for a (queue, nameSpace) tuple, a tailer is not thread safe.
-     *
-     */
-    MQTailer<M> createTailer(int queue, String nameSpace);
-
-
-    /**
-     * Same as {@link #createTailer(int, String)} using the default name space;
-     *
-     */
-    default MQTailer<M> createTailer(int queue) {
-        return createTailer(queue, "default");
-    }
-
     /**
      * Wait for consumer to process a message up to the offset.
      *
@@ -96,13 +70,5 @@ public interface MQueue<M extends Externalizable> extends AutoCloseable {
      * Return true if the message has been consumed, false in case of timeout.
      */
     boolean waitFor(MQOffset offset, String nameSpace, Duration timeout) throws InterruptedException;
-
-    /**
-     * Same as {@link #waitFor(MQOffset, String, Duration)} using the default name space
-     *
-     */
-    default boolean waitFor(MQOffset offset, Duration timeout) throws InterruptedException {
-        return waitFor(offset, "default", timeout);
-    }
 
 }

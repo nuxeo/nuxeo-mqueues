@@ -16,18 +16,32 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
 
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
+import java.io.IOException;
+import java.nio.file.Path;
+
 public class TestPatternBoundedQueuingChronicle extends TestPatternBoundedQueuing {
+    private Path basePath;
+
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
+    @After
+    public void resetBasePath() throws IOException {
+        basePath = null;
+    }
+
     @Override
     public MQManager<IdMessage> createManager() throws Exception {
-        return new ChronicleMQManager<>(folder.newFolder().toPath());
+        if (basePath == null) {
+            basePath = folder.newFolder().toPath();
+        }
+        return new ChronicleMQManager<>(basePath);
     }
 }

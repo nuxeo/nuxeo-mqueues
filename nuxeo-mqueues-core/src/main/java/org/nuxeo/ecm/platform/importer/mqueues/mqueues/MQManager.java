@@ -20,60 +20,40 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 
 import java.io.Externalizable;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
 
 /**
- * Manage {@link MQueue} access.
+ * Manage appender and tailer access.
  *
  * @since 9.2
  */
-public abstract class MQManager<M extends Externalizable> implements AutoCloseable {
-    private final Map<String, MQueue<M>> mqueues = new ConcurrentHashMap<>();
+public interface MQManager<M extends Externalizable> extends AutoCloseable {
 
     /**
      * Check if a MQueue exists.
      */
-    public abstract boolean exists(String name);
+    boolean exists(String name);
 
     /**
-     * Open an existing MQueue.
+     * Create a new MQueue if it does not exists.
      */
-    public abstract MQueue<M> open(String name);
+    boolean createIfNotExists(String name, int size);
 
     /**
-     * Create a new MQueue.
+     * Try to delete a MQueue.
+     * Returns true if successfully deleted, might not be possible depending on the implementation.
      */
-    public abstract MQueue<M> create(String name, int size);
+    boolean delete(String name);
 
     /**
-     * Open an existing MQueue or create it.
+     * Get an appender on the MQueue, The appender is thread safe.
      */
-    public synchronized MQueue<M> openOrCreate(String name, int size) {
-        if (!mqueues.containsKey(name)) {
-            if (exists(name)) {
-                mqueues.put(name, open(name));
-            } else {
-                mqueues.put(name, create(name, size));
-            }
-        }
-        return get(name);
-    }
+    MQAppender<M> getAppender(String name);
 
     /**
-     * Getter for a MQueue created or opened.
+     * Create a tailer on a mqueue/partition using a group
      */
-    public MQueue<M> get(String name) {
-        return mqueues.get(name);
-    }
+    MQTailer<M> createTailer(MQPartition partition, String group);
 
 
-    @Override
-    public void close() throws Exception {
-        // TODO: check if we want this behavior, closing the manager close all MQueue
-        for (MQueue<M> mq : mqueues.values()) {
-            mq.close();
-        }
-        mqueues.clear();
-    }
 }

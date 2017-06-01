@@ -23,14 +23,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
 
 import java.io.ByteArrayOutputStream;
@@ -51,8 +49,8 @@ import java.util.concurrent.Future;
  *
  * @since 9.2
  */
-public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
-    private static final Log log = LogFactory.getLog(KafkaMQueue.class);
+public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> {
+    private static final Log log = LogFactory.getLog(KafkaMQAppender.class);
     private final String topic;
     private final Properties consumerProps;
     private final Properties producerProps;
@@ -62,44 +60,17 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
     private final ConcurrentLinkedQueue<KafkaMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
     private final String name;
 
-    static public <M extends Externalizable> KafkaMQueue<M> open(String topic, String name, Properties producerProperties, Properties consumerProperties) {
-        return new KafkaMQueue<>(topic, name, producerProperties, consumerProperties);
+    static public <M extends Externalizable> KafkaMQAppender<M> open(String topic, String name, Properties producerProperties, Properties consumerProperties) {
+        return new KafkaMQAppender<>(topic, name, producerProperties, consumerProperties);
     }
 
-    private KafkaMQueue(String topic, String name, Properties producerProperties, Properties consumerProperties) {
+    private KafkaMQAppender(String topic, String name, Properties producerProperties, Properties consumerProperties) {
         this.topic = topic;
         this.name = name;
-        this.producerProps = normalizeProducerProperties(producerProperties);
-        this.consumerProps = normalizeConsumerProperties(consumerProperties);
+        this.producerProps = producerProperties;
+        this.consumerProps = consumerProperties;
         this.producer = new KafkaProducer<>(this.producerProps);
         this.size = producer.partitionsFor(topic).size();
-    }
-
-    private Properties normalizeConsumerProperties(Properties consumerProperties) {
-        Properties ret;
-        if (consumerProperties != null) {
-            ret = (Properties) consumerProperties.clone();
-        } else {
-            ret = new Properties();
-        }
-        ret.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
-        ret.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesDeserializer");
-        ret.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-        ret.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
-        return ret;
-    }
-
-    private Properties normalizeProducerProperties(Properties producerProperties) {
-        Properties ret;
-        if (producerProperties != null) {
-            ret = (Properties) producerProperties.clone();
-        } else {
-            ret = new Properties();
-        }
-        ret.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
-        ret.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesSerializer");
-        return ret;
     }
 
     @Override
@@ -144,14 +115,6 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public MQTailer<M> createTailer(int queue, String nameSpace) {
-        KafkaMQTailer<M> ret = new KafkaMQTailer<>(name, topic, queue, nameSpace,
-                (Properties) consumerProps.clone());
-        tailers.add(ret);
-        return ret;
     }
 
     @Override
