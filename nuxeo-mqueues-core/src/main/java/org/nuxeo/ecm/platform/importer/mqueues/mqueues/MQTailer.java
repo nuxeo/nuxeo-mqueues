@@ -62,16 +62,16 @@ public interface MQTailer<M> extends AutoCloseable {
     int getQueue();
 
     /**
-     * Returns the name of the MQueue.
+     * Returns name, partition tuple.
      *
      */
-    String getMQueueName();
+    MQPartition getMQPartition();
 
     /**
      * Return the tailer name space.
      *
      */
-    String getNameSpace();
+    String getGroup();
 
     boolean closed();
 }

@@ -27,9 +27,10 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
-import scala.collection.immutable.StringOps;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQPartitionGroup;
 
 import java.io.ByteArrayInputStream;
 import java.io.Externalizable;
@@ -51,25 +52,23 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     private static final Log log = LogFactory.getLog(KafkaMQTailer.class);
-    private final String nameSpace;
-    private final String mqName;
-    private KafkaConsumer<String, Bytes> consumer;
+    private final MQPartitionGroup id;
     private final TopicPartition topicPartition;
+    private KafkaConsumer<String, Bytes> consumer;
     private long lastOffset = 0;
     private long lastCommittedOffset = 0;
     private final Queue<ConsumerRecord<String, Bytes>> records = new LinkedList<>();
     // keep track of all tailers on the same namespace index even from different mq
-    private static final Set<String> indexNamespace = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private static final Set<MQPartitionGroup> tailersId = Collections.newSetFromMap(new ConcurrentHashMap<MQPartitionGroup, Boolean>());
     private boolean closed = false;
 
-    public KafkaMQTailer(String mqName, String topic, int partition, String nameSpace, Properties props) {
-        Objects.requireNonNull(nameSpace);
-        this.mqName = mqName;
-        this.topicPartition = new TopicPartition(topic, partition);
-        this.nameSpace = nameSpace;
+    public KafkaMQTailer(String topic, MQPartition partition, String group, Properties consumerProps) {
+        Objects.requireNonNull(group);
+        this.id = new MQPartitionGroup(group, partition.name(), partition.partition());
+        this.topicPartition = new TopicPartition(topic, partition.partition());
 
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, nameSpace);
-        this.consumer = new KafkaConsumer<>(props);
+        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, group);
+        this.consumer = new KafkaConsumer<>(consumerProps);
         this.consumer.assign(Collections.singletonList(topicPartition));
         OffsetAndMetadata offsetMeta = consumer.committed(topicPartition);
         if (offsetMeta != null) {
@@ -78,7 +77,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
             this.lastCommittedOffset = consumer.position(topicPartition);
         }
         registerTailer();
-        log.debug("Create tailer " + getTailerKey() + ":+" + lastCommittedOffset);
+        log.debug("Create tailer " + id + ":+" + lastCommittedOffset);
     }
 
     @Override
@@ -89,7 +88,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         if (records.isEmpty()) {
             if (poll(timeout) == 0) {
                 if (log.isTraceEnabled()) {
-                    log.trace("No data " + getTailerKey() + " after " + timeout.toMillis() + " ms");
+                    log.trace("No data " + id + " after " + timeout.toMillis() + " ms");
                 }
                 return null;
             }
@@ -98,7 +97,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         lastOffset = record.offset();
         M ret = messageOf(record.value());
         if (log.isDebugEnabled()) {
-            log.debug("Read " + getTailerKey() + ":+" + record.offset() + " returns key: "
+            log.debug("Read " + id + ":+" + record.offset() + " returns key: "
                     + record.key() + ", msg: " + ret);
         }
         return ret;
@@ -135,7 +134,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
             throw new InterruptedException(e.getMessage());
         }
         if (log.isDebugEnabled()) {
-            String msg = "Polling " + getTailerKey() + " returns " + records.size() + " records";
+            String msg = "Polling " + id + " returns " + records.size() + " records";
             if (records.size() > 0) {
                 log.debug(msg);
             } else {
@@ -147,7 +146,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
 
     @Override
     public void toEnd() {
-        log.debug("toEnd " + getTailerKey());
+        log.debug("toEnd: " + id);
         lastOffset = 0;
         records.clear();
         consumer.seekToEnd(Collections.singleton(topicPartition));
@@ -155,7 +154,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
 
     @Override
     public void toStart() {
-        log.debug("toStart " + getTailerKey());
+        log.debug("toStart: " + id);
         lastOffset = 0;
         records.clear();
         consumer.seekToBeginning(Collections.singleton(topicPartition));
@@ -163,7 +162,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
 
     @Override
     public void toLastCommitted() {
-        log.debug("toLastCommitted " + getTailerKey() + ":+" + lastCommittedOffset);
+        log.debug("toLastCommitted: " + id + ":+" + lastCommittedOffset);
         consumer.seek(topicPartition, lastCommittedOffset);
         records.clear();
     }
@@ -174,7 +173,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         consumer.commitSync(Collections.singletonMap(topicPartition,
                 new OffsetAndMetadata(lastCommittedOffset)));
         if (log.isDebugEnabled()) {
-            log.debug("Commit position: " + getTailerKey() + ":+" + lastCommittedOffset);
+            log.debug("Commit position: " + id + ":+" + lastCommittedOffset);
         }
         return new MQOffsetImpl(topicPartition.partition(), lastOffset);
     }
@@ -185,13 +184,13 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     }
 
     @Override
-    public String getMQueueName() {
-        return mqName;
+    public MQPartition getMQPartition() {
+        return new MQPartition(id.name, id.partition);
     }
 
     @Override
-    public String getNameSpace() {
-        return nameSpace;
+    public String getGroup() {
+        return id.group;
     }
 
     @Override
@@ -210,19 +209,13 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     }
 
     private void registerTailer() {
-        String key = getTailerKey();
-        if (!indexNamespace.add(key)) {
-            throw new IllegalArgumentException("A tailer for this queue and namespace already exists: " + key);
+        if (!tailersId.add(id)) {
+            throw new IllegalArgumentException("A tailer for this queue and namespace already exists: " + id);
         }
     }
 
     private void unregisterTailer() {
-        String key = getTailerKey();
-        indexNamespace.remove(key);
-    }
-
-    private String getTailerKey() {
-        return topicPartition.topic() + ":" + topicPartition.partition() + "/" + nameSpace;
+        tailersId.remove(id);
     }
 
 }

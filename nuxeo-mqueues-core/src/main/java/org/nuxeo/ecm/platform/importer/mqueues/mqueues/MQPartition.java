@@ -62,10 +62,7 @@ public class MQPartition {
 
     @Override
     public String toString() {
-        return "MQPartition{" +
-                "name='" + name + '\'' +
-                ", partition=" + partition +
-                '}';
+        return String.format("%s-%02d", name, partition);
     }
 
     public static MQPartition of(String name, int partition) {

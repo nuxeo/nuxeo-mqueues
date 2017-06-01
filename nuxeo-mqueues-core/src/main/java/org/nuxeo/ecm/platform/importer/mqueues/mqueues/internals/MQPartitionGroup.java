@@ -63,11 +63,7 @@ public class MQPartitionGroup {
 
     @Override
     public String toString() {
-        return "MQPartitionGroup{" +
-                "group='" + group + '\'' +
-                ", name='" + name + '\'' +
-                ", partition=" + partition +
-                '}';
+        return String.format("%s-02d-%s", name, partition, group);
     }
 
 }

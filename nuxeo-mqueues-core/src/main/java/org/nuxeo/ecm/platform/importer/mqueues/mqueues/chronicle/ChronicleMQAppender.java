@@ -103,7 +103,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
 
     public MQTailer<M> createTailer(MQPartition partition, String group) {
         return addTailer(new ChronicleMQTailer<>(basePath.toString(),
-                queues.get(partition.partition()).createTailer(), partition.partition(), group));
+                queues.get(partition.partition()).createTailer(), partition, group));
     }
 
     private MQTailer<M> addTailer(ChronicleMQTailer<M> tailer) {

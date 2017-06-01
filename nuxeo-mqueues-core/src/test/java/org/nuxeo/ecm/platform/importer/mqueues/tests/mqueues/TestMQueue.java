@@ -247,8 +247,9 @@ public abstract class TestMQueue {
             try (MQTailer<IdMessage> tailerBis = manager.createTailer(MQPartition.of(mqName, 0), "anotherGroup")) {
                 // with another namespace no problem
                 assertEquals(0, tailerBis.getQueue());
-                assertEquals("anotherGroup", tailerBis.getNameSpace());
-                assertEquals(appender.getName(), tailerBis.getMQueueName());
+                assertEquals("anotherGroup", tailerBis.getGroup());
+                assertEquals(appender.getName(), tailerBis.getMQPartition().name());
+                assertEquals(0, tailerBis.getMQPartition().partition());
                 assertEquals(0, tailerBis.getQueue());
             }
         }
@@ -446,7 +447,9 @@ public abstract class TestMQueue {
         assertEquals(name1, manager.getAppender(name1).getName());
         assertEquals(10, manager.getAppender(name1).size());
 
-        assertEquals(name1, manager.createTailer(MQPartition.of(name1, 0), "default").getMQueueName());
+
+        assertEquals(name1, manager.createTailer(MQPartition.of(name1, 0), "default").getMQPartition().name());
+        assertEquals(1,  manager.createTailer(MQPartition.of(name1, 1), "default").getMQPartition().partition());
 
         String name2 = "bar";
         manager.createIfNotExists(name2, 5);

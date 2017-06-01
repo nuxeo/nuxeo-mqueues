@@ -21,11 +21,12 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQPartitionGroup;
 
 import java.io.Externalizable;
-import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,39 +43,31 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     private static final long POLL_INTERVAL_MS = 100L;
     private final String basePath;
     private final ExcerptTailer tailer;
-    private final String nameSpace;
-    private final int queueIndex;
     private final ChronicleMQOffsetTracker offsetTracker;
+    private final MQPartitionGroup id;
     private boolean closed = false;
 
     // keep track of all tailers on the same namespace index even from different mq
-    private static final Set<String> indexNamespace = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private static final Set<MQPartitionGroup> tailersId = Collections.newSetFromMap(new ConcurrentHashMap<MQPartitionGroup, Boolean>());
 
-    public ChronicleMQTailer(String basePath, ExcerptTailer tailer, int queue, String nameSpace) {
-        Objects.requireNonNull(nameSpace);
+    public ChronicleMQTailer(String basePath, ExcerptTailer tailer, MQPartition partition, String group) {
+        Objects.requireNonNull(group);
         this.basePath = basePath;
         this.tailer = tailer;
-        this.queueIndex = queue;
-        this.nameSpace = nameSpace;
+        this.id = new MQPartitionGroup(group, partition.name(), partition.partition());
         registerTailer();
-        this.offsetTracker = new ChronicleMQOffsetTracker(basePath, queue, this.nameSpace);
+        this.offsetTracker = new ChronicleMQOffsetTracker(basePath, partition.partition(), group);
         toLastCommitted();
     }
 
     private void registerTailer() {
-        String key = getTailerKey();
-        if (!indexNamespace.add(key)) {
-            throw new IllegalArgumentException("A tailer for this queue and namespace already exists: " + key);
+        if (!tailersId.add(id)) {
+            throw new IllegalArgumentException("A tailer for this queue and namespace already exists: " + id);
         }
     }
 
     private void unregisterTailer() {
-        String key = getTailerKey();
-        indexNamespace.remove(key);
-    }
-
-    private String getTailerKey() {
-        return basePath + " " + queueIndex + " " + nameSpace;
+        tailersId.remove(id);
     }
 
     @Override
@@ -111,20 +104,20 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         long offset = tailer.index();
         offsetTracker.commit(offset);
         if (log.isTraceEnabled()) {
-            log.trace(String.format("queue-%02d commit offset: %d", queueIndex, offset));
+            log.trace(String.format("queue-%02d commit offset: %d", id, offset));
         }
-        return new MQOffsetImpl(queueIndex, offset);
+        return new MQOffsetImpl(id.partition, offset);
     }
 
     @Override
     public void toEnd() {
-        log.debug(String.format("queue-%02d toEnd", queueIndex));
+        log.debug(String.format("toEnd: ", id));
         tailer.toEnd();
     }
 
     @Override
     public void toStart() {
-        log.debug(String.format("queue-%02d toStart", queueIndex));
+        log.debug(String.format("toStart: ", id));
         tailer.toStart();
     }
 
@@ -132,28 +125,27 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     public void toLastCommitted() {
         long offset = offsetTracker.getLastCommittedOffset();
         if (offset > 0) {
-            log.debug(String.format("queue-%02d toLastCommitted found: %d", queueIndex, offset));
+            log.debug(String.format("toLastCommitted: %s, found: %d", id, offset));
             tailer.moveToIndex(offset);
         } else {
-            log.debug(String.format("queue-%02d toLastCommitted not found, run from beginning", queueIndex));
+            log.debug(String.format("toLastCommitted: %s not found, run from beginning", id));
             tailer.toStart();
         }
     }
 
     @Override
     public int getQueue() {
-        return queueIndex;
+        return id.partition;
     }
 
     @Override
-    public String getMQueueName() {
-        // TODO get it from mqueues
-        return new File(basePath).getName();
+    public MQPartition getMQPartition() {
+        return new MQPartition(id.name, id.partition);
     }
 
     @Override
-    public String getNameSpace() {
-        return nameSpace;
+    public String getGroup() {
+        return id.group;
     }
 
     @Override

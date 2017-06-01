@@ -75,9 +75,8 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         if (partition.partition() >= partitions) {
             throw new IllegalArgumentException("Partition out of bound " + partition + " max: " + partitions);
         }
-        KafkaMQTailer<M> ret = new KafkaMQTailer<>(partition.name(), getTopicName(partition.name()),
-                partition.partition(), group,
-                (Properties) consumerProperties.clone());
+        KafkaMQTailer<M> ret = new KafkaMQTailer<>(getTopicName(partition.name()), partition,
+                group, (Properties) consumerProperties.clone());
         return ret;
     }
 
