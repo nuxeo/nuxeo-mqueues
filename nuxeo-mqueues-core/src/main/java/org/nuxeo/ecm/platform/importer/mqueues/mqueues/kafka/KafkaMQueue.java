@@ -148,7 +148,7 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
 
     @Override
     public MQTailer<M> createTailer(int queue, String nameSpace) {
-        KafkaMQTailer ret = new KafkaMQTailer<>(name, topic, queue, nameSpace,
+        KafkaMQTailer<M> ret = new KafkaMQTailer<>(name, topic, queue, nameSpace,
                 (Properties) consumerProps.clone());
         tailers.add(ret);
         return ret;

@@ -70,7 +70,12 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, nameSpace);
         this.consumer = new KafkaConsumer<>(props);
         this.consumer.assign(Collections.singletonList(topicPartition));
-        this.lastCommittedOffset = consumer.position(topicPartition);
+        OffsetAndMetadata offsetMeta = consumer.committed(topicPartition);
+        if (offsetMeta != null) {
+            this.lastCommittedOffset = offsetMeta.offset();
+        } else {
+            this.lastCommittedOffset = consumer.position(topicPartition);
+        }
         registerTailer();
         log.debug("Create tailer " + getTailerKey() + ":+" + lastCommittedOffset);
     }

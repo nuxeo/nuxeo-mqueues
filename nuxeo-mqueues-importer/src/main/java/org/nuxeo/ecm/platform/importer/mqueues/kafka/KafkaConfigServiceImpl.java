@@ -21,6 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.kafka;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.core.event.EventServiceComponent;
 import org.nuxeo.runtime.model.ComponentContext;
 import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
@@ -42,6 +43,12 @@ public class KafkaConfigServiceImpl extends DefaultComponent implements KafkaCon
             configs.put(descriptor.name, descriptor);
             log.info(String.format("Register Kafka contribution: %s", descriptor.name));
         }
+    }
+
+    @Override
+    public int getApplicationStartedOrder() {
+        // since there is no deps, let's start before WorkManager
+        return EventServiceComponent.APPLICATION_STARTED_ORDER - 10;
     }
 
     @Override
