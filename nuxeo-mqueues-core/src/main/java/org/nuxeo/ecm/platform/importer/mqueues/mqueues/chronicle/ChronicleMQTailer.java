@@ -138,11 +138,6 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     }
 
     @Override
-    public int getQueue() {
-        return id.partition;
-    }
-
-    @Override
     public MQPartition getMQPartition() {
         return new MQPartition(id.name, id.partition);
     }

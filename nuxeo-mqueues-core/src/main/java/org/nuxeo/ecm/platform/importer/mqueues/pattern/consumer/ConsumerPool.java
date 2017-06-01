@@ -87,7 +87,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
             try {
                 tailer.close();
             } catch (Exception e) {
-                log.error("Unable to close tailer: " + tailer.getQueue());
+                log.error("Unable to close tailer: " + tailer.getMQPartition().partition());
             }
         });
     }

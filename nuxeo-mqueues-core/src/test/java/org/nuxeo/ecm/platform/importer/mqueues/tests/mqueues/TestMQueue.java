@@ -246,11 +246,9 @@ public abstract class TestMQueue {
 
             try (MQTailer<IdMessage> tailerBis = manager.createTailer("anotherGroup", MQPartition.of(mqName, 0))) {
                 // with another namespace no problem
-                assertEquals(0, tailerBis.getQueue());
+                assertEquals(0, tailerBis.getMQPartition().partition());
                 assertEquals("anotherGroup", tailerBis.getGroup());
                 assertEquals(appender.getName(), tailerBis.getMQPartition().name());
-                assertEquals(0, tailerBis.getMQPartition().partition());
-                assertEquals(0, tailerBis.getQueue());
             }
         }
     }

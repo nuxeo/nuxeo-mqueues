@@ -56,13 +56,6 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
      */
     void toLastCommitted();
 
-
-    /**
-     * TODO: remove
-     * Returns the associated queue index.
-     */
-    int getQueue();
-
     /**
      * Returns name, partition tuple.
      *

@@ -72,7 +72,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         this.tailer = tailer;
         this.currentBatchPolicy = policy.getBatchPolicy();
         this.policy = policy;
-        queue = tailer.getQueue();
+        queue = tailer.getMQPartition().partition();
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
         acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", String.valueOf(queue)));
         committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", String.valueOf(queue)));

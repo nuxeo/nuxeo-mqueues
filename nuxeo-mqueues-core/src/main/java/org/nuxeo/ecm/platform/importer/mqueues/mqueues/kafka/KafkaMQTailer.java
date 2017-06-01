@@ -180,12 +180,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         }
         return new MQOffsetImpl(topicPartition.partition(), lastOffset);
     }
-
-    @Override
-    public int getQueue() {
-        return topicPartition.partition();
-    }
-
+    
     @Override
     public MQPartition getMQPartition() {
         return new MQPartition(id.name, id.partition);
