@@ -60,7 +60,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
 
     @Override
     protected ConsumerStatus getErrorStatus() {
-        return new ConsumerStatus(0, 0, 0, 0, 0, 0, 0, true);
+        return new ConsumerStatus("error", 0, 0, 0, 0, 0, 0, true);
     }
 
     @Override
@@ -87,7 +87,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
             try {
                 tailer.close();
             } catch (Exception e) {
-                log.error("Unable to close tailer: " + tailer.getMQPartition().partition());
+                log.error("Unable to close tailers: " + tailer);
             }
         });
     }

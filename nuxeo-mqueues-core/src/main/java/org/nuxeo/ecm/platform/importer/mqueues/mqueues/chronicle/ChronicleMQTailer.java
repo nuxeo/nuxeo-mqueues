@@ -30,6 +30,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQPartitionGrou
 import java.io.Externalizable;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -41,20 +42,22 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> {
     private static final Log log = LogFactory.getLog(ChronicleMQTailer.class);
-    private static final long POLL_INTERVAL_MS = 100L;
+    protected static final long POLL_INTERVAL_MS = 100L;
     private final String basePath;
-    private final ExcerptTailer tailer;
+    private final ExcerptTailer cqTailer;
     private final ChronicleMQOffsetTracker offsetTracker;
     private final MQPartitionGroup id;
+    private final MQPartition partition;
     private boolean closed = false;
 
     // keep track of all tailers on the same namespace index even from different mq
     private static final Set<MQPartitionGroup> tailersId = Collections.newSetFromMap(new ConcurrentHashMap<MQPartitionGroup, Boolean>());
 
-    public ChronicleMQTailer(String basePath, ExcerptTailer tailer, MQPartition partition, String group) {
+    public ChronicleMQTailer(String basePath, ExcerptTailer cqTailer, MQPartition partition, String group) {
         Objects.requireNonNull(group);
         this.basePath = basePath;
-        this.tailer = tailer;
+        this.cqTailer = cqTailer;
+        this.partition = partition;
         this.id = new MQPartitionGroup(group, partition.name(), partition.partition());
         registerTailer();
         this.offsetTracker = new ChronicleMQOffsetTracker(basePath, partition.partition(), group);
@@ -87,25 +90,29 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         return ret;
     }
 
+
     @SuppressWarnings("unchecked")
-    private MQRecord<M> read() {
+    protected MQRecord<M> read() {
         if (closed) {
             throw new IllegalStateException("The tailer has been closed.");
         }
         final List<M> value = new ArrayList<>(1);
-        if (!tailer.readDocument(w -> value.add((M) w.read("msg").object()))) {
+        if (!cqTailer.readDocument(w -> value.add((M) w.read("msg").object()))) {
             return null;
 
         }
         MQRecord<M> ret = new MQRecord<>(new MQPartition(id.name, id.partition), value.get(0),
-                new MQOffsetImpl(id.partition, tailer.index()));
+                new MQOffsetImpl(id.partition, cqTailer.index()));
         return ret;
     }
 
     @Override
-    public MQOffset commit() {
+    public MQOffset commit(MQPartition partition) {
         // we write raw: queue, offset, timestamp
-        long offset = tailer.index();
+        if (! this.partition.equals(partition)) {
+            throw new IllegalArgumentException("Can not commit this partition: " + partition + " from " + id);
+        }
+        long offset = cqTailer.index();
         offsetTracker.commit(offset);
         if (log.isTraceEnabled()) {
             log.trace(String.format("queue-%02d commit offset: %d", id, offset));
@@ -114,15 +121,20 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     }
 
     @Override
+    public void commit() {
+        commit(partition);
+    }
+
+    @Override
     public void toEnd() {
         log.debug(String.format("toEnd: ", id));
-        tailer.toEnd();
+        cqTailer.toEnd();
     }
 
     @Override
     public void toStart() {
         log.debug(String.format("toStart: ", id));
-        tailer.toStart();
+        cqTailer.toStart();
     }
 
     @Override
@@ -130,16 +142,16 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         long offset = offsetTracker.getLastCommittedOffset();
         if (offset > 0) {
             log.debug(String.format("toLastCommitted: %s, found: %d", id, offset));
-            tailer.moveToIndex(offset);
+            cqTailer.moveToIndex(offset);
         } else {
             log.debug(String.format("toLastCommitted: %s not found, run from beginning", id));
-            tailer.toStart();
+            cqTailer.toStart();
         }
     }
 
     @Override
-    public MQPartition getMQPartition() {
-        return new MQPartition(id.name, id.partition);
+    public Collection<MQPartition> getMQPartitions() {
+        return Collections.singletonList(new MQPartition(id.name, id.partition));
     }
 
     @Override

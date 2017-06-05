@@ -20,6 +20,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 
 import java.io.Externalizable;
+import java.util.Collection;
 
 /**
  * Manage appender and tailer access.
@@ -54,5 +55,6 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
      */
     MQTailer<M> createTailer(String group, MQPartition partition);
 
+    MQTailer<M> createTailer(String group, Collection<MQPartition> partitions);
 
 }

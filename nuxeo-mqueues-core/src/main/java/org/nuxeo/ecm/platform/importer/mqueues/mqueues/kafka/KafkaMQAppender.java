@@ -71,6 +71,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         this.consumerProps = consumerProperties;
         this.producer = new KafkaProducer<>(this.producerProps);
         this.size = producer.partitionsFor(topic).size();
+        log.debug(String.format("Created appender: %s on topic: %s with %d partitions", name, topic, size));
     }
 
     @Override
@@ -100,7 +101,8 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         }
         if (log.isDebugEnabled()) {
             int len = record.value().get().length;
-            log.debug("append to " + topic + ":" + queue + ":+" + ret.offset() + ", msg: " + message + " length: " + len);
+            log.debug(String.format("append to %s-%02d:+%d, len: %d, msg: %s", name,
+                    queue, ret.offset(), len, message));
         }
         return new MQOffsetImpl(queue, ret.offset());
     }
@@ -169,6 +171,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
 
     @Override
     public void close() throws Exception {
+        log.debug("Closing appender: " + name);
         tailers.stream().filter(Objects::nonNull).forEach(tailer -> {
             try {
                 tailer.close();

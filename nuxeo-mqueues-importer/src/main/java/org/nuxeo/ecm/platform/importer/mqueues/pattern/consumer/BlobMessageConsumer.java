@@ -46,7 +46,7 @@ public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
     private final FileWriter outputFileWriter;
     private final String blobProviderName;
 
-    public BlobMessageConsumer(int consumerId, String blobProviderName, Path outputBlobInfoDirectory) {
+    public BlobMessageConsumer(String consumerId, String blobProviderName, Path outputBlobInfoDirectory) {
         super(consumerId);
         this.blobProviderName = blobProviderName;
         this.blobProvider = Framework.getService(BlobManager.class).getBlobProvider(blobProviderName);

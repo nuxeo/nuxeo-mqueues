@@ -31,6 +31,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
 import java.time.Duration;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -246,9 +247,9 @@ public abstract class TestMQueue {
 
             try (MQTailer<IdMessage> tailerBis = manager.createTailer("anotherGroup", MQPartition.of(mqName, 0))) {
                 // with another namespace no problem
-                assertEquals(0, tailerBis.getMQPartition().partition());
+
+                assertEquals(Collections.singletonList(MQPartition.of(mqName, 0)), tailerBis.getMQPartitions());
                 assertEquals("anotherGroup", tailerBis.getGroup());
-                assertEquals(appender.getName(), tailerBis.getMQPartition().name());
             }
         }
     }
@@ -446,8 +447,8 @@ public abstract class TestMQueue {
         assertEquals(10, manager.getAppender(name1).size());
 
 
-        assertEquals(name1, manager.createTailer("default", MQPartition.of(name1, 0)).getMQPartition().name());
-        assertEquals(1,  manager.createTailer("default", MQPartition.of(name1, 1)).getMQPartition().partition());
+        assertEquals(Collections.singletonList(MQPartition.of(name1, 0)),
+                manager.createTailer("default", MQPartition.of(name1, 0)).getMQPartitions());
 
         String name2 = "bar";
         manager.createIfNotExists(name2, 5);

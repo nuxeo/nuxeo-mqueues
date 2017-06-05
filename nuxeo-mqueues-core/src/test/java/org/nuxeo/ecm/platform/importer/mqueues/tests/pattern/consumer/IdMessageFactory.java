@@ -43,7 +43,7 @@ public class IdMessageFactory implements ConsumerFactory<IdMessage> {
     }
 
     @Override
-    public Consumer<IdMessage> createConsumer(int consumerId) {
+    public Consumer<IdMessage> createConsumer(String consumerId) {
         switch (type) {
             case BUGGY:
                 return new BuggyIdMessageConsumer(consumerId);

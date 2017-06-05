@@ -40,7 +40,7 @@ public class BlobMessageConsumerFactory implements ConsumerFactory<BlobMessage> 
     }
 
     @Override
-    public Consumer<BlobMessage> createConsumer(int consumerId) {
+    public Consumer<BlobMessage> createConsumer(String consumerId) {
         return new BlobMessageConsumer(consumerId, blobProviderName, outputBlobInfoDirectory);
     }
 }

@@ -20,6 +20,8 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 import java.io.Externalizable;
 import java.time.Duration;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Sequential reader for a queue.
@@ -37,9 +39,14 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
     MQRecord<M> read(Duration timeout) throws InterruptedException;
 
     /**
-     * Commit the offset of the last message returned by read.
+     * Commit the offset of the last message returned by read for this partition.
      */
-    MQOffset commit();
+    MQOffset commit(MQPartition partition);
+
+    /**
+     * Commit for all partitions.
+     */
+    void commit();
 
     /**
      * Position the current offset to the end of queue.
@@ -60,7 +67,7 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
      * Returns name, partition tuple.
      *
      */
-    MQPartition getMQPartition();
+    Collection<MQPartition> getMQPartitions();
 
     /**
      * Return the tailer name space.

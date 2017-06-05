@@ -33,7 +33,7 @@ public class DocumentMessageConsumerFactory implements ConsumerFactory<DocumentM
     }
 
     @Override
-    public Consumer<DocumentMessage> createConsumer(int consumerId) {
+    public Consumer<DocumentMessage> createConsumer(String consumerId) {
         return new DocumentMessageConsumer(consumerId, repositoryName, rootPath);
     }
 }

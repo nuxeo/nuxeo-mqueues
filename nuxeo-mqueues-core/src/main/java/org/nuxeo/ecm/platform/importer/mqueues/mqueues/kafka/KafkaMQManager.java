@@ -26,6 +26,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.AbstractMQManager;
 
 import java.io.Externalizable;
+import java.util.Collection;
 import java.util.Properties;
 
 /**
@@ -70,14 +71,18 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     }
 
     @Override
-    protected MQTailer<M> acquireTailer(MQPartition partition, String group) {
+    protected MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
+        partitions.forEach(this::checkValidPartition);
+        KafkaMQTailer<M> ret = new KafkaMQTailer<>(prefix, partitions,
+                group, (Properties) consumerProperties.clone());
+        return ret;
+    }
+
+    private void checkValidPartition(MQPartition partition) {
         int partitions = kUtils.getNumberOfPartitions(getTopicName(partition.name()));
         if (partition.partition() >= partitions) {
             throw new IllegalArgumentException("Partition out of bound " + partition + " max: " + partitions);
         }
-        KafkaMQTailer<M> ret = new KafkaMQTailer<>(getTopicName(partition.name()), partition,
-                group, (Properties) consumerProperties.clone());
-        return ret;
     }
 
     public Properties getProducerProperties() {

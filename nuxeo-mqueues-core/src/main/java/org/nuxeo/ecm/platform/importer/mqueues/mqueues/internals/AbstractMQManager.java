@@ -25,6 +25,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 
 import java.io.Externalizable;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,7 +39,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
 
     protected abstract MQAppender<M> createAppender(String name);
 
-    protected abstract MQTailer<M> acquireTailer(MQPartition partition, String group);
+    protected abstract MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group);
 
 
     @Override
@@ -55,7 +57,14 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
     }
 
     @Override
-    public MQTailer<M> createTailer(String group, MQPartition partition) {
+    public MQTailer<M> createTailer(String group, Collection<MQPartition> partitions) {
+        partitions.forEach(partition -> checkTailerForPartition(group, partition));
+        MQTailer<M> ret = acquireTailer(partitions, group);
+        partitions.forEach(partition -> tailers.put(new MQPartitionGroup(group, partition), ret));
+        return ret;
+    }
+
+    private void checkTailerForPartition(String group, MQPartition partition) {
         MQPartitionGroup key = new MQPartitionGroup(group, partition);
         MQTailer<M> ret = tailers.get(key);
         if (ret != null && !ret.closed()) {
@@ -64,9 +73,11 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
         if (!exists(partition.name())) {
             throw new IllegalArgumentException("Tailer with unknown MQueue name: " + partition.name());
         }
-        ret = acquireTailer(partition, group);
-        tailers.put(key, ret);
-        return ret;
+    }
+
+    @Override
+    public MQTailer<M> createTailer(String group, MQPartition partition) {
+        return createTailer(group, Collections.singletonList(partition));
     }
 
     @Override

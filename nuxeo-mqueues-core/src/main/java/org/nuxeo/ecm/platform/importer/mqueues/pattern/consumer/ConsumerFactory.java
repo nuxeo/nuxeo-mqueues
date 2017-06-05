@@ -26,7 +26,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 public interface ConsumerFactory<M extends Message> {
 
     /**
-     * @param consumerId the consumer index
+     * @param consumerId the consumer identifier
      */
-    Consumer<M> createConsumer(int consumerId);
+    Consumer<M> createConsumer(String consumerId);
 }

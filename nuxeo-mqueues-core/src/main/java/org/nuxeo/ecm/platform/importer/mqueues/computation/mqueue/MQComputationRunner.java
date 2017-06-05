@@ -208,7 +208,7 @@ public class MQComputationRunner implements Runnable {
             lastReadTime = System.currentTimeMillis();
             inRecords++;
             lowWatermark.mark(record.watermark);
-            String from = metadata.reverseMap(tailer.getMQPartition().name());
+            String from = metadata.reverseMap(mqRecord.partition.name());
             // System.out.println(metadata.name + ": Receive from " + from + " record: " + record);
             computation.processRecord(context, from, record);
             checkRecordFlags(record);

@@ -25,13 +25,13 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
  */
 public abstract class AbstractConsumer<M extends Message> implements Consumer<M> {
 
-    private final int consumerId;
+    private final String consumerId;
 
-    public AbstractConsumer(int consumerId) {
+    public AbstractConsumer(String consumerId) {
         this.consumerId = consumerId;
     }
 
-    public int getConsumerId() {
+    public String getConsumerId() {
         return consumerId;
     }
 

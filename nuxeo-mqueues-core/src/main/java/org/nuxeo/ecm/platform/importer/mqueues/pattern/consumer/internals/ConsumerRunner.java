@@ -53,8 +53,8 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
 
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
-    private final int queue;
     private final MQTailer<M> tailer;
+    private final String consumerId;
     private BatchPolicy currentBatchPolicy;
     private String threadName;
     private Consumer<M> consumer;
@@ -72,13 +72,13 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         this.tailer = tailer;
         this.currentBatchPolicy = policy.getBatchPolicy();
         this.policy = policy;
-        queue = tailer.getMQPartition().partition();
+        consumerId = tailer.toString();
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
-        acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", String.valueOf(queue)));
-        committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", String.valueOf(queue)));
-        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", String.valueOf(queue)));
-        batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", String.valueOf(queue)));
-        log.debug("Consumer thread created tailing on queue: " + queue);
+        acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", consumerId));
+        committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", consumerId));
+        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure",consumerId ));
+        batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", consumerId));
+        log.debug("Consumer thread created tailing on: " + consumerId);
     }
 
     private Counter newCounter(String name) {
@@ -97,7 +97,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         consumersCount.inc();
         long start = Time.currentTimeMillis();
         setTailerPosition();
-        consumer = factory.createConsumer(queue);
+        consumer = factory.createConsumer(consumerId);
         try {
             addSalt();
             consumerLoop();
@@ -105,7 +105,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
             consumer.close();
             consumersCount.dec();
         }
-        return new ConsumerStatus(queue, acceptTimer.getCount(), committedCounter.getCount(),
+        return new ConsumerStatus(consumerId, acceptTimer.getCount(), committedCounter.getCount(),
                 batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis(), false);
     }
 
@@ -183,7 +183,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
             BatchState state = acceptBatch();
             commitBatch(state);
             if (state.getState() == BatchState.State.LAST) {
-                log.info(String.format("No more message on queue %02d", queue));
+                log.info("No more message on tailer: " + tailer);
                 end = true;
             }
         } catch (Exception e) {

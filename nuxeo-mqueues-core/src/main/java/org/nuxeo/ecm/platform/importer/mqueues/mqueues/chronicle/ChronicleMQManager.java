@@ -30,6 +30,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.stream.Stream;
 
 import static org.apache.commons.io.FileUtils.deleteDirectory;
@@ -82,10 +84,11 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     }
 
     @Override
-    protected MQTailer<M> acquireTailer(MQPartition partition, String group) {
-        return ((ChronicleMQAppender) getAppender(partition.name())).createTailer(partition, group);
+    protected MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
+        Collection<ChronicleMQTailer<M>> pTailers = new ArrayList<>(partitions.size());
+        partitions.forEach(partition -> pTailers.add((ChronicleMQTailer<M>) ((ChronicleMQAppender<M>) getAppender(partition.name())).createTailer(partition, group)));
+        return new ChronicleCompoundMQTailer<>(pTailers, group);
     }
-
 
     private static void deleteQueueBasePath(File basePath) {
         try {

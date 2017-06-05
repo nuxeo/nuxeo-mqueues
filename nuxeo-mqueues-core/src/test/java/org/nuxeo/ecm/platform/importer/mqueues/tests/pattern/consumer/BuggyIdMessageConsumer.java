@@ -32,7 +32,7 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<IdMessage> {
     private long lastAccepted = -1;
     private long lastCommitted = -1;
 
-    public BuggyIdMessageConsumer(int consumerId) {
+    public BuggyIdMessageConsumer(String consumerId) {
         super(consumerId);
     }
 
@@ -41,9 +41,8 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<IdMessage> {
         if (getRandom100() < 1) {
             throw new BuggyException("Failure in begin");
         }
-        if (getConsumerId() == 0) {
-            log.trace("begin");
-        }
+        log.trace("begin " + getConsumerId());
+
     }
 
     @Override
@@ -53,8 +52,8 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<IdMessage> {
         }
 
         long tmp = Long.valueOf(message.getId());
-        if (getConsumerId() == 0) {
-            log.trace(" accept: " + tmp);
+        if (log.isTraceEnabled()) {
+            log.trace(getConsumerId() + " accept: " + tmp);
         }
         // ensure that message are always bigger than the last committed one
         if (lastCommitted >= 0 && tmp <= lastCommitted) {
@@ -78,8 +77,8 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<IdMessage> {
             throw new BuggyException("Failure in commit");
         }
         lastCommitted = lastAccepted;
-        if (getConsumerId() == 0) {
-            log.trace("commit " + lastCommitted);
+        if (log.isTraceEnabled()) {
+            log.trace(getConsumerId() + " commit " + lastCommitted);
         }
 
     }
@@ -90,8 +89,8 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<IdMessage> {
             throw new BuggyException("Failure in rollback");
         }
         lastAccepted = lastCommitted;
-        if (getConsumerId() == 0) {
-            log.trace("rollback to " + lastCommitted);
+        if (log.isTraceEnabled()) {
+            log.trace(getConsumerId() + " rollback to " + lastCommitted);
         }
     }
 
