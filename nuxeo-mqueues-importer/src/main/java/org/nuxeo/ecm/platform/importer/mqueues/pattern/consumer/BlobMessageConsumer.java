@@ -34,11 +34,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @since 9.1
  */
 public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
+    private static final AtomicInteger consumerCounter = new AtomicInteger(0);
+    private final Integer id = consumerCounter.getAndIncrement();
     private static final java.lang.String DEFAULT_ENCODING = "UTF-8";
     private static final String HEADER = "key, digest, length, filename, mimetype, encoding\n";
     private final BlobProvider blobProvider;
@@ -53,7 +56,8 @@ public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
         if (blobProvider == null) {
             throw new IllegalArgumentException("Invalid blob provider: " + blobProviderName);
         }
-        Path outputFile = Paths.get(outputBlobInfoDirectory.toString(), "bi-" + consumerId + ".csv");
+        Path outputFile = Paths.get(outputBlobInfoDirectory.toString(),
+                String.format("bi-%02d.csv", id));
         try {
             outputBlobInfoDirectory.toFile().mkdirs();
             outputFileWriter = new FileWriter(outputFile.toFile(), true);

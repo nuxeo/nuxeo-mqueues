@@ -19,7 +19,6 @@
 package org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -29,7 +28,6 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 

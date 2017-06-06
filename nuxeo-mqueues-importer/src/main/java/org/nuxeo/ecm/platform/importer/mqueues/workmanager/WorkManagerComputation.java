@@ -194,7 +194,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
         Topology.Builder builder = Topology.builder();
         workQueueConfig.getQueueIds().forEach(item -> builder.addComputation(() -> new ComputationWork(item), Collections.singletonList("i1:" + item)));
         this.topology = builder.build();
-        this.settings = new Settings(DEFAULT_CONCURRENCY);
+        this.settings = new Settings(DEFAULT_CONCURRENCY, DEFAULT_CONCURRENCY);
         workQueueConfig.getQueueIds().forEach(item -> settings.setConcurrency(item, workQueueConfig.get(item).getMaxThreads()));
     }
 

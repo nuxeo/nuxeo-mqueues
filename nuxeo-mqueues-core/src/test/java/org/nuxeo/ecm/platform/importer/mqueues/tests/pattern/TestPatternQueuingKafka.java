@@ -21,8 +21,6 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
@@ -55,10 +53,4 @@ public class TestPatternQueuingKafka extends TestPatternQueuing {
         prefix = null;
     }
 
-    @Override
-    @Test
-    @Ignore("hang on future.get")
-    public void killMQueue() throws Exception {
-
-    }
 }

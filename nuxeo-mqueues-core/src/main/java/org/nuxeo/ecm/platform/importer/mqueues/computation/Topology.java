@@ -61,7 +61,7 @@ public class Topology {
      * A plantuml representation of the topology.
      */
     public String toPlantuml() {
-        return toPlantuml(new Settings(0));
+        return toPlantuml(new Settings(0, 0));
     }
 
     public String toPlantuml(Settings settings) {

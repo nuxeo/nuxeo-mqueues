@@ -18,8 +18,6 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
-import javax.naming.Name;
-
 /**
  * A tuple MQueue name and partition.
  *

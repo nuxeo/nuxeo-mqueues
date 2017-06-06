@@ -170,6 +170,7 @@ public class ConsumerPolicy {
             this.name = name;
             return this;
         }
+
         public ConsumerPolicy build() {
             return new ConsumerPolicy(this);
         }

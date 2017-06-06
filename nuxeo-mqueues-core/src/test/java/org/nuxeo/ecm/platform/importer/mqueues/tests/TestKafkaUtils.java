@@ -21,9 +21,13 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -79,5 +83,25 @@ public class TestKafkaUtils {
         }
     }
 
+    @Test
+    public void testAssigments() throws Exception {
+        Map<String, Integer> streams = new HashMap<>();
+        streams.put("s1", 16);
+        streams.put("s2", 8);
+        streams.put("s3", 1);
+        List<List<MQPartition>> ret = KafkaUtils.roundRobinAssignments(3, streams);
+        // there are 25 partitions in total so 5 per
+        assertEquals(3, ret.size());
+        assertEquals(9, ret.get(0).size());
+        assertEquals(8, ret.get(1).size());
+        assertEquals(8, ret.get(2).size());
+        // assertEquals(null, ret);
+
+        ret = KafkaUtils.rangeAssignments(5, streams);
+        assertEquals(5, ret.size());
+        assertEquals(7, ret.get(0).size());
+
+        // assertEquals(null, ret);
+    }
 
 }

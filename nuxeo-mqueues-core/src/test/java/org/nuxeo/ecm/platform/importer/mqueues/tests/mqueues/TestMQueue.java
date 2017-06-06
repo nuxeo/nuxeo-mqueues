@@ -93,7 +93,6 @@ public abstract class TestMQueue {
     }
 
 
-
     @Test
     public void basicAppendAndTail() throws Exception {
         final int NB_QUEUE = 10;

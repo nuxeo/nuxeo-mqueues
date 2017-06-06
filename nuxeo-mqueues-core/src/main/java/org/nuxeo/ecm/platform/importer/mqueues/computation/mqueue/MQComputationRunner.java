@@ -26,15 +26,15 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.ComputationContextImpl;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkMonotonicInterval;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -50,10 +50,10 @@ public class MQComputationRunner implements Runnable {
     public static final Duration READ_TIMEOUT = Duration.ofMillis(25);
 
     private final ComputationContextImpl context;
-    private final int partition;
+    private final List<MQPartition> partitions;
     private final MQManager<Record> mqManager;
     private final ComputationMetadataMapping metadata;
-    private final MQTailer<Record>[] tailers;
+    private final MQTailer<Record> tailer;
     private final Supplier<Computation> supplier;
 
     private volatile boolean stop = false;
@@ -64,24 +64,24 @@ public class MQComputationRunner implements Runnable {
     private long inRecords = 0;
     private long inCheckpointRecords = 0;
     private long outRecords = 0;
-    // private final WatermarkInterval lowWatermark = new WatermarkInterval();
     private final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
     private long lastReadTime = System.currentTimeMillis();
     private long lastTimerExecution = 0;
     private String threadName;
 
     @SuppressWarnings("unchecked")
-    public MQComputationRunner(Supplier<Computation> supplier, ComputationMetadataMapping metadata, int partition, MQManager<Record> mqManager) {
+    public MQComputationRunner(Supplier<Computation> supplier, ComputationMetadataMapping metadata,
+                               List<MQPartition> defaultAssignment, MQManager<Record> mqManager) {
         this.supplier = supplier;
         this.metadata = metadata;
         this.mqManager = mqManager;
-        this.partition = partition;
+        this.partitions = defaultAssignment;
         this.context = new ComputationContextImpl(metadata);
-
-        this.tailers = new MQTailer[metadata.istreams.size()];
-        int i = 0;
-        for (String streamName : metadata.istreams) {
-            tailers[i++] = mqManager.createTailer(metadata.name, MQPartition.of(streamName, partition));
+        // TODO: if mq support subscribe use subscribe else create tailer for assign
+        if (defaultAssignment.isEmpty()) {
+            this.tailer = null;
+        } else {
+            this.tailer = mqManager.createTailer(metadata.name, defaultAssignment);
         }
     }
 
@@ -122,26 +122,26 @@ public class MQComputationRunner implements Runnable {
             }
         } finally {
             computation.destroy();
-            closeTailers();
+            closeTailer();
             log.debug(metadata.name + ": Exited");
         }
     }
 
-    private void closeTailers() {
-        Arrays.stream(tailers).forEach(tailer -> {
+    private void closeTailer() {
+        if (tailer != null && !tailer.closed()) {
             try {
-                if (tailer != null)
-                    tailer.close();
+                tailer.close();
             } catch (Exception e) {
                 log.debug(metadata.name + ": Exception while closing tailer", e);
             }
-        });
+        }
     }
 
     private void processLoop() throws InterruptedException {
         while (continueLoop()) {
             processTimer();
             processRecord();
+            // TODO: add pause for computation without inputs or without timer to prevent CPU hogs
         }
     }
 
@@ -194,12 +194,9 @@ public class MQComputationRunner implements Runnable {
     }
 
     private void processRecord() throws InterruptedException {
-        if (tailers.length == 0) {
+        if (tailer == null) {
             return;
         }
-        // round robin on input stream tailers
-        MQTailer<Record> tailer = tailers[(int) (counter++ % tailers.length)];
-
         Duration timeoutRead = getTimeoutDuration();
         MQRecord<Record> mqRecord = tailer.read(timeoutRead);
         Record record;
@@ -286,7 +283,7 @@ public class MQComputationRunner implements Runnable {
     }
 
     private void saveOffsets() {
-        for (MQTailer<Record> tailer : tailers) {
+        if (tailer != null) {
             tailer.commit();
         }
     }

@@ -55,7 +55,7 @@ public class ConsumerStatus {
         }
         double elapsed = (stopTime - startTime) / 1000.;
         double mps = (elapsed != 0) ? committed / elapsed : 0.0;
-        return String.format("Consumer %02d status: accepted (include retries): %s, committed: %d, batch: %d, batchFailure: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
+        return String.format("Consumer %s status: accepted (include retries): %s, committed: %d, batch: %d, batchFailure: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
                 consumerId, accepted, committed, batchCommit, batchFailure, elapsed, mps);
     }
 

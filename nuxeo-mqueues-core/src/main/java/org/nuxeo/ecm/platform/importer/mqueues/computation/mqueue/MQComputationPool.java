@@ -25,7 +25,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationMetadataMa
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -52,44 +52,31 @@ public class MQComputationPool {
     private final int threads;
     private final MQManager<Record> manager;
     private final Supplier<Computation> supplier;
+    private final List<List<MQPartition>> defaultAssignments;
     private ExecutorService threadPool;
     private final List<MQComputationRunner> runners;
 
-    public MQComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, int defaultThreads, MQManager<Record> manager) {
+    public MQComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, List<List<MQPartition>> defaultAssignments, MQManager<Record> manager) {
         this.supplier = supplier;
         this.manager = manager;
         this.metadata = metadata;
-        this.threads = getNumberOfThreads(defaultThreads);
-        this.runners = new ArrayList<>(defaultThreads);
+        this.threads = defaultAssignments.size();
+        this.defaultAssignments = defaultAssignments;
+        this.runners = new ArrayList<>(threads);
     }
 
     public String getComputationName() {
         return metadata.name;
     }
 
-    private int getNumberOfThreads(int defaultThreads) {
-        if (metadata.istreams.isEmpty()) {
-            return defaultThreads;
-        }
-        return getPartitionsOfInputStreams();
-    }
-
-    private int getPartitionsOfInputStreams() {
-        for (String streamName : metadata.istreams) {
-            MQAppender<Record> appender = manager.getAppender(streamName);
-            return appender.size();
-        }
-        throw new IllegalArgumentException("No input stream");
-    }
-
     public void start() {
         log.info(metadata.name + ": Starting pool");
         threadPool = newFixedThreadPool(threads, new NamedThreadFactory(metadata.name + "Pool"));
-        for (int i = 0; i < threads; i++) {
-            MQComputationRunner runner = new MQComputationRunner(supplier, metadata, i, manager);
+        defaultAssignments.forEach(assignments -> {
+            MQComputationRunner runner = new MQComputationRunner(supplier, metadata, assignments, manager);
             threadPool.submit(runner);
             runners.add(runner);
-        }
+        });
         // close the pool no new admission
         threadPool.shutdown();
         log.debug(metadata.name + ": Pool started, threads: " + threads);

@@ -1,4 +1,4 @@
-package org.nuxeo.ecm.platform.importer.mqueues.tests;/*
+/*
  * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests;/*
  * Contributors:
  *     bdelbosc
  */
-
+package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;

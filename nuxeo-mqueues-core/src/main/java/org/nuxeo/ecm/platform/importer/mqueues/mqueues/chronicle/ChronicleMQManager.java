@@ -87,6 +87,9 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     protected MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
         Collection<ChronicleMQTailer<M>> pTailers = new ArrayList<>(partitions.size());
         partitions.forEach(partition -> pTailers.add((ChronicleMQTailer<M>) ((ChronicleMQAppender<M>) getAppender(partition.name())).createTailer(partition, group)));
+        if (pTailers.size() == 1) {
+            return (MQTailer<M>) pTailers.toArray()[0];
+        }
         return new ChronicleCompoundMQTailer<>(pTailers, group);
     }
 

@@ -76,7 +76,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
         acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", consumerId));
         committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", consumerId));
-        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure",consumerId ));
+        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", consumerId));
         batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", consumerId));
         log.debug("Consumer thread created tailing on: " + consumerId);
     }
@@ -150,8 +150,8 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         while (!execution.isComplete()) {
             try {
                 end = processBatch();
-                execution.complete();
                 tailer.commit();
+                execution.complete();
             } catch (Throwable t) {
                 batchFailureCount.inc();
                 if (!execution.canRetryOn(t)) {

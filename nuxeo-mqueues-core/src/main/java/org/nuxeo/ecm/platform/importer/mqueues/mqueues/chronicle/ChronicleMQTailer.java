@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> {
     private static final Log log = LogFactory.getLog(ChronicleMQTailer.class);
     protected static final long POLL_INTERVAL_MS = 100L;
+
     private final String basePath;
     private final ExcerptTailer cqTailer;
     private final ChronicleMQOffsetTracker offsetTracker;
@@ -109,13 +110,13 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     @Override
     public MQOffset commit(MQPartition partition) {
         // we write raw: queue, offset, timestamp
-        if (! this.partition.equals(partition)) {
+        if (!this.partition.equals(partition)) {
             throw new IllegalArgumentException("Can not commit this partition: " + partition + " from " + id);
         }
         long offset = cqTailer.index();
         offsetTracker.commit(offset);
         if (log.isTraceEnabled()) {
-            log.trace(String.format("queue-%02d commit offset: %d", id, offset));
+            log.trace(String.format("Commit %s:+%d", id, offset));
         }
         return new MQOffsetImpl(id.partition, offset);
     }
@@ -127,13 +128,13 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
 
     @Override
     public void toEnd() {
-        log.debug(String.format("toEnd: ", id));
+        log.debug(String.format("toEnd: %s", id));
         cqTailer.toEnd();
     }
 
     @Override
     public void toStart() {
-        log.debug(String.format("toStart: ", id));
+        log.debug(String.format("toStart: %s", id));
         cqTailer.toStart();
     }
 
@@ -170,4 +171,14 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     public boolean closed() {
         return closed;
     }
+
+    @Override
+    public String toString() {
+        return "ChronicleMQTailer{" +
+                "basePath='" + basePath + '\'' +
+                ", id=" + id +
+                ", closed=" + closed +
+                '}';
+    }
+
 }

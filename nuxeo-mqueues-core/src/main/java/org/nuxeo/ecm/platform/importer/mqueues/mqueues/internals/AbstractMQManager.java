@@ -82,7 +82,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
 
     @Override
     public synchronized MQAppender<M> getAppender(String name) {
-        if (!appenders.containsKey(name)) {
+        if (!appenders.containsKey(name) || appenders.get(name).closed()) {
             if (exists(name)) {
                 appenders.put(name, createAppender(name));
             } else {

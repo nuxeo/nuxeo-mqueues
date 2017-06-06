@@ -25,9 +25,9 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 
 import java.io.Externalizable;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTailer<M> {
     private final Collection<ChronicleMQTailer<M>> tailers;
     private final String group;
-    private final List<MQPartition> mqPartitions;
+    private final List<MQPartition> mqPartitions = new ArrayList<>();
     private boolean closed = false;
     private long counter = 0;
 
@@ -46,8 +46,8 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
             throw new IllegalArgumentException("Can not create an empty compound tailer");
         }
         this.tailers = tailers;
-        this.mqPartitions = tailers.stream().map(partition -> partition.getMQPartitions().stream().findFirst().get()).collect(Collectors.toList());
         this.group = group;
+        tailers.stream().forEach(partition -> mqPartitions.addAll(partition.getMQPartitions()));
     }
 
     @Override
@@ -72,7 +72,7 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
         int toSkip = (int) (counter % tailers.size());
         int i = 0;
         MQRecord<M> ret;
-        for (ChronicleMQTailer<M> tailer: tailers) {
+        for (ChronicleMQTailer<M> tailer : tailers) {
             if (i < toSkip) {
                 continue;
             }
@@ -86,7 +86,12 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
 
     @Override
     public MQOffset commit(MQPartition partition) {
-        return (MQOffset) tailers.stream().filter(tailer -> partition.equals(tailer.getMQPartitions())).findFirst().get();
+        for (MQTailer<M> tailer: tailers) {
+            if (tailer.getMQPartitions().contains(partition)) {
+                return tailer.commit(partition);
+            }
+        }
+        throw new IllegalArgumentException("No tailer matching: " + partition);
     }
 
     @Override

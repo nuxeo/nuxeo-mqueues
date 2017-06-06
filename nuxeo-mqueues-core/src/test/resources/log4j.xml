@@ -50,7 +50,7 @@
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka">
-    <priority value="DEBUG" />
+    <priority value="INFO" />
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.computation">
@@ -58,7 +58,7 @@
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.tests.computation">
-    <priority value="WARN" />
+    <priority value="INFO" />
   </category>
 
   <!-- hide the warn and stack on retry -->

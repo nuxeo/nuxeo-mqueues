@@ -40,6 +40,7 @@ import java.io.ObjectInputStream;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -61,13 +62,14 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     private final String prefix;
     private KafkaConsumer<String, Bytes> consumer;
     private final Map<TopicPartition, Long> lastOffsets = new HashMap<>();
+    private final Map<TopicPartition, Long> lastCommittedOffsets = new HashMap<>();
     private final Queue<ConsumerRecord<String, Bytes>> records = new LinkedList<>();
     // keep track of all tailers on the same namespace index even from different mq
     private boolean closed = false;
 
     public KafkaMQTailer(String prefix, Collection<MQPartition> partitions, String group, Properties consumerProps) {
         Objects.requireNonNull(group);
-        this.id = buildId(partitions);
+        this.id = buildId(group, partitions);
         this.prefix = prefix;
         this.group = group;
         this.partitions = partitions;
@@ -76,12 +78,12 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, group);
         this.consumer = new KafkaConsumer<>(consumerProps);
         this.consumer.assign(topicPartitions);
-        log.debug(String.format("Created tailer: %s for group: %s using prefix: %s", id, group, prefix));
+        log.debug(String.format("Created tailer: %s using prefix: %s", id, prefix));
         toLastCommitted();
     }
 
-    private String buildId(Collection<MQPartition> partitions) {
-        return partitions.stream().map(MQPartition::toString).collect(Collectors.joining("|"));
+    private String buildId(String group, Collection<MQPartition> partitions) {
+        return group + ":" + partitions.stream().map(MQPartition::toString).collect(Collectors.joining("|"));
     }
 
     @Override
@@ -101,8 +103,9 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         lastOffsets.put(new TopicPartition(record.topic(), record.partition()), record.offset());
         M value = messageOf(record.value());
         if (log.isDebugEnabled()) {
-            log.debug("Read " + id + ":+" + record.offset() + " returns key: "
-                    + record.key() + ", msg: " + value);
+            log.debug(String.format("Read from %s-%02d:+%d, key: %s, value: %s",
+                    record.topic().replace(prefix, ""), record.partition(), record.offset(),
+                    record.key(), value));
         }
         return new MQRecord<>(new MQPartition(getNameForTopic(record.topic()), record.partition()), value,
                 new MQOffsetImpl(record.partition(), record.offset()));
@@ -177,16 +180,21 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     }
 
     private void toLastCommitted(TopicPartition topicPartition) {
-        long offset;
-        OffsetAndMetadata offsetMeta = consumer.committed(topicPartition);
-        if (offsetMeta != null) {
-            offset = offsetMeta.offset();
+        Long offset = lastCommittedOffsets.get(topicPartition);
+        if (offset == null) {
+            OffsetAndMetadata offsetMeta = consumer.committed(topicPartition);
+            if (offsetMeta != null) {
+                offset = offsetMeta.offset();
+            }
+        }
+        if (offset != null) {
+            consumer.seek(topicPartition, offset);
         } else {
+            consumer.seekToBeginning(Collections.singletonList(topicPartition));
             offset = consumer.position(topicPartition);
         }
-        consumer.seek(topicPartition, offset);
-        lastOffsets.put(topicPartition, offset);
-        log.debug(String.format("toLastCommitted: %s-02d:+%d", topicPartition.topic(), topicPartition.partition(),
+        log.debug(String.format(" toLastCommitted: %s-%02d:+%d", topicPartition.topic().replace(prefix, ""),
+                topicPartition.partition(),
                 offset));
     }
 
@@ -196,10 +204,13 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         partitions.stream().map(partition -> new TopicPartition(prefix + partition.name(),
                 partition.partition())).filter(lastOffsets::containsKey)
                 .forEach(tp -> offsetToCommit.put(tp, new OffsetAndMetadata(lastOffsets.get(tp) + 1)));
+        lastOffsets.clear();
         consumer.commitSync(offsetToCommit);
+        offsetToCommit.forEach((topicPartition,  offset) -> lastCommittedOffsets.put(topicPartition, offset.offset()));
         if (log.isDebugEnabled()) {
-            offsetToCommit.forEach((tp, offset) -> log.debug("Committed: " + tp + ":+" + offset.offset()));
             log.debug("Committed all positions for: " + id);
+            offsetToCommit.forEach((tp, offset) -> log.debug(String.format(" Committed: %s:%s-%02d:+%d",
+                    group, tp.topic().replace(prefix, ""), tp.partition(), offset.offset() + 1)));
         }
     }
 
@@ -238,10 +249,27 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     public void close() throws Exception {
         if (consumer != null) {
             log.debug("Closing tailer: " + id);
-            consumer.close();
+            try {
+                // calling wakeup enable to terminate consumer blocking on poll call
+                consumer.wakeup();
+                consumer.close();
+            } catch (IllegalStateException|ConcurrentModificationException e) {
+                // this happens if the consumer has already been closed or if it is closed from another
+                // thread.
+                log.warn("Discard error while closing consumer: ", e);
+            }
             consumer = null;
         }
         closed = true;
+    }
+
+    @Override
+    public String toString() {
+        return "KafkaMQTailer{" +
+                "prefix='" + prefix + '\'' +
+                ", id=" + id +
+                ", closed=" + closed +
+                '}';
     }
 
 }

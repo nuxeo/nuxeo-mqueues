@@ -27,12 +27,16 @@ import org.I0Itec.zkclient.ZkConnection;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.RoundRobinAssignor;
+import org.apache.kafka.clients.consumer.internals.PartitionAssignor;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.Cluster;
+import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -40,7 +44,12 @@ import org.junit.Test;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -164,6 +173,39 @@ public class TestLibKafka {
         assertTrue(count > 100);
     }
 
+
+    @Test
+    public void testAssignator() throws Exception {
+        final List<PartitionInfo> parts = new ArrayList<>();
+        parts.addAll(getPartsFor("t0", 4));
+        parts.addAll(getPartsFor("t1", 5));
+        Map<String, PartitionAssignor.Subscription> subscriptions = new HashMap<>();
+        subscriptions.put("C1.1", new PartitionAssignor.Subscription(Arrays.asList("t0", "t1")));
+        subscriptions.put("C1.2", new PartitionAssignor.Subscription(Arrays.asList("t0", "t1")));
+        subscriptions.put("C1.3", new PartitionAssignor.Subscription(Arrays.asList("t0", "t1")));
+        Cluster cluster = new Cluster("kafka-cluster", Collections.emptyList(), parts,
+                Collections.<String>emptySet(),
+                Collections.<String>emptySet());
+        PartitionAssignor assignor = new RoundRobinAssignor();
+        // PartitionAssignor assignor2 = new RangeAssignor();
+        Map<String, PartitionAssignor.Assignment> assignement = assignor.assign(cluster, subscriptions);
+        // assertEquals(null, assignement);
+        assertEquals(3, assignement.get("C1.1").partitions().size());
+        assertEquals(3, assignement.get("C1.2").partitions().size());
+        assertEquals(3, assignement.get("C1.3").partitions().size());
+        TopicPartition c1tp0 = assignement.get("C1.1").partitions().get(0);
+        assertEquals(new TopicPartition("t0", 0), c1tp0);
+        //assertEquals(new HashMap<>(), assignor.assign(cluster,  subscriptions));
+    }
+
+    private Collection<PartitionInfo> getPartsFor(String topic, int partitions) {
+        Collection<PartitionInfo> ret = new ArrayList<>();
+        for (int i = 0; i < partitions; i++) {
+            ret.add(new PartitionInfo(topic, i, null, null, null));
+        }
+        return ret;
+    }
+
     protected Properties getProducerProperties() {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, DEFAULT_BOOTSTRAP_SERVER);
@@ -232,5 +274,6 @@ public class TestLibKafka {
     protected boolean topicExists(ZkUtils zkUtils, String topic) {
         return AdminUtils.topicExists(zkUtils, topic);
     }
+
 
 }

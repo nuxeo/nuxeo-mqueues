@@ -57,8 +57,8 @@
     <priority value="INFO" />
   </category>
 
-  <category name="org.nuxeo.ecm.platform.importer.queue">
-    <priority value="INFO" />
+  <category name="org.nuxeo.ecm.platform.importer.mqueues">
+    <priority value="WARN" />
   </category>
 
   <root>

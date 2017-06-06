@@ -28,8 +28,6 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 import java.time.Duration;
 import java.util.Properties;
 
-import static org.jboss.netty.handler.codec.http.multipart.DiskFileUpload.prefix;
-
 public class TestMQueueKafka extends TestMQueue {
     public static final String DEFAULT_BOOTSTRAP_SERVER = "localhost:9092";
     public static final String TOPIC_PREFIX = "nuxeo-test";

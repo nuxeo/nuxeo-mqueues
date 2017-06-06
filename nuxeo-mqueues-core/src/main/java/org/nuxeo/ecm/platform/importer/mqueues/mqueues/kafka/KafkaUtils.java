@@ -29,11 +29,23 @@ import org.I0Itec.zkclient.ZkConnection;
 import org.I0Itec.zkclient.exception.ZkTimeoutException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.kafka.clients.consumer.RangeAssignor;
+import org.apache.kafka.clients.consumer.RoundRobinAssignor;
+import org.apache.kafka.clients.consumer.internals.PartitionAssignor;
+import org.apache.kafka.common.Cluster;
+import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.requests.MetadataResponse;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import scala.collection.Iterator;
 import scala.collection.Seq;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -152,6 +164,46 @@ public class KafkaUtils implements AutoCloseable {
             zkClient.close();
         }
         log.debug("Closed.");
+    }
+
+
+    public static List<List<MQPartition>> rangeAssignments(int threads, Map<String, Integer> streams) {
+        PartitionAssignor assignor = new RangeAssignor();
+        return assignments(assignor, threads, streams);
+    }
+
+    public static List<List<MQPartition>> roundRobinAssignments(int threads, Map<String, Integer> streams) {
+        PartitionAssignor assignor = new RoundRobinAssignor();
+        return assignments(assignor, threads, streams);
+    }
+
+
+    protected static List<List<MQPartition>> assignments(PartitionAssignor assignor, int threads, Map<String, Integer> streams) {
+        final List<PartitionInfo> parts = new ArrayList<>();
+        streams.forEach((streamName, size) -> parts.addAll(getPartsFor(streamName, size)));
+        Map<String, PartitionAssignor.Subscription> subscriptions = new HashMap<>();
+        List<String> streamNames = streams.keySet().stream().sorted().collect(Collectors.toList());
+        for (int i = 0; i < threads; i++) {
+            subscriptions.put(String.valueOf(i), new PartitionAssignor.Subscription(streamNames));
+        }
+        Cluster cluster = new Cluster("kafka-cluster", Collections.emptyList(), parts,
+                Collections.<String>emptySet(), Collections.<String>emptySet());
+        Map<String, PartitionAssignor.Assignment> assignments = assignor.assign(cluster, subscriptions);
+        List<List<MQPartition>> ret = new ArrayList<>(threads);
+        for (int i = 0; i < threads; i++) {
+            ret.add(assignments.get(String.valueOf(i)).partitions().stream()
+                    .map(part -> new MQPartition(part.topic(), part.partition()))
+                    .collect(Collectors.toList()));
+        }
+        return ret;
+    }
+
+    protected static Collection<PartitionInfo> getPartsFor(String topic, int partitions) {
+        Collection<PartitionInfo> ret = new ArrayList<>();
+        for (int i = 0; i < partitions; i++) {
+            ret.add(new PartitionInfo(topic, i, null, null, null));
+        }
+        return ret;
     }
 
 }

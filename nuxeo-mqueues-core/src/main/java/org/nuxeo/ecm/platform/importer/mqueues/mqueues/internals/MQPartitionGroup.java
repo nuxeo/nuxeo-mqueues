@@ -63,7 +63,7 @@ public class MQPartitionGroup {
 
     @Override
     public String toString() {
-        return String.format("%s-02d-%s", name, partition, group);
+        return String.format("%s:%s-%02d", group, name, partition);
     }
 
 }

@@ -35,6 +35,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.pattern.consumer.IdMessageFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.pattern.producer.RandomIdMessageProducerFactory;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -122,7 +123,7 @@ public abstract class TestPatternBoundedQueuing {
         final int NB_QUEUE = 23;
         // ordered message producer requires nb_producer <= nb consumer
         final int NB_PRODUCERS = NB_QUEUE;
-        final int NB_DOCUMENTS = getNbDocumentForBuggyConsumerTest();
+        final int NB_DOCUMENTS = 127; // getNbDocumentForBuggyConsumerTest();
         // final int NB_DOCUMENTS = 499999;
         final int BATCH_SIZE = 13;
 
@@ -139,9 +140,9 @@ public abstract class TestPatternBoundedQueuing {
         // 2. Use the mq and run the consumers
         ConsumerPool<IdMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
                 IdMessageFactory.BUGGY,
-                ConsumerPolicy.builder()
+                ConsumerPolicy.builder().waitMessageTimeout(Duration.ofSeconds(10))
                         .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
-                        .retryPolicy(new RetryPolicy().withMaxRetries(1000)).build());
+                        .retryPolicy(new RetryPolicy().withMaxRetries(10000)).build());
 
         List<ConsumerStatus> cret = consumers.start().get();
 

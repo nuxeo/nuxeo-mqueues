@@ -59,6 +59,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
     // keep track of created tailers to make sure they are closed
     private final ConcurrentLinkedQueue<KafkaMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
     private final String name;
+    private boolean closed;
 
     static public <M extends Externalizable> KafkaMQAppender<M> open(String topic, String name, Properties producerProperties, Properties consumerProperties) {
         return new KafkaMQAppender<>(topic, name, producerProperties, consumerProperties);
@@ -91,7 +92,8 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
     @Override
     public MQOffset append(int queue, Externalizable message) {
         Bytes value = Bytes.wrap(messageAsByteArray(message));
-        ProducerRecord<String, Bytes> record = new ProducerRecord<>(topic, queue, Integer.toString(queue), value);
+        String key = String.valueOf(queue);
+        ProducerRecord<String, Bytes> record = new ProducerRecord<>(topic, queue, key, value);
         Future<RecordMetadata> result = producer.send(record);
         RecordMetadata ret;
         try {
@@ -101,8 +103,8 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         }
         if (log.isDebugEnabled()) {
             int len = record.value().get().length;
-            log.debug(String.format("append to %s-%02d:+%d, len: %d, msg: %s", name,
-                    queue, ret.offset(), len, message));
+            log.debug(String.format("append to %s-%02d:+%d, len: %d, key: %s, value: %s", name,
+                    queue, ret.offset(), len, key, message));
         }
         return new MQOffsetImpl(queue, ret.offset());
     }
@@ -146,6 +148,11 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         }
     }
 
+    @Override
+    public boolean closed() {
+        return closed;
+    }
+
     private boolean isProcessed(String group, TopicPartition topicPartition, long offset) {
         // TODO: find a better way, this is expensive to create a consumer each time
         // but this is needed, an open consumer is not properly updated
@@ -184,5 +191,6 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
             producer.close();
             producer = null;
         }
+        closed = true;
     }
 }

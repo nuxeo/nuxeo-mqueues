@@ -21,7 +21,6 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 import java.io.Externalizable;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.List;
 
 /**
  * Sequential reader for a queue.

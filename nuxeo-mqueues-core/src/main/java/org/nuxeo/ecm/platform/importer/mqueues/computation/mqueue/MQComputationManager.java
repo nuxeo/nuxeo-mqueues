@@ -27,6 +27,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
 
 import java.time.Duration;
 import java.util.Comparator;
@@ -135,38 +137,20 @@ public class MQComputationManager implements ComputationManager {
         log.debug("Initializing pools");
         return topology.metadataList().stream()
                 .map(meta -> new MQComputationPool(topology.getSupplier(meta.name), meta,
-                        settings.getConcurrency(meta.name), manager))
+                        getDefaultAssignments(meta), manager))
                 .collect(Collectors.toList());
+    }
+
+    private List<List<MQPartition>> getDefaultAssignments(ComputationMetadataMapping meta) {
+        int threads = settings.getConcurrency(meta.name);
+        Map<String, Integer> streams = new HashMap<>();
+        meta.istreams.forEach(streamName -> streams.put(streamName, settings.getPartitions(streamName)));
+        return KafkaUtils.roundRobinAssignments(threads, streams);
     }
 
     private void initStreams() {
         log.debug("Initializing streams");
-        Map<String, Integer> streamPartitions = computePartitions();
-        topology.streamsSet().forEach(name -> manager.createIfNotExists(name, streamPartitions.get(name)));
-    }
-
-    private Map<String, Integer> computePartitions() {
-        Map<String, Integer> ret = new HashMap<>();
-        // set input stream partition according to computation concurrency
-        topology.metadataList().forEach(meta -> meta.istreams.forEach(
-                stream -> ret.put(stream, settings.getConcurrency(meta.name))));
-        // set default on external output streams
-        topology.streamsSet().forEach(stream -> ret.putIfAbsent(stream, settings.getExternalStreamPartitions(stream)));
-        // check if there is a conflict when input stream partition does not match computation concurrency
-        Set<ComputationMetadataMapping> conflicts = topology.metadataList().stream()
-                .filter(meta -> checkConflict(meta.name, ret)).collect(Collectors.toSet());
-        if (!conflicts.isEmpty()) {
-            String msg = "Conflict detected: " + conflicts.stream().map(
-                    meta -> "Computation " + meta + " can not apply concurrency of: " + settings.getConcurrency(meta.name))
-                    .collect(Collectors.joining(". "));
-            log.error(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        return ret;
-    }
-
-    private boolean checkConflict(String name, Map<String, Integer> ret) {
-        return topology.getParents(name).stream().filter(stream -> ret.get(stream) != settings.getConcurrency(name)).count() > 0;
+        topology.streamsSet().forEach(streamName -> manager.createIfNotExists(streamName, settings.getPartitions(streamName)));
     }
 
 }

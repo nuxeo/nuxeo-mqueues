@@ -25,7 +25,6 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Duration;
 
 public class TestPatternQueuingChronicle extends TestPatternQueuing {
     private Path basePath;

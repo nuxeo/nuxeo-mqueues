@@ -22,24 +22,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Enable to configure the concurrency of computations.<br>
- *
- * The concurrency of computations fixes the number of partition in its input streams.
- * Two computations that read from the same input stream must have the same concurrency.
- * Invalid settings will be detected by the {@link ComputationManager}.</br>
- *
- * For a topology with external output streams (there is no computation that read this stream),
- * the size of the output stream can be set using {@link #setExternalStreamPartitions(String, int)}.
+ * Enable to configure the stream partitioning and computation concurrency.
  *
  * @since 9.2
  */
 public class Settings {
     private final int defaultConcurrency;
+    private final int defaultPartitions;
     private final Map<String, Integer> concurrences = new HashMap<>();
     private final Map<String, Integer> partitions = new HashMap<>();
 
-    public Settings(int defaultConcurrency) {
+    public Settings(int defaultConcurrency, int defaultPartitions) {
         this.defaultConcurrency = defaultConcurrency;
+        this.defaultPartitions = defaultPartitions;
     }
 
     public Settings setConcurrency(String computationName, int concurrency) {
@@ -51,13 +46,13 @@ public class Settings {
         return concurrences.getOrDefault(computationName, defaultConcurrency);
     }
 
-    public Settings setExternalStreamPartitions(String streamName, int partitions) {
+    public Settings setPartitions(String streamName, int partitions) {
         this.partitions.put(streamName, partitions);
         return this;
     }
 
-    public int getExternalStreamPartitions(String streamName) {
-        return partitions.getOrDefault(streamName, defaultConcurrency);
+    public int getPartitions(String streamName) {
+        return partitions.getOrDefault(streamName, defaultPartitions);
     }
 
 }
