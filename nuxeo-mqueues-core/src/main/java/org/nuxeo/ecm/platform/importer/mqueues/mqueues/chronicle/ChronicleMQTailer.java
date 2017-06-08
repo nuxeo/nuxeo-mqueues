@@ -151,7 +151,7 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     }
 
     @Override
-    public Collection<MQPartition> getMQPartitions() {
+    public Collection<MQPartition> assignments() {
         return Collections.singletonList(new MQPartition(id.name, id.partition));
     }
 

@@ -28,7 +28,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 /**
@@ -37,17 +36,17 @@ import java.util.stream.Collectors;
 public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTailer<M> {
     private final Collection<ChronicleMQTailer<M>> tailers;
     private final String group;
+    private final int size;
     private final List<MQPartition> mqPartitions = new ArrayList<>();
     private boolean closed = false;
     private long counter = 0;
 
     public ChronicleCompoundMQTailer(Collection<ChronicleMQTailer<M>> tailers, String group) {
-        if (tailers.isEmpty()) {
-            throw new IllegalArgumentException("Can not create an empty compound tailer");
-        }
+        // empty tailers is an accepted input
         this.tailers = tailers;
         this.group = group;
-        tailers.stream().forEach(partition -> mqPartitions.addAll(partition.getMQPartitions()));
+        this.size = tailers.size();
+        tailers.stream().forEach(partition -> mqPartitions.addAll(partition.assignments()));
     }
 
     @Override
@@ -68,12 +67,11 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
 
     private MQRecord<M> read() {
         // round robin on tailers
-        counter++;
-        int toSkip = (int) (counter % tailers.size());
+        int toSkip = (size > 0) ? ((int) (counter++ % size)) : 0;
         int i = 0;
         MQRecord<M> ret;
         for (ChronicleMQTailer<M> tailer : tailers) {
-            if (i < toSkip) {
+            if (i++ < toSkip) {
                 continue;
             }
             ret = tailer.read();
@@ -86,8 +84,8 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
 
     @Override
     public MQOffset commit(MQPartition partition) {
-        for (MQTailer<M> tailer: tailers) {
-            if (tailer.getMQPartitions().contains(partition)) {
+        for (MQTailer<M> tailer : tailers) {
+            if (tailer.assignments().contains(partition)) {
                 return tailer.commit(partition);
             }
         }
@@ -115,7 +113,7 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
     }
 
     @Override
-    public Collection<MQPartition> getMQPartitions() {
+    public Collection<MQPartition> assignments() {
         return mqPartitions;
     }
 

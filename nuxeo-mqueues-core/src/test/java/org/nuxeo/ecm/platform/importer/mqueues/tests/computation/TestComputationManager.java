@@ -196,8 +196,19 @@ public abstract class TestComputationManager {
 
     @Test
     public void testComplexTopoManyRecords() throws Exception {
-        testComplexTopo(1003, 8, 8);
+        testComplexTopo(1003, 32, 32);
     }
+
+    @Test
+    public void testComplexTopoManyRecordsOnePartition() throws Exception {
+        testComplexTopo(101, 32, 1);
+    }
+
+    @Test
+    public void testComplexTopoManyRecordsOneThreadManyPartitions() throws Exception {
+        testComplexTopo(100, 20, 21);
+    }
+
 
     @Test
     public void testStopAndResume() throws Exception {
@@ -311,7 +322,7 @@ public abstract class TestComputationManager {
     private int readCounterFromPartition(MQManager<Record> manager, String stream, int partition) throws InterruptedException {
         MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition));
         int result = 0;
-        for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(1000)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(1))) {
+        for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(1000)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(500))) {
             result += Integer.valueOf(mqRecord.value.key);
         }
         tailer.commit();
@@ -330,7 +341,7 @@ public abstract class TestComputationManager {
     private int countRecordInPartition(MQManager<Record> manager, String stream, int partition) throws Exception {
         try (MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition))) {
             int result = 0;
-            for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(100)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(1))) {
+            for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(1000)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(500))) {
                 result += 1;
             }
             return result;

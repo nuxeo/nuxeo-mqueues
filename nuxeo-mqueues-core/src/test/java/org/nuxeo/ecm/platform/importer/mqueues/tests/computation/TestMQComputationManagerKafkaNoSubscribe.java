@@ -16,25 +16,24 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
+package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
-import java.io.Externalizable;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
+
+import java.util.Properties;
 
 /**
- *
+ * Kafka test using manual assignment of topic/partitions
  * @since 9.2
  */
-public class MQRecord<M extends Externalizable> {
-    public M value;
-    public MQPartition partition;
-    public MQOffset offset;
+public class TestMQComputationManagerKafkaNoSubscribe extends TestMQComputationManagerKafka {
 
-    public MQRecord(MQPartition partition, M value, MQOffset offset) {
-        this.partition = partition;
-        this.value = value;
-        this.offset = offset;
+    @Override
+    protected Properties getConsumerProps() {
+        Properties ret = (Properties) TestMQueueKafka.getConsumerProps().clone();
+        ret.put(KafkaMQManager.DISABLE_SUBSCRIBE_PROP, "true");
+        return ret;
     }
+
 }
-
-
-

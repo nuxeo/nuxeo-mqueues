@@ -21,13 +21,16 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.utils.Bytes;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
@@ -53,38 +56,67 @@ import java.util.stream.Collectors;
 /**
  * @since 9.2
  */
-public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
+public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, ConsumerRebalanceListener {
     private static final Log log = LogFactory.getLog(KafkaMQTailer.class);
-    private final String id;
-    private final Collection<TopicPartition> topicPartitions;
     private final String group;
-    private final Collection<MQPartition> partitions;
     private final String prefix;
     private KafkaConsumer<String, Bytes> consumer;
+    private String id;
+    private Collection<TopicPartition> topicPartitions;
+    private Collection<MQPartition> partitions;
     private final Map<TopicPartition, Long> lastOffsets = new HashMap<>();
     private final Map<TopicPartition, Long> lastCommittedOffsets = new HashMap<>();
     private final Queue<ConsumerRecord<String, Bytes>> records = new LinkedList<>();
     // keep track of all tailers on the same namespace index even from different mq
     private boolean closed = false;
+    private Collection<String> names;
+    private MQRebalanceListener listener;
 
-    public KafkaMQTailer(String prefix, Collection<MQPartition> partitions, String group, Properties consumerProps) {
+    protected KafkaMQTailer(String prefix, String group, Properties consumerProps) {
         Objects.requireNonNull(group);
-        this.id = buildId(group, partitions);
         this.prefix = prefix;
         this.group = group;
-        this.partitions = partitions;
-        this.topicPartitions = partitions.stream().map(partition -> new TopicPartition(prefix + partition.name(),
-                partition.partition())).collect(Collectors.toList());
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, group);
         this.consumer = new KafkaConsumer<>(consumerProps);
-        this.consumer.assign(topicPartitions);
-        log.debug(String.format("Created tailer: %s using prefix: %s", id, prefix));
-        toLastCommitted();
+
     }
 
-    private String buildId(String group, Collection<MQPartition> partitions) {
+    public static final <M extends Externalizable> KafkaMQTailer<M> createAndAssign(String prefix, Collection<MQPartition> partitions, String group, Properties consumerProps) {
+        KafkaMQTailer<M> ret = new KafkaMQTailer<>(prefix, group, consumerProps);
+        ret.id = buildId(ret.group, partitions);
+        ret.partitions = partitions;
+        ret.topicPartitions = partitions.stream().map(partition -> new TopicPartition(prefix + partition.name(),
+                partition.partition())).collect(Collectors.toList());
+        ret.consumer.assign(ret.topicPartitions);
+        log.debug(String.format("Created tailer with assignments: %s using prefix: %s", ret.id, prefix));
+        return ret;
+    }
+
+    public static final <M extends Externalizable> KafkaMQTailer<M> createAndSubscribe(String prefix, Collection<String> names, String group, Properties consumerProps,
+                                                                                       MQRebalanceListener listener) {
+        KafkaMQTailer<M> ret = new KafkaMQTailer<>(prefix, group, consumerProps);
+        ret.id = buildIdFromTopics(ret.group, names);
+        ret.names = names;
+        Collection<String> topics = names.stream().map(name -> prefix + name).collect(Collectors.toList());
+        ret.listener = listener;
+        ret.consumer.subscribe(topics, ret);
+        log.debug(String.format("Created tailer with subscription: %s using prefix: %s", ret.id, prefix));
+        return ret;
+    }
+
+    private static String buildId(String group, Collection<MQPartition> partitions) {
         return group + ":" + partitions.stream().map(MQPartition::toString).collect(Collectors.joining("|"));
     }
+
+    private String buildIdFromTopicPartitions(Collection<TopicPartition> partitions) {
+        return group + ":" + partitions.stream().map(tp -> String.format("%s-%02d", getNameForTopic(tp.topic()), tp.partition()))
+                .collect(Collectors.joining("|"));
+    }
+
+    private static String buildIdFromTopics(String group, Collection<String> topics) {
+        return group + ":" + topics.stream().collect(Collectors.joining("|"));
+    }
+
 
     @Override
     public MQRecord<M> read(Duration timeout) throws InterruptedException {
@@ -104,7 +136,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         M value = messageOf(record.value());
         if (log.isDebugEnabled()) {
             log.debug(String.format("Read from %s-%02d:+%d, key: %s, value: %s",
-                    record.topic().replace(prefix, ""), record.partition(), record.offset(),
+                    getNameForTopic(record.topic()), record.partition(), record.offset(),
                     record.key(), value));
         }
         return new MQRecord<>(new MQPartition(getNameForTopic(record.topic()), record.partition()), value,
@@ -175,11 +207,17 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
     @Override
     public void toLastCommitted() {
         log.debug("toLastCommitted tailer: " + id);
-        topicPartitions.forEach(this::toLastCommitted);
+        String msg = consumer.assignment().stream().map(tp -> String.format("%s-%02d:+%d",
+                getNameForTopic(tp.topic()), tp.partition(), toLastCommitted(tp)))
+                .collect(Collectors.joining("|"));
+        if (msg.length() > 0) {
+            log.info("toLastCommitted offsets: " + group + ":" + msg);
+        }
+        lastCommittedOffsets.clear();
         records.clear();
     }
 
-    private void toLastCommitted(TopicPartition topicPartition) {
+    private long toLastCommitted(TopicPartition topicPartition) {
         Long offset = lastCommittedOffsets.get(topicPartition);
         if (offset == null) {
             OffsetAndMetadata offsetMeta = consumer.committed(topicPartition);
@@ -193,24 +231,27 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
             consumer.seekToBeginning(Collections.singletonList(topicPartition));
             offset = consumer.position(topicPartition);
         }
-        log.debug(String.format(" toLastCommitted: %s-%02d:+%d", topicPartition.topic().replace(prefix, ""),
+        log.debug(String.format(" toLastCommitted: %s-%02d:+%d", getNameForTopic(topicPartition.topic()),
                 topicPartition.partition(),
                 offset));
+        return offset;
     }
 
     @Override
     public void commit() {
         Map<TopicPartition, OffsetAndMetadata> offsetToCommit = new HashMap<>();
-        partitions.stream().map(partition -> new TopicPartition(prefix + partition.name(),
-                partition.partition())).filter(lastOffsets::containsKey)
-                .forEach(tp -> offsetToCommit.put(tp, new OffsetAndMetadata(lastOffsets.get(tp) + 1)));
+        lastOffsets.forEach((tp, offset) -> offsetToCommit.put(tp, new OffsetAndMetadata(offset + 1)));
         lastOffsets.clear();
+        if (offsetToCommit.isEmpty()) {
+            return;
+        }
         consumer.commitSync(offsetToCommit);
-        offsetToCommit.forEach((topicPartition,  offset) -> lastCommittedOffsets.put(topicPartition, offset.offset()));
+        offsetToCommit.forEach((topicPartition, offset) -> lastCommittedOffsets.put(topicPartition, offset.offset()));
         if (log.isDebugEnabled()) {
-            log.debug("Committed all positions for: " + id);
-            offsetToCommit.forEach((tp, offset) -> log.debug(String.format(" Committed: %s:%s-%02d:+%d",
-                    group, tp.topic().replace(prefix, ""), tp.partition(), offset.offset() + 1)));
+            String msg = offsetToCommit.entrySet().stream().map(entry -> String.format("%s-%02d:+%d",
+                    getNameForTopic(entry.getKey().topic()), entry.getKey().partition(), entry.getValue().offset() + 1))
+                    .collect(Collectors.joining("|"));
+            log.debug("Committed offsets  " + group + ":" + msg);
         }
     }
 
@@ -225,13 +266,13 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
         consumer.commitSync(Collections.singletonMap(topicPartition,
                 new OffsetAndMetadata(offset)));
         if (log.isDebugEnabled()) {
-            log.debug("Committed: " + partition.name() + ":" + partition.partition() + ":+" + offset);
+            log.info("Committed: " + partition.name() + ":" + partition.partition() + ":+" + offset);
         }
         return new MQOffsetImpl(topicPartition.partition(), (offset));
     }
 
     @Override
-    public Collection<MQPartition> getMQPartitions() {
+    public Collection<MQPartition> assignments() {
         return partitions;
     }
 
@@ -253,10 +294,12 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
                 // calling wakeup enable to terminate consumer blocking on poll call
                 consumer.wakeup();
                 consumer.close();
-            } catch (IllegalStateException|ConcurrentModificationException e) {
+            } catch (InterruptException | IllegalStateException | ConcurrentModificationException e) {
                 // this happens if the consumer has already been closed or if it is closed from another
                 // thread.
                 log.warn("Discard error while closing consumer: ", e);
+            } catch (Throwable t) {
+                log.error("interrupted", t);
             }
             consumer = null;
         }
@@ -271,5 +314,27 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M> {
                 ", closed=" + closed +
                 '}';
     }
+
+    @Override
+    public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+        if (!partitions.isEmpty()) {
+            log.info(String.format("Rebalance revoked: %s", buildIdFromTopicPartitions(partitions)));
+        }
+        id = buildIdFromTopics(group, names);
+        listener.onPartitionsRevoked(partitions.stream().map(tp -> MQPartition.of(getNameForTopic(tp.topic()),
+                tp.partition())).collect(Collectors.toList()));
+    }
+
+    @Override
+    public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+        id = buildIdFromTopicPartitions(partitions);
+        if (!partitions.isEmpty()) {
+            log.info(String.format("Rebalance assigned: %s", id));
+        }
+        toLastCommitted();
+        listener.onPartitionsAssigned(partitions.stream().map(tp -> MQPartition.of(getNameForTopic(tp.topic()),
+                tp.partition())).collect(Collectors.toList()));
+    }
+
 
 }

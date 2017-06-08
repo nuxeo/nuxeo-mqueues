@@ -22,6 +22,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.AbstractMQManager;
 
@@ -30,13 +31,15 @@ import java.util.Collection;
 import java.util.Properties;
 
 /**
- * @since 9.2
+  * @since 9.2
  */
 public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<M> {
+    public static final String DISABLE_SUBSCRIBE_PROP = "subscribe.disable";
     private final KafkaUtils kUtils;
     private final Properties producerProperties;
     private final Properties consumerProperties;
     private final String prefix;
+    private boolean disableSubscribe = false;
 
 
     public KafkaMQManager(String zkServers, Properties producerProperties, Properties consumerProperties) {
@@ -46,6 +49,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     public KafkaMQManager(String zkServers, String topicPrefix, Properties producerProperties, Properties consumerProperties) {
         this.prefix = (topicPrefix != null) ? topicPrefix : "";
         this.kUtils = new KafkaUtils(zkServers);
+        disableSubscribe = Boolean.valueOf((String) consumerProperties.getProperty(DISABLE_SUBSCRIBE_PROP, "false"));
         this.producerProperties = normalizeProducerProperties(producerProperties);
         this.consumerProperties = normalizeConsumerProperties(consumerProperties);
     }
@@ -73,7 +77,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     @Override
     protected MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
         partitions.forEach(this::checkValidPartition);
-        KafkaMQTailer<M> ret = new KafkaMQTailer<>(prefix, partitions,
+        KafkaMQTailer<M> ret = KafkaMQTailer.createAndAssign(prefix, partitions,
                 group, (Properties) consumerProperties.clone());
         return ret;
     }
@@ -101,6 +105,18 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         }
     }
 
+    @Override
+    public boolean supportSubscribe() {
+        return !disableSubscribe;
+    }
+
+    @Override
+    public MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener) {
+        KafkaMQTailer<M> ret = KafkaMQTailer.createAndSubscribe(prefix, names,
+                group, (Properties) consumerProperties.clone(), listener);
+        return ret;
+    }
+
     protected static Properties normalizeConsumerProperties(Properties consumerProperties) {
         Properties ret;
         if (consumerProperties != null) {
@@ -112,7 +128,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         ret.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesDeserializer");
         ret.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         ret.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
+        ret.remove(DISABLE_SUBSCRIBE_PROP);
         return ret;
     }
 

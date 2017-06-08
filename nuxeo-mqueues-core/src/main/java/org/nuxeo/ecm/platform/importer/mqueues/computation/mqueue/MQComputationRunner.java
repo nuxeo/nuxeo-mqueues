@@ -29,10 +29,12 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkMo
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,13 +46,12 @@ import java.util.stream.Collectors;
  *
  * @since 9.2
  */
-public class MQComputationRunner implements Runnable {
+public class MQComputationRunner implements Runnable, MQRebalanceListener {
     private static final Log log = LogFactory.getLog(MQComputationRunner.class);
-    private static final long STARVING_TIMEOUT_MS = 500;
+    private static final long STARVING_TIMEOUT_MS = 1000;
     public static final Duration READ_TIMEOUT = Duration.ofMillis(25);
 
     private final ComputationContextImpl context;
-    private final List<MQPartition> partitions;
     private final MQManager<Record> mqManager;
     private final ComputationMetadataMapping metadata;
     private final MQTailer<Record> tailer;
@@ -75,11 +76,11 @@ public class MQComputationRunner implements Runnable {
         this.supplier = supplier;
         this.metadata = metadata;
         this.mqManager = mqManager;
-        this.partitions = defaultAssignment;
         this.context = new ComputationContextImpl(metadata);
-        // TODO: if mq support subscribe use subscribe else create tailer for assign
-        if (defaultAssignment.isEmpty()) {
+        if (metadata.istreams.isEmpty()) {
             this.tailer = null;
+        } else if (mqManager.supportSubscribe()) {
+            this.tailer = mqManager.subscribe(metadata.name, metadata.istreams, this);
         } else {
             this.tailer = mqManager.createTailer(metadata.name, defaultAssignment);
         }
@@ -98,6 +99,7 @@ public class MQComputationRunner implements Runnable {
     @Override
     public void run() {
         threadName = Thread.currentThread().getName();
+        boolean interrupted = false;
         computation = supplier.get();
         log.debug(metadata.name + ": Init");
         computation.init(context);
@@ -111,7 +113,8 @@ public class MQComputationRunner implements Runnable {
             } else {
                 log.debug(metadata.name + ": Interrupted");
             }
-            Thread.currentThread().interrupt();
+            // the interrupt flag is set after the tailer are closed
+            interrupted = true;
         } catch (Exception e) {
             if (Thread.currentThread().isInterrupted()) {
                 // this can happen when pool is shutdownNow throwing ClosedByInterruptException
@@ -121,9 +124,15 @@ public class MQComputationRunner implements Runnable {
                 throw e;
             }
         } finally {
-            computation.destroy();
-            closeTailer();
-            log.debug(metadata.name + ": Exited");
+            try {
+                computation.destroy();
+                closeTailer();
+                log.debug(metadata.name + ": Exited");
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
     }
 
@@ -317,5 +326,25 @@ public class MQComputationRunner implements Runnable {
             name += "," + message;
         }
         Thread.currentThread().setName(name);
+    }
+
+    @Override
+    public void onPartitionsRevoked(Collection<MQPartition> partitions) {
+        if (partitions.isEmpty()) {
+            return;
+        }
+        try {
+            checkpoint();
+            setThreadName("rebalance revoked");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void onPartitionsAssigned(Collection<MQPartition> partitions) {
+        lastReadTime = System.currentTimeMillis();
+        setThreadName("rebalance assigned");
     }
 }

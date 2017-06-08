@@ -98,7 +98,10 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         RecordMetadata ret;
         try {
             ret = result.get();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Unable to send record: " + record, e);
+        } catch (ExecutionException e) {
             throw new RuntimeException("Unable to send record: " + record, e);
         }
         if (log.isDebugEnabled()) {

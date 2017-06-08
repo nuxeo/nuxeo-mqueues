@@ -22,6 +22,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 
 import java.io.Externalizable;
@@ -62,6 +63,16 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
         MQTailer<M> ret = acquireTailer(partitions, group);
         partitions.forEach(partition -> tailers.put(new MQPartitionGroup(group, partition), ret));
         return ret;
+    }
+
+    @Override
+    public boolean supportSubscribe() {
+        return false;
+    }
+
+    @Override
+    public MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener) {
+        throw new UnsupportedOperationException("subscribe is not supported by this implementation");
     }
 
     private void checkTailerForPartition(String group, MQPartition partition) {

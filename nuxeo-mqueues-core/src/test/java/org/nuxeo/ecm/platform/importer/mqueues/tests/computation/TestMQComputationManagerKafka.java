@@ -32,11 +32,14 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
 
+import java.util.Properties;
+
 /**
- * @since 9.1
+ * Kafka test using subscribe API for topic/partitions
+ * @since 9.2
  */
 public class TestMQComputationManagerKafka extends TestComputationManager {
-    private String prefix;
+    protected String prefix;
 
     @BeforeClass
     public static void assumeKafkaEnabled() {
@@ -55,14 +58,18 @@ public class TestMQComputationManagerKafka extends TestComputationManager {
         this.prefix = getTopicPrefix(testName.getMethodName());
         return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),
-                TestMQueueKafka.getConsumerProps());
+                getConsumerProps());
     }
 
     @Override
     public MQManager<Record> getSameStreams() throws Exception {
         return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),
-                TestMQueueKafka.getConsumerProps());
+                getConsumerProps());
+    }
+
+    protected Properties getConsumerProps() {
+        return TestMQueueKafka.getConsumerProps();
     }
 
     @Override

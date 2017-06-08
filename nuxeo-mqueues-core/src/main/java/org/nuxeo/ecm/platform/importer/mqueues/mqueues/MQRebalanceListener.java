@@ -18,23 +18,15 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
-import java.io.Externalizable;
+import java.util.Collection;
 
 /**
- *
  * @since 9.2
  */
-public class MQRecord<M extends Externalizable> {
-    public M value;
-    public MQPartition partition;
-    public MQOffset offset;
+public interface MQRebalanceListener {
 
-    public MQRecord(MQPartition partition, M value, MQOffset offset) {
-        this.partition = partition;
-        this.value = value;
-        this.offset = offset;
-    }
+    void onPartitionsRevoked(Collection<MQPartition> partitions);
+
+    void onPartitionsAssigned(Collection<MQPartition> partitions);
+
 }
-
-
-

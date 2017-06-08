@@ -51,10 +51,28 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
     MQAppender<M> getAppender(String name);
 
     /**
-     * Create a tailer on a mqueue/partition using a group
+     * Create a tailer to read a specific mqueue/partition for a group of consumer
      */
     MQTailer<M> createTailer(String group, MQPartition partition);
 
+    /**
+     * Create a tailer to read on multiple mqueue/partitions for a group of consumer
+     */
     MQTailer<M> createTailer(String group, Collection<MQPartition> partitions);
+
+    /**
+     * Returns true if the MQueue implementation the {@link #subscribe(String, Collection, MQRebalanceListener)} method.
+     */
+    boolean supportSubscribe();
+
+    /**
+     * Create a tailer that read on multiple mqueues, the partitions assignments are done dynamically depending on the
+     * subscribers. A listener can be used to be notified when mqueue/partition list change.
+     * <p/>
+     * Either use {@link #createTailer(String, Collection)} either use {@link #subscribe(String, Collection, MQRebalanceListener)}
+     * this should not be mixed.
+     * TODO: complete doc
+     */
+    MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener);
 
 }

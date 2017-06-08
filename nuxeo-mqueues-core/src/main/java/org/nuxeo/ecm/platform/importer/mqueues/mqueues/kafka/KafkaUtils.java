@@ -39,6 +39,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import scala.collection.Iterator;
 import scala.collection.Seq;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -108,6 +109,35 @@ public class KafkaUtils implements AutoCloseable {
         }
         AdminUtils.createTopic(zkUtils, topic, partitions, replicationFactor,
                 new Properties(), RackAwareMode.Disabled$.MODULE$);
+        try {
+            waitForTopicCreation(topic, Duration.ofSeconds(5));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean waitForTopicCreation(String topic, Duration timeout) throws InterruptedException {
+        // if you don't wait for a topic to be ready, this raise LEADER_NOT_AVAILABLE warning
+        // and you can expects lots of rebalancing
+        final long timeoutMs = timeout.toMillis();
+        final long deadline = System.currentTimeMillis() + timeoutMs;
+        boolean ret = false;
+        while (!ret && System.currentTimeMillis() < deadline) {
+            ret = allPartitionsAssigned(topic);
+            Thread.sleep(100);
+        }
+        if (!ret) {
+            log.error("Topic: " + topic + " has some uninitialized partitions.");
+        }
+        return ret;
+    }
+
+    private boolean allPartitionsAssigned(String topic) {
+        MetadataResponse.TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zkUtils);
+        long errors = meta.partitionMetadata().stream().filter(p -> p.error().code() > 0).count();
+        // System.out.println(topic + ": "+ errors);
+        return errors == 0;
     }
 
     public boolean topicExists(String topic) {

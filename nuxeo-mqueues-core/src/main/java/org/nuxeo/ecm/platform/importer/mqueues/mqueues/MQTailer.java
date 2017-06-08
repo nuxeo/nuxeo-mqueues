@@ -23,7 +23,7 @@ import java.time.Duration;
 import java.util.Collection;
 
 /**
- * Sequential reader for a queue.
+ * Sequential reader for a mqueue/partition or a list of mqueue/partition.
  *
  * A tailer is not thread safe and should not be shared by multiple threads.
  *
@@ -31,42 +31,42 @@ import java.util.Collection;
 public interface MQTailer<M extends Externalizable> extends AutoCloseable {
 
     /**
-     * Read a message from the queue within the timeout.
+     * Read a message from the assigned mqueue/partition within the timeout.
      *
      * @return null if there is no message in the queue after the timeout.
      */
     MQRecord<M> read(Duration timeout) throws InterruptedException;
 
     /**
-     * Commit the offset of the last message returned by read for this partition.
+     * Commit the offset of the last message returned by read for this mqueue/partition.
      */
     MQOffset commit(MQPartition partition);
 
     /**
-     * Commit for all partitions.
+     * Commit the offset of the last message returned by read for all the assigned mqueue/partition.
      */
     void commit();
 
     /**
-     * Position the current offset to the end of queue.
+     * Position the current offsets of all mqueue/partition to the end.
      */
     void toEnd();
 
     /**
-     * Position the current offset to the beginning of the queue.
+     * Position the current offsets of all mqueue/partition to the beginning.
      */
     void toStart();
 
     /**
-     * Position the current offset just after the last committed message.
+     * Position the current offsets of all mqueue/partition just after the last committed message.
      */
     void toLastCommitted();
 
     /**
-     * Returns name, partition tuple.
+     * Returns the list of mqueue/partition currently assigned to this tailer.
      *
      */
-    Collection<MQPartition> getMQPartitions();
+    Collection<MQPartition> assignments();
 
     /**
      * Return the tailer name space.
@@ -74,5 +74,8 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
      */
     String getGroup();
 
+    /**
+     * Return true if the tailer has been closed using {@link #close()}
+     */
     boolean closed();
 }
