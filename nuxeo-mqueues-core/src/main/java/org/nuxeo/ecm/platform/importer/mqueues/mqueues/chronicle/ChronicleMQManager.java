@@ -42,10 +42,32 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
  */
 public class ChronicleMQManager<M extends Externalizable> extends AbstractMQManager<M> {
     private static final Log log = LogFactory.getLog(ChronicleMQManager.class);
+
+    /**
+     * Default retention duration for queue files
+     */
+    public static final String DEFAULT_RETENTION_DURATION = "3h";
+
     private final Path basePath;
+
+    private final String retentionDuration;
 
     public ChronicleMQManager(Path basePath) {
         this.basePath = basePath;
+        this.retentionDuration = DEFAULT_RETENTION_DURATION;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param basePath the base path.
+     * @param retentionDuration the retention duration. It is the time period the queue files will be retained. Once the
+     *            retention duration expires, the files will be deleted. The accepted format are d'd', h'h', m'm' or
+     *            s's' (for respectively retention duration expressed in days, hours, minutes or seconds)
+     */
+    public ChronicleMQManager(Path basePath, String retentionDuration) {
+        this.basePath = basePath;
+        this.retentionDuration = retentionDuration;
     }
 
     public String getBasePath() {
@@ -60,7 +82,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
 
     @Override
     public void create(String name, int size) {
-        ChronicleMQAppender<M> cq = ChronicleMQAppender.create(new File(basePath.toFile(), name), size);
+        ChronicleMQAppender<M> cq = ChronicleMQAppender.create(new File(basePath.toFile(), name), size, retentionDuration);
         try {
             cq.close();
         } catch (Exception e) {
