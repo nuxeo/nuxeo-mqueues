@@ -18,8 +18,18 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
+import static org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager.DEFAULT_RETENTION_DURATION;
+
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.RollingResourcesCache;
+import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
@@ -35,12 +45,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Stream;
-
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
 /**
  * Chronicle Queue implementation of MQAppender.
@@ -49,15 +59,25 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
  *
  * @since 9.1
  */
-public class ChronicleMQAppender<M extends Externalizable> implements MQAppender<M> {
+public class ChronicleMQAppender<M extends Externalizable> implements MQAppender<M>, StoreFileListener {
     private static final Log log = LogFactory.getLog(ChronicleMQAppender.class);
     private static final String QUEUE_PREFIX = "Q-";
     private static final int POLL_INTERVAL_MS = 100;
+
+    private static final String SECOND_ROLLING_PERIOD = "s";
+
+    private static final String MINUTE_ROLLING_PERIOD = "m";
+
+    private static final String HOUR_ROLLING_PERIOD = "h";
+
+    private static final String DAY_ROLLING_PERIOD = "d";
 
     private final List<ChronicleQueue> queues;
     private final int nbQueues;
     private final File basePath;
     private final String name;
+
+    private int retentionNbCycles;
 
     // keep track of created tailers to make sure they are closed before the mq
     private final ConcurrentLinkedQueue<ChronicleMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
@@ -72,17 +92,32 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
     }
 
     /**
+     * Create a new mqueues
+     */
+    static public <M extends Externalizable> ChronicleMQAppender<M> create(File basePath, int size,
+            String retentionPolicy) {
+        return new ChronicleMQAppender<>(basePath, size, retentionPolicy);
+    }
+
+    /**
      * Create a new mqueues.
      */
     static public <M extends Externalizable> ChronicleMQAppender<M> create(File basePath, int size) {
-        return new ChronicleMQAppender<>(basePath, size);
+        return new ChronicleMQAppender<>(basePath, size, DEFAULT_RETENTION_DURATION);
     }
 
     /**
      * Open an existing mqueues.
      */
     static public <M extends Externalizable> ChronicleMQAppender<M> open(File basePath) {
-        return new ChronicleMQAppender<>(basePath, 0);
+        return new ChronicleMQAppender<>(basePath, 0, DEFAULT_RETENTION_DURATION);
+    }
+
+    /**
+     * Open an existing mqueues.
+     */
+    static public <M extends Externalizable> ChronicleMQAppender<M> open(File basePath, String retentionDuration) {
+        return new ChronicleMQAppender<>(basePath, 0, retentionDuration);
     }
 
     @Override
@@ -165,7 +200,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         closed = true;
     }
 
-    private ChronicleMQAppender(File basePath, int size) {
+    private ChronicleMQAppender(File basePath, int size, String retentionDuration) {
         if (size == 0) {
             // open
             if (!exists(basePath)) {
@@ -190,13 +225,23 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         }
         this.name = basePath.getName();
         this.basePath = basePath;
+
+        if (retentionDuration != null) {
+            retentionNbCycles = Integer.valueOf(retentionDuration.substring(0, retentionDuration.length() - 1));
+        }
+
+        final RollCycle rollCycle = getRollCycle(retentionDuration);
+
         queues = new ArrayList<>(this.nbQueues);
         log.debug(String.format("%s chronicle mqueue: %s, path: %s, size: %d",
                 (size == 0) ? "Opening" : "Creating", name, basePath, nbQueues));
 
         for (int i = 0; i < nbQueues; i++) {
             File path = new File(basePath, String.format("%s%02d", QUEUE_PREFIX, i));
-            ChronicleQueue queue = binary(path).build();
+            ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                                                              .rollCycle(rollCycle)
+                                                              .storeFileListener(this)
+                                                              .build();
             queues.add(queue);
             // touch the queue so we can count them even if they stay empty.
             queue.file().mkdirs();
@@ -221,5 +266,78 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         return ret;
     }
 
+    private RollCycle getRollCycle(String retentionDuration) {
+        String rollingPeriod = retentionDuration.substring(retentionDuration.length() - 1);
+        RollCycle rollCycle;
+        switch (rollingPeriod) {
+        case SECOND_ROLLING_PERIOD:
+            rollCycle = RollCycles.TEST_SECONDLY;
+            break;
+        case MINUTE_ROLLING_PERIOD:
+            rollCycle = RollCycles.MINUTELY;
+            break;
+        case HOUR_ROLLING_PERIOD:
+            rollCycle = RollCycles.HOURLY;
+            break;
+        case DAY_ROLLING_PERIOD:
+            rollCycle = RollCycles.DAILY;
+            break;
+        default:
+            String msg = "Unknown rolling period: " + rollingPeriod + " for MQueue: " + name();
+            log.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        return rollCycle;
+    }
 
+    private int findQueueIndex(File queueFile) {
+        String queueDirName = queueFile.getParentFile().getName();
+        return Integer.valueOf(queueDirName.substring(queueDirName.length() - 2));
+    }
+
+    @Override
+    public void onAcquired(int cycle, File file) {
+        if (log.isDebugEnabled()) {
+            log.debug("New file created: " + file + " on cycle: " + cycle);
+        }
+
+        SingleChronicleQueue queue = (SingleChronicleQueue) queues.get(findQueueIndex(file));
+
+        int lowerCycle = queue.firstCycle();
+        int upperCycle = cycle - retentionNbCycles;
+
+        purgeQueue(lowerCycle, upperCycle, queue);
+
+    }
+
+    /**
+     * Files in queue older than the current date minus the retention duration are candidates for purging, knowing that
+     * the more recent files should be kept to ensure no data loss (for example after an interruption longer than the
+     * retention duration).
+     */
+    protected void purgeQueue(int lowerCycle, int upperCycle, SingleChronicleQueue queue) {
+        // TODO this method should be refactored after chronicle-queue lib upgrade
+        File[] files = queue.file().listFiles();
+
+        if (files != null && lowerCycle < upperCycle) {
+            RollingResourcesCache cache = new RollingResourcesCache(queue.rollCycle(), queue.epoch(),
+                    name -> new File(queue.file().getAbsolutePath(), name + SUFFIX),
+                    f -> FilenameUtils.removeExtension(f.getName()));
+
+            Arrays.stream(files)
+                  .sorted(Comparator.comparingLong(cache::toLong)) // Order files by cycles
+                  .limit(files.length - retentionNbCycles) // Keep the 'retentionNbCycles' more recent files
+                  .filter(f -> cache.parseCount(FilenameUtils.removeExtension(f.getName())) < upperCycle)
+                  .forEach(f -> {
+                      if (f.delete()) {
+                          log.info("File deleted: " + f.getAbsolutePath());
+                      }
+                  });
+        }
+    }
+
+    @Override
+    public void onReleased(int cycle, File file) {
+
+    }
 }

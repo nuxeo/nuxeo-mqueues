@@ -22,6 +22,7 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
@@ -30,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -53,7 +55,7 @@ public class TestMQueueChronicle extends TestMQueue {
         if (basePath == null) {
             basePath = folder.newFolder().toPath();
         }
-        return new ChronicleMQManager<>(basePath);
+        return new ChronicleMQManager<>(basePath, "3s");
     }
 
     @Test
@@ -76,6 +78,39 @@ public class TestMQueueChronicle extends TestMQueue {
         } catch (IllegalArgumentException e) {
             // expected
         }
+    }
+
+    @Test
+    public void testFileRetention() throws Exception {
+
+        IdMessage msg1 = IdMessage.of("id1");
+        IdMessage msg2 = IdMessage.of("id2");
+        IdMessage msg3 = IdMessage.of("id3");
+        IdMessage msg4 = IdMessage.of("id4");
+
+        ChronicleMQManager<IdMessage> manager = (ChronicleMQManager<IdMessage>) createManager();
+        manager.createIfNotExists(mqName, 1);
+        MQAppender<IdMessage> appender = manager.getAppender(mqName);
+
+        File queueFile = new File(manager.getBasePath() + File.separator + "Q-00");
+        assertEquals(0, queueFile.list().length);
+
+        appender.append(0, msg1);
+        assertEquals(1, queueFile.list().length);
+        Thread.sleep(1001);
+        appender.append(0, msg2);
+        assertEquals(2, queueFile.list().length);
+
+        Thread.sleep(4001);
+
+        appender.append(0, msg3);
+        assertEquals(3, queueFile.list().length);
+
+        // From now, there should be at least 3 retained files in the queue
+        Thread.sleep(1001);
+        appender.append(0, msg4);
+        assertEquals(3, queueFile.list().length);
+
     }
 
 }
