@@ -30,6 +30,8 @@ import java.nio.file.Paths;
 public class ChronicleConfig {
     public static final String NUXEO_MQUEUE_DIR_PROP = "nuxeo.mqueue.chronicle.dir";
 
+    public static final String NUXEO_MQUEUE_RET_DURATION_PROP = "nuxeo.mqueue.chronicle.retention.duration";
+
     /**
      * Returns the base path to store Chronicle Queues
      */
@@ -44,6 +46,13 @@ public class ChronicleConfig {
         }
         return Paths.get(Framework.getRuntime().getHome().getAbsolutePath(),
                 "data", "mqueue", name).toAbsolutePath();
+    }
+
+    /**
+     * Returns the retention duration property
+     */
+    public static String getRetentionDuration() {
+        return Framework.getProperty(NUXEO_MQUEUE_RET_DURATION_PROP);
     }
 
 }

@@ -118,7 +118,8 @@ public class BlobConsumers {
 
     protected MQManager<BlobMessage> getManager() {
         if (kafkaConfig == null || kafkaConfig.isEmpty()) {
-            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"));
+            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"),
+                    ChronicleConfig.getRetentionDuration());
         }
         KafkaConfigService service = Framework.getService(KafkaConfigService.class);
         return new KafkaMQManager<>(service.getZkServers(kafkaConfig),

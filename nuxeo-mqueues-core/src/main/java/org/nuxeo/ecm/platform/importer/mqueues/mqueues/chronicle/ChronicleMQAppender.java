@@ -230,7 +230,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
             retentionNbCycles = Integer.valueOf(retentionDuration.substring(0, retentionDuration.length() - 1));
         }
 
-        final RollCycle rollCycle = getRollCycle(retentionDuration);
+        RollCycle rollCycle = getRollCycle(retentionDuration);
 
         queues = new ArrayList<>(this.nbQueues);
         log.debug(String.format("%s chronicle mqueue: %s, path: %s, size: %d",
@@ -330,7 +330,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
                   .filter(f -> cache.parseCount(FilenameUtils.removeExtension(f.getName())) < upperCycle)
                   .forEach(f -> {
                       if (f.delete()) {
-                          log.info("File deleted: " + f.getAbsolutePath());
+                          log.info("Queue file deleted: " + f.getAbsolutePath());
                       }
                   });
         }

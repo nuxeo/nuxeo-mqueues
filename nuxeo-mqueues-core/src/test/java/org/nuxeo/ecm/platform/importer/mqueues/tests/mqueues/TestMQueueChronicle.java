@@ -89,10 +89,10 @@ public class TestMQueueChronicle extends TestMQueue {
         IdMessage msg4 = IdMessage.of("id4");
 
         ChronicleMQManager<IdMessage> manager = (ChronicleMQManager<IdMessage>) createManager();
-        manager.createIfNotExists(mqName, 1);
-        MQAppender<IdMessage> appender = manager.getAppender(mqName);
+        manager.createIfNotExists("foo", 1);
+        MQAppender<IdMessage> appender = manager.getAppender("foo");
 
-        File queueFile = new File(manager.getBasePath() + File.separator + "Q-00");
+        File queueFile = new File(manager.getBasePath(), "foo/Q-00");
         assertEquals(0, queueFile.list().length);
 
         appender.append(0, msg1);
