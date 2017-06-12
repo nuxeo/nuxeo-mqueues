@@ -38,7 +38,9 @@ public class WorkManagerComputationChronicle extends WorkManagerComputation {
     @Override
     protected MQManager<Record> initStream() {
         Path basePath = ChronicleConfig.getBasePath("work");
-        log.info("Init WorkManagerComputation using Chronicle MQueue impl, basePath: " + basePath);
-        return new ChronicleMQManager<>(basePath);
+        String retentionDuration = ChronicleConfig.getRetentionDuration();
+        log.info("Init WorkManagerComputation using Chronicle MQueue impl, basePath: " + basePath
+                + " and retention duration: " + retentionDuration);
+        return new ChronicleMQManager<>(basePath, retentionDuration);
     }
 }

@@ -62,12 +62,13 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
      *
      * @param basePath the base path.
      * @param retentionDuration the retention duration. It is the time period the queue files will be retained. Once the
-     *            retention duration expires, the files will be deleted. The accepted format are d'd', h'h', m'm' or
-     *            s's' (for respectively retention duration expressed in days, hours, minutes or seconds)
+     *            retention duration expires, the older files are candidates for being purged. The property can be
+     *            expressed as: 15s, 30m, 1h, 4d ... (where 's' is expressing a duration in seconds, 'm' in minutes,'h'
+     *            in hours and 'd' in days)
      */
     public ChronicleMQManager(Path basePath, String retentionDuration) {
         this.basePath = basePath;
-        this.retentionDuration = retentionDuration;
+        this.retentionDuration = retentionDuration == null ? DEFAULT_RETENTION_DURATION : retentionDuration;
     }
 
     public String getBasePath() {
@@ -103,7 +104,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
 
     @Override
     public MQAppender<M> createAppender(String name) {
-        return ChronicleMQAppender.open(new File(basePath.toFile(), name));
+        return ChronicleMQAppender.open(new File(basePath.toFile(), name), retentionDuration);
     }
 
     @Override
