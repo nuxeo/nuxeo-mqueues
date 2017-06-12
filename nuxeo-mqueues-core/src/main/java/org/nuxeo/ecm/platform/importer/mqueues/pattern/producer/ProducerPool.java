@@ -39,7 +39,7 @@ public class ProducerPool<M extends Message> extends AbstractCallablePool<Produc
     private final ProducerFactory<M> factory;
     private final String mqName;
 
-    public ProducerPool(String mqName, MQManager<M> manager, ProducerFactory<M> factory, int nbThreads) {
+    public ProducerPool(String mqName, MQManager<M> manager, ProducerFactory<M> factory, short nbThreads) {
         super(nbThreads);
         this.mqName = mqName;
         this.manager = manager;

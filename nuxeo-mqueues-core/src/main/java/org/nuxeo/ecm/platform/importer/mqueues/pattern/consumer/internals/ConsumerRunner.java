@@ -26,6 +26,9 @@ import net.jodah.failsafe.Execution;
 import net.openhft.chronicle.core.util.Time;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
@@ -35,8 +38,14 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerStatus;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import static java.lang.Thread.currentThread;
 
@@ -45,7 +54,7 @@ import static java.lang.Thread.currentThread;
  *
  * @since 9.1
  */
-public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatus> {
+public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatus>, MQRebalanceListener {
     private static final Log log = LogFactory.getLog(ConsumerRunner.class);
 
     // This is the registry name used by Nuxeo without adding a dependency nuxeo-runtime
@@ -54,7 +63,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
     private final MQTailer<M> tailer;
-    private final String consumerId;
+    private String consumerId;
     private BatchPolicy currentBatchPolicy;
     private String threadName;
     private Consumer<M> consumer;
@@ -65,20 +74,36 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     protected final Timer batchCommitTimer;
     protected final Counter batchFailureCount;
     protected final Counter consumersCount;
+    private boolean alreadySalted = false;
 
 
-    public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQTailer<M> tailer) {
+    public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQManager<M> manager,
+                          List<MQPartition> defaultAssignments) {
         this.factory = factory;
-        this.tailer = tailer;
         this.currentBatchPolicy = policy.getBatchPolicy();
         this.policy = policy;
+        this.tailer = createTailer(manager, defaultAssignments);
         consumerId = tailer.toString();
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
         acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", consumerId));
         committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", consumerId));
         batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", consumerId));
         batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", consumerId));
+        if (! manager.supportSubscribe()) {
+            setTailerPosition();
+        }
         log.debug("Consumer thread created tailing on: " + consumerId);
+    }
+
+    private MQTailer<M> createTailer(MQManager<M> manager, List<MQPartition> defaultAssignments) {
+        MQTailer<M> tailer;
+        if (manager.supportSubscribe()) {
+            Set<String> names = defaultAssignments.stream().map(mp -> mp.name()).collect(Collectors.toSet());
+            tailer = manager.subscribe(policy.getName(), names, this);
+        } else {
+            tailer = manager.createTailer(policy.getName(), defaultAssignments);
+        }
+        return tailer;
     }
 
     private Counter newCounter(String name) {
@@ -96,10 +121,8 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         threadName = currentThread().getName();
         consumersCount.inc();
         long start = Time.currentTimeMillis();
-        setTailerPosition();
         consumer = factory.createConsumer(consumerId);
         try {
-            addSalt();
             consumerLoop();
         } finally {
             consumer.close();
@@ -110,10 +133,15 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     }
 
     private void addSalt() throws InterruptedException {
-        long randomDelay = ThreadLocalRandom.current().nextLong(policy.getBatchPolicy().getTimeThreshold().toMillis());
+        if (alreadySalted) {
+            return;
+        }
+        // this random delay prevent consumers to be too much synchronized
         if (policy.isSalted()) {
+            long randomDelay = ThreadLocalRandom.current().nextLong(policy.getBatchPolicy().getTimeThreshold().toMillis());
             Thread.sleep(randomDelay);
         }
+        alreadySalted = true;
     }
 
     private void setTailerPosition() {
@@ -220,6 +248,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         MQRecord<M> record;
         M message;
         while ((record = tailer.read(policy.getWaitMessageTimeout())) != null) {
+            // addSalt(); // do this here so kafka subscription happens concurrently
             message = record.value;
             if (message.poisonPill()) {
                 log.warn("Receive a poison pill: " + message);
@@ -253,5 +282,18 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
             name += "-null";
         }
         currentThread().setName(name);
+    }
+
+    @Override
+    public void onPartitionsRevoked(Collection<MQPartition> partitions) {
+        log.info("Partitions revoked: " + partitions);
+    }
+
+    @Override
+    public void onPartitionsAssigned(Collection<MQPartition> partitions) {
+        consumerId = tailer.toString();
+        log.info("Partitions reassigned: " + consumerId);
+        // partitions are opened on last committed by default
+        restoreBatchPolicy();
     }
 }

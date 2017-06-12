@@ -55,6 +55,9 @@ public class BlobConsumers {
     @Context
     protected OperationContext ctx;
 
+    @Param(name = "nbThreads", required = false)
+    protected Integer nbThreads;
+
     @Param(name = "blobInfoPath")
     protected String blobInfoPath;
 
@@ -86,13 +89,23 @@ public class BlobConsumers {
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
                     ConsumerPolicy.builder()
+                            .name(ID)
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)
                                     .timeThreshold(Duration.ofSeconds(batchThresholdS)).build())
-                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS)).build());
+                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                            .maxThreads(getNbThreads())
+                            .build());
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    protected short getNbThreads() {
+        if (nbThreads != null) {
+            return nbThreads.shortValue();
+        }
+        return 0;
     }
 
     protected String getMQName() {

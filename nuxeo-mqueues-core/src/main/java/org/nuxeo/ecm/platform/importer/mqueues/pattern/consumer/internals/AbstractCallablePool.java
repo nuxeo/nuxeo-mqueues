@@ -40,10 +40,10 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
  */
 public abstract class AbstractCallablePool<T> implements AutoCloseable {
     private static final Log log = LogFactory.getLog(AbstractCallablePool.class);
-    private final int nbThreads;
+    private final short nbThreads;
     private ExecutorService threadPool;
 
-    public AbstractCallablePool(int nbThreads) {
+    public AbstractCallablePool(short nbThreads) {
         this.nbThreads = nbThreads;
     }
 
@@ -57,6 +57,10 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
     protected abstract String getThreadPrefix();
 
     protected abstract void afterCall(List<T> ret);
+
+    public int getNbThreads() {
+        return nbThreads;
+    }
 
     public CompletableFuture<List<T>> start() {
         ExecutorService supplyThreadPool = Executors.newSingleThreadExecutor(new NamedThreadFactory(getThreadPrefix() + "Pool"));

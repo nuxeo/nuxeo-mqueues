@@ -53,6 +53,7 @@ public class ConsumerPolicy {
     private final StartOffset startOffset;
     private final boolean salted;
     private final String name;
+    private final short maxThreads;
 
     public ConsumerPolicy(Builder builder) {
         batchPolicy = builder.batchPolicy;
@@ -61,6 +62,7 @@ public class ConsumerPolicy {
         waitMessageTimeout = builder.waitMessageTimeout;
         startOffset = builder.startOffset;
         salted = builder.salted;
+        maxThreads = builder.maxThreads;
         if (builder.name != null) {
             name = builder.name;
         } else {
@@ -96,6 +98,10 @@ public class ConsumerPolicy {
         return name;
     }
 
+    public short getMaxThreads() {
+        return maxThreads;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -108,6 +114,7 @@ public class ConsumerPolicy {
         private StartOffset startOffset = StartOffset.LAST_COMMITTED;
         private boolean salted = false;
         private String name;
+        private short maxThreads = 0;
 
         protected Builder() {
 
@@ -128,6 +135,14 @@ public class ConsumerPolicy {
          */
         public Builder continueOnFailure(boolean value) {
             skipFailure = value;
+            return this;
+        }
+
+        /**
+         * Maximum consumer threads to use. The number of threads is limited by the size of the MQueue.
+         */
+        public Builder maxThreads(short maxThreads) {
+            this.maxThreads = maxThreads;
             return this;
         }
 

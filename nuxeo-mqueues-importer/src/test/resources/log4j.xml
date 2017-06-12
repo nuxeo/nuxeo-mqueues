@@ -61,6 +61,10 @@
     <priority value="WARN" />
   </category>
 
+  <category name="org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka">
+    <priority value="DEBUG" />
+  </category>
+
   <root>
     <appender-ref ref="CONSOLE" />
     <appender-ref ref="FILE" />

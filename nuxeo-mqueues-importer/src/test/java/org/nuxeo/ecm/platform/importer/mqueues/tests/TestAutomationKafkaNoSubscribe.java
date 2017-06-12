@@ -29,7 +29,7 @@ import java.util.Map;
  * @since 9.2
  */
 @LocalDeploy("org.nuxeo.ecm.mqueues.kafka.tests.contrib:test-kafka-config-contrib.xml")
-public class TestAutomationKafka extends TestAutomation {
+public class TestAutomationKafkaNoSubscribe extends TestAutomation {
 
     @BeforeClass
     public static void assumeKafkaEnabled() {
@@ -38,6 +38,6 @@ public class TestAutomationKafka extends TestAutomation {
 
     @Override
     public void addExtraParams(Map<String, Object> params) {
-        params.put("kafkaConfig", "default");
+        params.put("kafkaConfig", "no-subscribe");
     }
 }

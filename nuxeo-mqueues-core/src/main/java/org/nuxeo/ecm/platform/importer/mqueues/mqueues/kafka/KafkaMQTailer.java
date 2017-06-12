@@ -317,9 +317,9 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
 
     @Override
     public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-        if (!partitions.isEmpty()) {
+        //if (!partitions.isEmpty()) {
             log.info(String.format("Rebalance revoked: %s", buildIdFromTopicPartitions(partitions)));
-        }
+        //}
         id = buildIdFromTopics(group, names);
         listener.onPartitionsRevoked(partitions.stream().map(tp -> MQPartition.of(getNameForTopic(tp.topic()),
                 tp.partition())).collect(Collectors.toList()));

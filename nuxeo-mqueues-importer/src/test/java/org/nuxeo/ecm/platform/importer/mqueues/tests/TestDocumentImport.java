@@ -72,7 +72,7 @@ public abstract class TestDocumentImport {
     @Test
     public void synchronous() throws Exception {
         final int NB_QUEUE = 5;
-        final int NB_PRODUCERS = 5;
+        final short NB_PRODUCERS = 5;
         final int NB_DOCUMENTS = 2 * 100;
         try (MQManager<DocumentMessage> manager = getManager()) {
             manager.createIfNotExists("document-import", NB_QUEUE);
@@ -98,7 +98,7 @@ public abstract class TestDocumentImport {
     @Test
     public void importBlobFirst() throws Exception {
         final int NB_QUEUE = 5;
-        final int NB_PRODUCERS = 5;
+        final short NB_PRODUCERS = 5;
         final long NB_BLOBS = 100;
         final long NB_DOCUMENTS = 2 * 100;
         final Path blobInfoPath = folder.newFolder("blob-info").toPath();

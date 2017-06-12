@@ -18,26 +18,15 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.runtime.test.runner.LocalDeploy;
-
 import java.util.Map;
 
 /**
  * @since 9.2
  */
-@LocalDeploy("org.nuxeo.ecm.mqueues.kafka.tests.contrib:test-kafka-config-contrib.xml")
-public class TestAutomationKafka extends TestAutomation {
-
-    @BeforeClass
-    public static void assumeKafkaEnabled() {
-        Assume.assumeTrue(KafkaUtils.kafkaDetected());
-    }
+public class TestAutomationChronicle extends TestAutomation {
 
     @Override
     public void addExtraParams(Map<String, Object> params) {
-        params.put("kafkaConfig", "default");
+
     }
 }

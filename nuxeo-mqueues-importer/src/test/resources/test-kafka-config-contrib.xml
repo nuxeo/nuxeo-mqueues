@@ -8,7 +8,20 @@
         <property name="bootstrap.servers">localhost:9092</property>
       </producerProperties>
       <consumerProperties>
+        <!--<property name="max.poll.records">30</property>-->
+        <property name="max.poll.interval.ms">30000</property>
+        <!--<property name="request.timeout.ms">20000</property>-->
         <property name="bootstrap.servers">localhost:9092</property>
+      </consumerProperties>
+    </kafkaConfig>
+
+    <kafkaConfig name="no-subscribe" zkServers="localhost:2181" topicPrefix="RANDOM()">
+      <producerProperties>
+        <property name="bootstrap.servers">localhost:9092</property>
+      </producerProperties>
+      <consumerProperties>
+        <property name="bootstrap.servers">localhost:9092</property>
+        <property name="subscribe.disable">true</property>
       </consumerProperties>
     </kafkaConfig>
 

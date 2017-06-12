@@ -66,6 +66,9 @@ public class RandomDocumentProducers {
     @Param(name = "mqName", required = false)
     protected String mqName;
 
+    @Param(name = "mqSize", required = false)
+    protected Integer mqSize;
+
     @Param(name = "blobInfoPath", required = false)
     protected String blobInfoPath;
 
@@ -76,19 +79,26 @@ public class RandomDocumentProducers {
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         try (MQManager<DocumentMessage> manager = getManager()) {
-            manager.createIfNotExists(getMQName(), nbThreads);
+            manager.createIfNotExists(getMQName(), getMQSize());
             ProducerPool<DocumentMessage> producers;
             if (blobInfoPath != null) {
                 producers = new ProducerPool<>(getMQName(), manager,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, Paths.get(blobInfoPath)), nbThreads);
+                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, Paths.get(blobInfoPath)), nbThreads.shortValue());
             } else {
                 producers = new ProducerPool<>(getMQName(), manager,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads);
+                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads.shortValue());
             }
             producers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    protected int getMQSize() {
+        if (mqSize != null && mqSize > 0) {
+            return mqSize;
+        }
+        return nbThreads;
     }
 
     protected String getMQName() {

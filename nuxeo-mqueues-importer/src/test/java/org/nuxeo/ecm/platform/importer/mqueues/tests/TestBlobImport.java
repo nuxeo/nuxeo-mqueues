@@ -58,7 +58,7 @@ public abstract class TestBlobImport {
     @Test
     public void randomStringBlob() throws Exception {
         final int NB_QUEUE = 10;
-        final int NB_PRODUCERS = 10;
+        final short NB_PRODUCERS = 10;
         final int NB_BLOBS = 2 * 1000;
 
         try (MQManager<BlobMessage> manager = getManager()) {
@@ -67,7 +67,7 @@ public abstract class TestBlobImport {
                 ProducerPool<BlobMessage> producers = new ProducerPool<>("blob-import", manager,
                         new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 1), NB_PRODUCERS);
                 List<ProducerStatus> ret = producers.start().get();
-                assertEquals(NB_PRODUCERS, (long) ret.size());
+                assertEquals(NB_PRODUCERS, ret.size());
                 assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
             }
 

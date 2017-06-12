@@ -73,7 +73,7 @@ public abstract class TestPatternBoundedQueuing {
 
     @Test
     public void producersThenConsumers() throws Exception {
-        final int NB_PRODUCERS = 15;
+        final short NB_PRODUCERS = 15;
         final int NB_DOCUMENTS = 1 * 1000;
 
         // 1. Create a mq and run the producers
@@ -96,7 +96,7 @@ public abstract class TestPatternBoundedQueuing {
 
     @Test
     public void producersAndConsumersConcurrently() throws Exception {
-        final int NB_PRODUCERS = 15;
+        final short NB_PRODUCERS = 15;
         final int NB_DOCUMENTS = 1000;
 
         // Create a mq, producer and consumer pool
@@ -122,7 +122,7 @@ public abstract class TestPatternBoundedQueuing {
     public void producerAndBuggyConsumers() throws Exception {
         final int NB_QUEUE = 23;
         // ordered message producer requires nb_producer <= nb consumer
-        final int NB_PRODUCERS = NB_QUEUE;
+        final short NB_PRODUCERS = NB_QUEUE;
         final int NB_DOCUMENTS = 127; // getNbDocumentForBuggyConsumerTest();
         // final int NB_DOCUMENTS = 499999;
         final int BATCH_SIZE = 13;

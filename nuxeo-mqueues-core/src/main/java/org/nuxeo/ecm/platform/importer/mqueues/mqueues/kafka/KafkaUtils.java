@@ -115,6 +115,7 @@ public class KafkaUtils implements AutoCloseable {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
+        AdminUtils.deleteAllConsumerGroupInfoForTopicInZK(zkUtils, topic);
     }
 
     private boolean waitForTopicCreation(String topic, Duration timeout) throws InterruptedException {

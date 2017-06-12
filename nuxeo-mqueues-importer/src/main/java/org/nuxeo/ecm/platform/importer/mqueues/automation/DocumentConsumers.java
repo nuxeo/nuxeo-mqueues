@@ -54,6 +54,9 @@ public class DocumentConsumers {
     @Context
     protected OperationContext ctx;
 
+    @Param(name = "nbThreads", required = false)
+    protected Integer nbThreads;
+
     @Param(name = "rootFolder")
     protected String rootFolder;
 
@@ -86,17 +89,26 @@ public class DocumentConsumers {
             DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
                     ConsumerPolicy.builder()
+                            .name(ID)
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)
                                     .timeThreshold(Duration.ofSeconds(batchThresholdS))
                                     .build())
                             .retryPolicy(
                                     new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                            .maxThreads(getNbThreads())
                             .salted()
                             .build());
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    private short getNbThreads() {
+        if (nbThreads != null) {
+            return nbThreads.shortValue();
+        }
+        return 0;
     }
 
     protected String getRepositoryName() {

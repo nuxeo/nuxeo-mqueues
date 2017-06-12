@@ -69,13 +69,14 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
     Collection<MQPartition> assignments();
 
     /**
-     * Return the tailer name space.
+     * Returns the tailer group.
      *
      */
     String getGroup();
 
     /**
-     * Return true if the tailer has been closed using {@link #close()}
+     * Returns true if the tailer has been closed using {@link #close()}
      */
     boolean closed();
+
 }
