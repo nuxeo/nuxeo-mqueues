@@ -323,7 +323,7 @@ public abstract class TestComputationManager {
         MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition));
         int result = 0;
         for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(1000)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(500))) {
-            result += Integer.valueOf(mqRecord.value.key);
+            result += Integer.valueOf(mqRecord.value().key);
         }
         tailer.commit();
         return result;

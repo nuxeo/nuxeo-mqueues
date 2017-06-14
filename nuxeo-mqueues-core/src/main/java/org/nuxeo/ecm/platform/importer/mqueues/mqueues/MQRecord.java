@@ -21,18 +21,40 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 import java.io.Externalizable;
 
 /**
+ * A MQRecord contains the message and source information.
  *
  * @since 9.2
  */
 public class MQRecord<M extends Externalizable> {
-    public M value;
-    public MQPartition partition;
-    public MQOffset offset;
+    protected M value;
+    protected MQPartition partition;
+    protected MQOffset offset;
 
     public MQRecord(MQPartition partition, M value, MQOffset offset) {
         this.partition = partition;
         this.value = value;
         this.offset = offset;
+    }
+
+    /**
+     * Returns the message.
+     */
+    public M value() {
+        return value;
+    }
+
+    /**
+     * Returns the partition where the message has been read.
+     */
+    public MQPartition partition() {
+        return partition;
+    }
+
+    /**
+     * Returns the offset of the message.
+     */
+    public MQOffset offset() {
+        return offset;
     }
 }
 

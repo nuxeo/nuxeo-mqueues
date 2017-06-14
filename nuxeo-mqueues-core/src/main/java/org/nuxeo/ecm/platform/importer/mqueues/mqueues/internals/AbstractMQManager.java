@@ -29,12 +29,14 @@ import java.io.Externalizable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 
 public abstract class AbstractMQManager<M extends Externalizable> implements MQManager<M> {
     private final Map<String, MQAppender<M>> appenders = new ConcurrentHashMap<>();
-    private final Map<MQPartitionGroup, MQTailer<M>> tailers = new ConcurrentHashMap<>();
+    private final Map<MQPartitionGroup, MQTailer<M>> tailersAssignments = new ConcurrentHashMap<>();
+    private final Set<MQTailer<M>> tailers = Collections.newSetFromMap(new ConcurrentHashMap<MQTailer<M>, Boolean>());
 
     protected abstract void create(String name, int size);
 
@@ -42,6 +44,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
 
     protected abstract MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group);
 
+    protected abstract MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener);
 
     @Override
     public boolean createIfNotExists(String name, int size) {
@@ -61,7 +64,8 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
     public MQTailer<M> createTailer(String group, Collection<MQPartition> partitions) {
         partitions.forEach(partition -> checkTailerForPartition(group, partition));
         MQTailer<M> ret = acquireTailer(partitions, group);
-        partitions.forEach(partition -> tailers.put(new MQPartitionGroup(group, partition), ret));
+        partitions.forEach(partition -> tailersAssignments.put(new MQPartitionGroup(group, partition), ret));
+        tailers.add(ret);
         return ret;
     }
 
@@ -72,12 +76,15 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
 
     @Override
     public MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener) {
-        throw new UnsupportedOperationException("subscribe is not supported by this implementation");
+        MQTailer<M> ret = doSubscribe(group, names, listener);
+        tailers.add(ret);
+        return ret;
     }
+
 
     private void checkTailerForPartition(String group, MQPartition partition) {
         MQPartitionGroup key = new MQPartitionGroup(group, partition);
-        MQTailer<M> ret = tailers.get(key);
+        MQTailer<M> ret = tailersAssignments.get(key);
         if (ret != null && !ret.closed()) {
             throw new IllegalArgumentException("Tailer for this partition already created: " + partition + ", group: " + group);
         }
@@ -110,9 +117,11 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
         for (MQAppender<M> app : appenders.values()) {
             app.close();
         }
-        for (MQTailer<M> tailer : tailers.values()) {
+        appenders.clear();
+        for (MQTailer<M> tailer : tailers) {
             tailer.close();
         }
-        appenders.clear();
+        tailers.clear();
+        tailersAssignments.clear();
     }
 }

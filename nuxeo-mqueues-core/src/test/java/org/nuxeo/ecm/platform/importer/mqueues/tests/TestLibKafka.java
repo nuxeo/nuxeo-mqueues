@@ -166,7 +166,7 @@ public class TestLibKafka {
         assertEquals(5, consumer.assignment().size());
         int count = 0;
         for (ConsumerRecord<String, String> record : consumer.poll(2000)) {
-            System.out.println("receive: " + record.key() + " " + record.value());
+            // System.out.println("receive: " + record.key() + " " + record.value());
             count += 1;
         }
         consumer.close();
@@ -235,7 +235,7 @@ public class TestLibKafka {
                 e.printStackTrace();
             } else {
                 String message = String.format("sent message to topic:%s partition:%s  offset:%s", recordMetadata.topic(), recordMetadata.partition(), recordMetadata.offset());
-                System.out.println(message);
+                // System.out.println(message);
             }
         }
     }

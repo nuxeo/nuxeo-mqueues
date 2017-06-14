@@ -23,19 +23,20 @@ import java.io.Externalizable;
 import java.util.Collection;
 
 /**
- * Manage appender and tailer access.
+ * Manage MQueue and give access to appender and tailers.
  *
  * @since 9.2
  */
 public interface MQManager<M extends Externalizable> extends AutoCloseable {
 
     /**
-     * Check if a MQueue exists.
+     * Returns true if a MQueue with this {@code name} exists.
      */
     boolean exists(String name);
 
     /**
-     * Create a new MQueue if it does not exists.
+     * Create a new MQueue with {@code size} partitions, only if it does not exists.
+     * Returns true it the MQueue has been created.
      */
     boolean createIfNotExists(String name, int size);
 
@@ -46,32 +47,37 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
     boolean delete(String name);
 
     /**
-     * Get an appender on the MQueue, The appender is thread safe.
+     * Get an appender for the MQueue named {@code name}.
+     * An appender is thread safe.
      */
     MQAppender<M> getAppender(String name);
 
     /**
-     * Create a tailer to read a specific mqueue/partition for a group of consumer
+     * Create a tailer for a consumer {@code group} and assign a single {@code partition}.
+     * A tailer is NOT thread safe.
      */
     MQTailer<M> createTailer(String group, MQPartition partition);
 
     /**
-     * Create a tailer to read on multiple mqueue/partitions for a group of consumer
+     * Create a tailer for a consumer {@code group} and assign multiple {@code partitions}.
+     * A tailer is NOT thread safe.
      */
     MQTailer<M> createTailer(String group, Collection<MQPartition> partitions);
 
     /**
-     * Returns true if the MQueue implementation the {@link #subscribe(String, Collection, MQRebalanceListener)} method.
+     * Returns {@code true} if the MQueue {@link #subscribe} method is supported.
      */
     boolean supportSubscribe();
 
     /**
-     * Create a tailer that read on multiple mqueues, the partitions assignments are done dynamically depending on the
-     * subscribers. A listener can be used to be notified when mqueue/partition list change.
+     * Create a tailer for a consumer {@code group} and subscribe to multiple MQueues.
+     * The partitions assignment is done dynamically depending on the subscribers.
+     * The partitions can change during tailers life, this is called a rebalancing.
+     * A listener can be used to be notified on assignment changes.
      * <p/>
-     * Either use {@link #createTailer(String, Collection)} either use {@link #subscribe(String, Collection, MQRebalanceListener)}
-     * this should not be mixed.
-     * TODO: complete doc
+     * A tailer is NOT thread safe.
+     * <p/>
+     * You should not mix {@link #createTailer} and {@code subscribe} usage using the same {@code group}.
      */
     MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener);
 

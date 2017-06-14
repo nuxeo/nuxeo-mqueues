@@ -134,7 +134,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
     }
 
     @Override
-    public void applicationStarted(ComponentContext context) {
+    public void start(ComponentContext context) {
         init();
     }
 

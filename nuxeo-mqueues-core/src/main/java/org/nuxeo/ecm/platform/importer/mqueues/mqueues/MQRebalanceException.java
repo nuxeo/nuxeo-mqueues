@@ -18,16 +18,9 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
-import java.util.Collection;
-
 /**
- * Listener to be notified on partition rebalancing.
  * @since 9.2
  */
-public interface MQRebalanceListener {
-
-    void onPartitionsRevoked(Collection<MQPartition> partitions);
-
-    void onPartitionsAssigned(Collection<MQPartition> partitions);
+public class MQRebalanceException extends RuntimeException {
 
 }

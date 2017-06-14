@@ -86,7 +86,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
     }
 
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -96,15 +96,15 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
     }
 
     @Override
-    public MQOffsetImpl append(int queue, M message) {
-        ExcerptAppender appender = queues.get(queue).acquireAppender();
+    public MQOffset append(int partition, M message) {
+        ExcerptAppender appender = queues.get(partition).acquireAppender();
         appender.writeDocument(w -> w.write("msg").object(message));
         long offset = appender.lastIndexAppended();
+        MQOffset ret = new MQOffsetImpl(name, partition, offset);
         if (log.isDebugEnabled()) {
-            log.debug(String.format("append to %s-%02d:+%d, value: %s",
-                    name, queue, offset, message));
+            log.debug(String.format("append to %s, value: %s", ret, message));
         }
-        return new MQOffsetImpl(queue, offset);
+        return ret;
     }
 
     public MQTailer<M> createTailer(MQPartition partition, String group) {
@@ -118,11 +118,11 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
     }
 
     @Override
-    public boolean waitFor(MQOffset offset, String nameSpace, Duration timeout) throws InterruptedException {
+    public boolean waitFor(MQOffset offset, String group, Duration timeout) throws InterruptedException {
         boolean ret;
-        long offsetPosition = ((MQOffsetImpl) offset).getOffset();
-        int queue = ((MQOffsetImpl) offset).getQueue();
-        try (ChronicleMQOffsetTracker offsetTracker = new ChronicleMQOffsetTracker(basePath.toString(), queue, nameSpace)) {
+        long offsetPosition = offset.offset();
+        int partition = offset.partition().partition();
+        try (ChronicleMQOffsetTracker offsetTracker = new ChronicleMQOffsetTracker(basePath.toString(), partition, group)) {
             ret = isProcessed(offsetTracker, offsetPosition);
             if (ret) {
                 return true;

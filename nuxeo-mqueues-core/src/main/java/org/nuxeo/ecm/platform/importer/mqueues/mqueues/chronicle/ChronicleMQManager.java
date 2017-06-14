@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.AbstractMQManager;
 
@@ -88,9 +89,15 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
         Collection<ChronicleMQTailer<M>> pTailers = new ArrayList<>(partitions.size());
         partitions.forEach(partition -> pTailers.add((ChronicleMQTailer<M>) ((ChronicleMQAppender<M>) getAppender(partition.name())).createTailer(partition, group)));
         if (pTailers.size() == 1) {
-            return (MQTailer<M>) pTailers.toArray()[0];
+            return pTailers.iterator().next();
         }
         return new ChronicleCompoundMQTailer<>(pTailers, group);
+    }
+
+    @Override
+    protected MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener) {
+        throw new UnsupportedOperationException("subscribe is not supported by Chronicle implementation");
+
     }
 
     private static void deleteQueueBasePath(File basePath) {

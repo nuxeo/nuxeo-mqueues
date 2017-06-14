@@ -19,7 +19,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 /**
- * A tuple MQueue name and partition.
+ * A tuple to store MQueue name and the partition index.
  *
  * @since 9.2
  */
@@ -32,12 +32,18 @@ public class MQPartition {
         this.partition = partition;
     }
 
-    public int partition() {
-        return partition;
-    }
-
+    /**
+     * Returns the MQueue's name
+     */
     public String name() {
         return name;
+    }
+
+    /**
+     * Returns the partition index.
+     */
+    public int partition() {
+        return partition;
     }
 
     @Override

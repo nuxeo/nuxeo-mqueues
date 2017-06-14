@@ -23,7 +23,7 @@ import java.time.Duration;
 import java.util.Collection;
 
 /**
- * Sequential reader for a mqueue/partition or a list of mqueue/partition.
+ * Sequential reader for a partition or multiple partitions.
  *
  * A tailer is not thread safe and should not be shared by multiple threads.
  *
@@ -31,52 +31,55 @@ import java.util.Collection;
 public interface MQTailer<M extends Externalizable> extends AutoCloseable {
 
     /**
-     * Read a message from the assigned mqueue/partition within the timeout.
+     * Returns the consumer group.
      *
-     * @return null if there is no message in the queue after the timeout.
      */
-    MQRecord<M> read(Duration timeout) throws InterruptedException;
+    String group();
 
     /**
-     * Commit the offset of the last message returned by read for this mqueue/partition.
-     */
-    MQOffset commit(MQPartition partition);
-
-    /**
-     * Commit the offset of the last message returned by read for all the assigned mqueue/partition.
-     */
-    void commit();
-
-    /**
-     * Position the current offsets of all mqueue/partition to the end.
-     */
-    void toEnd();
-
-    /**
-     * Position the current offsets of all mqueue/partition to the beginning.
-     */
-    void toStart();
-
-    /**
-     * Position the current offsets of all mqueue/partition just after the last committed message.
-     */
-    void toLastCommitted();
-
-    /**
-     * Returns the list of mqueue/partition currently assigned to this tailer.
-     *
+     * Returns the list of partitions currently assigned to this tailer.
+     * Assignments can change only if the tailer has been created using {@link MQManager#subscribe}.
      */
     Collection<MQPartition> assignments();
 
     /**
-     * Returns the tailer group.
+     * Read a message from assigned partitions within the timeout.
      *
+     * @return null if there is no message in the queue after the timeout.
+     * @throws MQRebalanceException if a partition rebalancing happen during the read,
+     * this is possible only when using {@link MQManager#subscribe}.
      */
-    String getGroup();
+    MQRecord<M> read(Duration timeout) throws InterruptedException;
 
     /**
-     * Returns true if the tailer has been closed using {@link #close()}
+     * Commit current positions for all partitions (last message offset returned by read).
+     */
+    void commit();
+
+    /**
+     * Commit current position for the partition.
+     *
+     * @return the committed offset, can return null if there was no previous read done on this partition.
+     */
+    MQOffset commit(MQPartition partition);
+
+    /**
+     * Set the current positions to the end of all partitions.
+     */
+    void toEnd();
+
+    /**
+     * Set the current position to the fist message of all partitions.
+     */
+    void toStart();
+
+    /**
+     * Set the current positions to previously committed positions.
+     */
+    void toLastCommitted();
+
+    /**
+     * Returns {@code true} if the tailer has been closed.
      */
     boolean closed();
-
 }

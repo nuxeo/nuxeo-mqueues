@@ -141,6 +141,7 @@ public class IdMessage implements Message {
 
     @Override
     public String toString() {
-        return String.format("IdMessage(\"%s\", len:%d, poison:%b, batch:%b)", id, (data != null) ? data.length : 0, poisonPill, forceBatch);
+        return String.format("IdMessage(\"%s\", len:%d%s%s)", id, (data != null) ? data.length : 0,
+                poisonPill ? ", poison" : "", forceBatch ? ", batch" : "");
     }
 }

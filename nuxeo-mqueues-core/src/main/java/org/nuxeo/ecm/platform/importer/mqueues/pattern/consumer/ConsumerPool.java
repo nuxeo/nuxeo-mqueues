@@ -22,19 +22,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.AbstractCallablePool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.ConsumerRunner;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 
 /**
@@ -92,7 +87,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
 
     @Override
     protected void afterCall(List<ConsumerStatus> ret) {
-        ret.forEach(log::info);
+        ret.forEach(log::warn);
         log.warn(ConsumerStatus.toString(ret));
     }
 

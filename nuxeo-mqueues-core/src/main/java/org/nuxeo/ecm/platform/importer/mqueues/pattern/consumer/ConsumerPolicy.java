@@ -39,11 +39,22 @@ public class ConsumerPolicy {
     public static final ConsumerPolicy BOUNDED = builder()
             .waitMessageTimeout(Duration.ofSeconds(5))
             .continueOnFailure(false).build();
+
+    public static final ConsumerPolicy BOUNDED_RETRY = builder()
+            .waitMessageTimeout(Duration.ofSeconds(5))
+            .retryPolicy(new RetryPolicy().withMaxRetries(3))
+            .continueOnFailure(false).build();
+
     /**
      * Consumer policy that wait for ever for new message and skip failure.
      */
     public static final ConsumerPolicy UNBOUNDED = builder()
             .continueOnFailure(true)
+            .waitMessageForEver().build();
+
+    public static final ConsumerPolicy UNBOUNDED_RETRY = builder()
+            .continueOnFailure(true)
+            .retryPolicy(new RetryPolicy().withMaxRetries(3))
             .waitMessageForEver().build();
 
     private final BatchPolicy batchPolicy;

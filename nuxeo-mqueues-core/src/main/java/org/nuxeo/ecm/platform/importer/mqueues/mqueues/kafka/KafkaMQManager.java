@@ -31,7 +31,7 @@ import java.util.Collection;
 import java.util.Properties;
 
 /**
-  * @since 9.2
+ * @since 9.2
  */
 public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<M> {
     public static final String DISABLE_SUBSCRIBE_PROP = "subscribe.disable";
@@ -77,9 +77,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     @Override
     protected MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
         partitions.forEach(this::checkValidPartition);
-        KafkaMQTailer<M> ret = KafkaMQTailer.createAndAssign(prefix, partitions,
-                group, (Properties) consumerProperties.clone());
-        return ret;
+        return KafkaMQTailer.createAndAssign(prefix, partitions, group, (Properties) consumerProperties.clone());
     }
 
     private void checkValidPartition(MQPartition partition) {
@@ -111,10 +109,8 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     }
 
     @Override
-    public MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener) {
-        KafkaMQTailer<M> ret = KafkaMQTailer.createAndSubscribe(prefix, names,
-                group, (Properties) consumerProperties.clone(), listener);
-        return ret;
+    protected MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener) {
+        return KafkaMQTailer.createAndSubscribe(prefix, names, group, (Properties) consumerProperties.clone(), listener);
     }
 
     protected static Properties normalizeConsumerProperties(Properties consumerProperties) {

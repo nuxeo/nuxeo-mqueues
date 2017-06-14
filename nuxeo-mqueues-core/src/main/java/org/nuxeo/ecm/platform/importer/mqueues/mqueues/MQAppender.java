@@ -23,31 +23,31 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
+ * An appender is used to append message into a MQueue.
+ * Implementation are thread safe.
  *
  * @since 9.2
  */
 public interface MQAppender<M extends Externalizable> extends AutoCloseable {
 
     /**
-     * Returns the MQueue name.
-     *
+     * Returns the MQueue's name.
      */
-    String getName();
+    String name();
 
     /**
-     * Returns the size of the queues array (aka number of partitions).
-     *
+     * Returns the number of partitions.
      */
     int size();
 
     /**
-     * Append a message into a queue, returns current {@link MQOffset} position.
+     * Append a message into a partition, returns {@link MQOffset} position of the message.
      *
      * This method is thread safe, a queue can be shared by multiple producers.
      *
-     * @param queue index lower than {@link #size()}
+     * @param partition index lower than {@link #size()}
      */
-    MQOffset append(int queue, M message);
+    MQOffset append(int partition, M message);
 
     /**
      * Same as {@link #append(int, Externalizable)}, the queue is chosen using a hash of {@param key}.
@@ -56,7 +56,7 @@ public interface MQAppender<M extends Externalizable> extends AutoCloseable {
         Objects.requireNonNull(key);
         // Provide a basic partitioning that works because:
         // 1. String.hashCode is known to be constant even with different JVM (this is not the case for all objects)
-        // 2. the mod is not optimal in case of partition rebalancing but the size is not supposed to change
+        // 2. the modulo operator is not optimal when rebalancing on partitions resizing but this should not happen.
         // and yes hashCode can be negative.
         int queue = (key.hashCode() & 0x7fffffff) % size();
         return append(queue, message);
@@ -65,11 +65,14 @@ public interface MQAppender<M extends Externalizable> extends AutoCloseable {
     /**
      * Wait for consumer to process a message up to the offset.
      *
-     * The message is processed if a consumer commit its offset (or a bigger one) in the default name space.
+     * The message is processed if a consumer commit its offset (or a bigger one) in the group name space.
      *
-     * Return true if the message has been consumed, false in case of timeout.
+     * Return {@code true} if the message has been consumed, {@code false} in case of timeout.
      */
-    boolean waitFor(MQOffset offset, String nameSpace, Duration timeout) throws InterruptedException;
+    boolean waitFor(MQOffset offset, String group, Duration timeout) throws InterruptedException;
 
+    /**
+     * Returs {@code true} if the close has been closed.
+     */
     boolean closed();
 }

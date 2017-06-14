@@ -21,6 +21,7 @@
       </producerProperties>
       <consumerProperties>
         <property name="bootstrap.servers">localhost:9092</property>
+        <property name="max.poll.interval.ms">30000</property>
         <property name="subscribe.disable">true</property>
       </consumerProperties>
     </kafkaConfig>

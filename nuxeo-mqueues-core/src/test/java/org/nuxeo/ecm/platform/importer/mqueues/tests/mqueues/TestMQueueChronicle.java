@@ -29,7 +29,6 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Duration;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -39,16 +38,10 @@ import static org.junit.Assert.fail;
  * @since 9.2
  */
 public class TestMQueueChronicle extends TestMQueue {
-    private final static Duration MIN_DURATION = Duration.ofMillis(1);
     private Path basePath;
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
-
-    @Override
-    public Duration getMinDuration() {
-        return MIN_DURATION;
-    }
 
     @After
     public void resetBasePath() throws IOException {

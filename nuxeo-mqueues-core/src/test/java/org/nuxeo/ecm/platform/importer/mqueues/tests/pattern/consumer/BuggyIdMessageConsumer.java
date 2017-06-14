@@ -55,18 +55,20 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<IdMessage> {
         if (log.isTraceEnabled()) {
             log.trace(getConsumerId() + " accept: " + tmp);
         }
-        // ensure that message are always bigger than the last committed one
-        if (lastCommitted >= 0 && tmp <= lastCommitted) {
-            String msg = "Error receive unordered message: " + tmp + " < last committed: " + lastCommitted;
-            log.error(msg);
-            throw new IllegalStateException(msg);
-        }
-        // ensure that message arrive ordered
-        if (lastAccepted >= 0 && tmp <= lastAccepted) {
-            String msg = "Error receive unordered message: " + tmp + " < last accepted : " + lastAccepted;
-            log.error(msg);
-            throw new IllegalStateException(msg);
-        }
+        // these assertions are not valid when tailing from multiple partitions
+
+//        // ensure that message are always bigger than the last committed one
+//        if (lastCommitted >= 0 && tmp <= lastCommitted) {
+//            String msg = "Error receive unordered message: " + tmp + " < last committed: " + lastCommitted;
+//            log.error(msg);
+//            throw new IllegalStateException(msg);
+//        }
+//        // ensure that message arrive ordered
+//        if (lastAccepted >= 0 && tmp <= lastAccepted) {
+//            String msg = "Error receive unordered message: " + tmp + " < last accepted : " + lastAccepted;
+//            log.error(msg);
+//            throw new IllegalStateException(msg);
+//        }
 
         lastAccepted = tmp;
     }

@@ -76,7 +76,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
     }
 
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -90,26 +90,27 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
     }
 
     @Override
-    public MQOffset append(int queue, Externalizable message) {
+    public MQOffset append(int partition, Externalizable message) {
         Bytes value = Bytes.wrap(messageAsByteArray(message));
-        String key = String.valueOf(queue);
-        ProducerRecord<String, Bytes> record = new ProducerRecord<>(topic, queue, key, value);
-        Future<RecordMetadata> result = producer.send(record);
-        RecordMetadata ret;
+        String key = String.valueOf(partition);
+        ProducerRecord<String, Bytes> record = new ProducerRecord<>(topic, partition, key, value);
+        Future<RecordMetadata> future = producer.send(record);
+        RecordMetadata result;
         try {
-            ret = result.get();
+            result = future.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Unable to send record: " + record, e);
         } catch (ExecutionException e) {
             throw new RuntimeException("Unable to send record: " + record, e);
         }
+        MQOffset ret = new MQOffsetImpl(name, partition, result.offset());
         if (log.isDebugEnabled()) {
             int len = record.value().get().length;
             log.debug(String.format("append to %s-%02d:+%d, len: %d, key: %s, value: %s", name,
-                    queue, ret.offset(), len, key, message));
+                    partition, ret.offset(), len, key, message));
         }
-        return new MQOffsetImpl(queue, ret.offset());
+        return ret;
     }
 
     private byte[] messageAsByteArray(Externalizable message) {
@@ -125,13 +126,14 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
     }
 
     @Override
-    public boolean waitFor(MQOffset offset, String nameSpace, Duration timeout) throws InterruptedException {
+    public boolean waitFor(MQOffset offset, String group, Duration timeout) throws InterruptedException {
         boolean ret = false;
-        long offsetPosition = ((MQOffsetImpl) offset).getOffset();
-        int partition = ((MQOffsetImpl) offset).getQueue();
-        TopicPartition topicPartition = new TopicPartition(topic, partition);
+        if (!name.equals(offset.partition().name())) {
+            throw new IllegalArgumentException(name + " can not wait for an offset of a different MQueue: " + offset);
+        }
+        TopicPartition topicPartition = new TopicPartition(topic, offset.partition().partition());
         try {
-            ret = isProcessed(nameSpace, topicPartition, offsetPosition);
+            ret = isProcessed(group, topicPartition, offset.offset());
             if (ret) {
                 return true;
             }
@@ -140,13 +142,12 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
             final long delay = Math.min(100, timeoutMs);
             while (!ret && System.currentTimeMillis() < deadline) {
                 Thread.sleep(delay);
-                ret = isProcessed(nameSpace, topicPartition, offsetPosition);
+                ret = isProcessed(group, topicPartition, offset.offset());
             }
             return ret;
         } finally {
             if (log.isDebugEnabled()) {
-                log.debug("waitFor " + topicPartition.topic() + ":" + topicPartition.partition() + "/" + nameSpace
-                        + ":+" + offsetPosition + " returns: " + ret);
+                log.debug("waitFor " + offset + "/" + group + " returns: " + ret);
             }
         }
     }

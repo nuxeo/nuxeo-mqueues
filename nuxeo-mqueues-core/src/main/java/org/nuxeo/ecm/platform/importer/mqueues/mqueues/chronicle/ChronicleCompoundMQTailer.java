@@ -34,7 +34,7 @@ import java.util.List;
  * @since 9.2
  */
 public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTailer<M> {
-    private final Collection<ChronicleMQTailer<M>> tailers;
+    private final List<ChronicleMQTailer<M>> tailers = new ArrayList<>();
     private final String group;
     private final int size;
     private final List<MQPartition> mqPartitions = new ArrayList<>();
@@ -43,7 +43,7 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
 
     public ChronicleCompoundMQTailer(Collection<ChronicleMQTailer<M>> tailers, String group) {
         // empty tailers is an accepted input
-        this.tailers = tailers;
+        this.tailers.addAll(tailers);
         this.group = group;
         this.size = tailers.size();
         tailers.stream().forEach(partition -> mqPartitions.addAll(partition.assignments()));
@@ -66,19 +66,20 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
     }
 
     private MQRecord<M> read() {
+        if (size <= 0) {
+            return null;
+        }
         // round robin on tailers
-        int toSkip = (size > 0) ? ((int) (counter++ % size)) : 0;
-        int i = 0;
         MQRecord<M> ret;
-        for (ChronicleMQTailer<M> tailer : tailers) {
-            if (i++ < toSkip) {
-                continue;
-            }
-            ret = tailer.read();
+        long end = counter + size;
+        do {
+            counter++;
+            int i = (int) counter % size;
+            ret = tailers.get(i).read();
             if (ret != null) {
                 return ret;
             }
-        }
+        } while (counter < end);
         return null;
     }
 
@@ -118,13 +119,22 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
     }
 
     @Override
-    public String getGroup() {
+    public String group() {
         return group;
     }
 
     @Override
     public boolean closed() {
         return closed;
+    }
+
+    public void seek(MQPartition partition, MQOffset offset) {
+        for (MQTailer<M> tailer : tailers) {
+            if (tailer.assignments().contains(partition)) {
+                ((ChronicleMQTailer<M>) tailer).seek(partition, offset);
+                return;
+            }
+        }
     }
 
     @Override

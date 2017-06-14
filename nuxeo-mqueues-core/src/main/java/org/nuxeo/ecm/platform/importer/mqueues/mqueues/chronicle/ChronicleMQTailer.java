@@ -102,9 +102,7 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
             return null;
 
         }
-        MQRecord<M> ret = new MQRecord<>(new MQPartition(id.name, id.partition), value.get(0),
-                new MQOffsetImpl(id.partition, cqTailer.index()));
-        return ret;
+        return new MQRecord<>(partition, value.get(0), new MQOffsetImpl(partition, cqTailer.index()));
     }
 
     @Override
@@ -118,7 +116,7 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         if (log.isTraceEnabled()) {
             log.trace(String.format("Commit %s:+%d", id, offset));
         }
-        return new MQOffsetImpl(id.partition, offset);
+        return new MQOffsetImpl(partition, offset);
     }
 
     @Override
@@ -150,13 +148,17 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         }
     }
 
+    public void seek(MQPartition partition, MQOffset offset) {
+        cqTailer.moveToIndex(((MQOffsetImpl) offset).offset());
+    }
+
     @Override
     public Collection<MQPartition> assignments() {
         return Collections.singletonList(new MQPartition(id.name, id.partition));
     }
 
     @Override
-    public String getGroup() {
+    public String group() {
         return id.group;
     }
 

@@ -86,11 +86,13 @@ public abstract class TestPatternBoundedQueuing {
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
         // 2 run the consumers
+        ConsumerPolicy consumerPolicy = ConsumerPolicy.builder().waitMessageTimeout(Duration.ofSeconds(5))
+                .continueOnFailure(false).maxThreads((short) 8).build();
         ConsumerPool<IdMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
-                IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED);
+                IdMessageFactory.NOOP, consumerPolicy);
         List<ConsumerStatus> cret = consumers.start().get();
 
-        assertEquals(MQ_SIZE, (long) cret.size());
+        assertEquals(consumerPolicy.getMaxThreads(), (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
     }
 
@@ -120,7 +122,7 @@ public abstract class TestPatternBoundedQueuing {
 
     @Test
     public void producerAndBuggyConsumers() throws Exception {
-        final int NB_QUEUE = 23;
+        final int NB_QUEUE = 12;
         // ordered message producer requires nb_producer <= nb consumer
         final short NB_PRODUCERS = NB_QUEUE;
         final int NB_DOCUMENTS = 127; // getNbDocumentForBuggyConsumerTest();
@@ -138,15 +140,17 @@ public abstract class TestPatternBoundedQueuing {
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, pret.stream().mapToLong(r -> r.nbProcessed).sum());
 
         // 2. Use the mq and run the consumers
+        ConsumerPolicy consumerPolicy = ConsumerPolicy.builder().waitMessageTimeout(Duration.ofSeconds(10))
+                .maxThreads((short) 7)
+                .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
+                .retryPolicy(new RetryPolicy().withMaxRetries(10000)).build();
         ConsumerPool<IdMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
                 IdMessageFactory.BUGGY,
-                ConsumerPolicy.builder().waitMessageTimeout(Duration.ofSeconds(10))
-                        .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
-                        .retryPolicy(new RetryPolicy().withMaxRetries(10000)).build());
+                consumerPolicy);
 
         List<ConsumerStatus> cret = consumers.start().get();
 
-        assertEquals(NB_QUEUE, (long) cret.size());
+        assertEquals(consumerPolicy.getMaxThreads(), (long) cret.size());
         assertEquals(NB_PRODUCERS * NB_DOCUMENTS, cret.stream().mapToLong(r -> r.committed).sum());
         assertTrue(NB_PRODUCERS * NB_DOCUMENTS < cret.stream().mapToLong(r -> r.accepted).sum());
     }

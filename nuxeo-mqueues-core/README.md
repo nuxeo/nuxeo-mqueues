@@ -5,12 +5,8 @@ nuxeo-mqueues-core
 
  This module implements an asynchronous message passing system called MQueue. 
  
- A MQueue acts as a partitioned queue. MQueue stands for Multi Queue.
- 
  MQueue is used in different producer consumer patterns described below.
 
- This module also contains a Computation pattern not tied to MQueue (even if one possible impl is done using MQueue).
- 
  This module has no dependency on Nuxeo framework to ease integration with third party.
 
 ## Warning
@@ -21,27 +17,35 @@ nuxeo-mqueues-core
 
 ### Features
 
-A MQueue is a partitioned queue, this can be seen as an array of queues. 
-Each queue being unbounded and persisted.
+ A MQueue can be seen as an array of queues, MQueue stands for Multi Queue.
+ A MQueue acts as a partitioned queue, queues that are part of a MQueue are called partitions.  
 
-A producer is responsible for choosing which message to assign to which queue:
+ To write to a MQueue a producer need to acquire an appender.
+ 
+ A producer is responsible for choosing which message to assign to which partition:
 
-* Using a round robin algorithm a producer can balance messages between queues.
-* Using a shard key it can group message by queue following its own semantic.
+ * Using a round robin algorithm a producer can balance messages between partitions.
+ * Using a shard key it can group message by partition following its own semantic.
 
-There is no back pressure on producer because the queues are unbounded (persisted outside of JVM memory),
-so the producer is never blocked when appending a message.
+ There is no back pressure on producer because the partition are unbounded (persisted outside of JVM memory),
+ so the producer is never blocked when appending a message.
 
-A consumer reads message using a tailer, the tailer don't destroy messages while reading from a queue.
-Each queue of an MQueue is an ordered immutable sequence of messages that are appended. 
+ To read from a MQueue a consumer need to create a tailer. The tailer don't destroy messages while reading from a partition.
+ Each partition of a MQueue is an ordered immutable sequence of messages. 
 
-The maximum consumer concurrency is fixed by the size of the MQueues (the number of its partition) 
+ A tailer read from assigned partitions and it is part of a consumer group. 
+ The consumer group is a name space to store tailer positions.
+ This way consumers can stop and resume processing without loosing messages. 
+ Tailer can also read message from the beginning or end of its assigned partitions.
+ There can be only one tailer assigned to a group/partition tuple.
+ The maximum consumer concurrency for a group is fixed by the number of partitions of the MQueue (its size).
+ 
+ Of course it is possible to create different group of consumers that process concurrently 
+ the same MQueue at their own speed.
 
-Tailer position (aka offset) can be persisted, this enable to have consumer that stop and resume processing without loosing messages.
-Tailer can also read message from the beginning or end of a queue.
-
-Tailer offsets are persisted in a namespace, this enable to create group of consumers that process concurrently 
-the same mqueues at their own speed.
+ The tailer partition assignment can be static or dynamic.
+ The dynamic assignment use a subscribe API, a tailer that subscribe or terminate will
+  trigger a rebalancing of the partitions assignments of the group. 
 
 ### MQueue Implementations
 
@@ -49,11 +53,13 @@ the same mqueues at their own speed.
  
   [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is a high performance off-Heap queue implementation.
 
-  A MQueue is composed of multiple Chronicle Queues (one for each queue).
-  There is an additional Chronicle Queue created for each consumer offset namespace.
+  Each partition of a MQueue is materialized as a Chronicle Queue.
+  There is an additional Chronicle Queue created for each consumer group to persist consumer's offsets.
 
   This implementation is limited to a single node because the Chronicle Queue can not be distributed
   with the open source version.
+  
+  The dynamic assignment is not supported, therefore there is no rebalancing to handle.
   
   The queues are persisted on disk, at the moment there is no retention policy so everything is kept for ever until [NXP-22113](https://jira.nuxeo.com/browse/NXP-22113)
   
@@ -62,34 +68,25 @@ the same mqueues at their own speed.
 
   [Kafka](http://kafka.apache.org/) is a distributed streaming app framework.
   
-  A MQueue is simply a Topic with partitions equals to the MQueue size.
+  A MQueue is simply a topic, partitions have the same meaning.
   
-  Tailer is assigned to a topic/partition manually. Offset are also managed (committed) manually. 
+  Offsets are managed manually and persisted in the `__consumer_offsets` internal topic. 
  
-  As a result Kafka does not manage the consumer distribution in this implementation.
-  All consumer of a namespace (a group) must run on the same node.
+  The dynamic assignment is supported and needed to support distributed consumers.      
+
+
+## Producer/Consumer Patterns
+
+MQueue can be used as is and provides benefits of a solid asynchronous message passing system.
+ For instance you can impl a work queue or pub/sub on it.
   
-  Still it is possible to distribute producer and consumer group around nodes.  
+But some pattern are generic and this module comes with 2 main implementations:
+- A simple producer/consumer pattern that handle retry and batching
+- A computation stream pattern to combine producer/consumer into compex topology
 
+### Simple producer/consumer pattern
 
-### Producer/Consumer Patterns
-
-Based on MQueue API we can implement multiple patterns of producer/consumer:
-
-1. Queuing (aka work queue): a message is delivered to one and only one consumer
-  * producers append messages to a MQueue
-  * there is a single consumer per partitioned queue: the number of consumers is equal to the number of queues
-  
-2. Pub/Sub (aka event bus): an event is publish on a channel, multiple listeners can subscribe to a channel
-  * a publisher append messages to a MQueue (channel)
-  * subscribers read messages from a queue, each subscriber has its own tailer namespace
-
-The first Queuing pattern has an API available to provide easy to implement producer and consumer,
-it comes with a batching and retry policy (see below).
-
-The pub/sub does not require extra API than the MQueue API. 
-
-### Queuing with a limited amount of messages
+#### Queuing with a limited amount of messages
 
 Typical usage can be a mass import process where producers extract documents and consumer import documents:
 
@@ -119,7 +116,7 @@ Both the producer and consumer implementation are driven (pulled) by the module.
 
 See [TestBoundedQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/pattern/TestPatternBoundedQueuing.java) for basic examples.
 
-### Queuing unlimited
+#### Queuing unlimited
 
 Almost the same as pattern as above but producers and consumers are always up processing an infinite flow of messages.
 There is no Producer interface, a producer just use a [MQueue](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/mqueues/MQueue.java) to append messages.
@@ -135,7 +132,7 @@ A producer can wait for a message to be consumed, this can simulate an async cal
 See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/pattern/TestPatternQueuing.java) for basic examples.
 
 
-## Stream and Computations
+### Stream and Computations
  
 This pattern is taken from [Google MillWheel](https://research.google.com/pubs/pub41378.html) and is implemented in [Concord.io](http://concord.io/docs/guides/architecture.html
 ) and not far from  [Kafka Stream Processor](https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/Processor.java).
@@ -155,13 +152,9 @@ Here is an example of the DAG used in UT:
 
 
 
-### Computation implementation
+#### Computation implementation
 
-A default implementation of Computation is provided based on MQueue, stream are simply a MQueue of Record.
-
-Using MQueue brings MQueue limitation: a computation group must run on the same node.
-
-Alternative implementations are in progress [NXP-22397](https://jira.nuxeo.com/browse/NXP-22397)
+A default implementation of Computation is provided based on MQueue, a stream is simply a MQueue of Record.
 
 ## Building
 

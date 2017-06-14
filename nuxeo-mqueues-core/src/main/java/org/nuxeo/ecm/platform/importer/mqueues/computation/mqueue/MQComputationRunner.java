@@ -29,6 +29,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.internals.WatermarkMo
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceException;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
@@ -207,14 +208,19 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
             return;
         }
         Duration timeoutRead = getTimeoutDuration();
-        MQRecord<Record> mqRecord = tailer.read(timeoutRead);
+        MQRecord<Record> mqRecord = null;
+        try {
+            mqRecord = tailer.read(timeoutRead);
+        } catch (MQRebalanceException e) {
+            // the revoke has done a checkpoint we can continue
+        }
         Record record;
         if (mqRecord != null) {
-            record = mqRecord.value;
+            record = mqRecord.value();
             lastReadTime = System.currentTimeMillis();
             inRecords++;
             lowWatermark.mark(record.watermark);
-            String from = metadata.reverseMap(mqRecord.partition.name());
+            String from = metadata.reverseMap(mqRecord.partition().name());
             // System.out.println(metadata.name + ": Receive from " + from + " record: " + record);
             computation.processRecord(context, from, record);
             checkRecordFlags(record);
@@ -226,8 +232,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
 
     private Duration getTimeoutDuration() {
         // Adapt the duration so we are not throttling when one of the input stream is empty
-        Duration ret = Duration.ofMillis(Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime));
-        return ret;
+        return Duration.ofMillis(Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime));
     }
 
     private void checkSourceLowWatermark() {
