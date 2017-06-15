@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,18 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
+package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
+import java.util.Collection;
 
 /**
- * @since 9.1
+ * Listener to be notified on partition rebalancing.
+ * @since 9.2
  */
-public interface ConsumerFactory<M extends Message> {
+public interface MQRebalanceListener {
 
-    /**
-     * @param consumerId the consumer identifier
-     */
-    Consumer<M> createConsumer(String consumerId);
+    void onPartitionsRevoked(Collection<MQPartition> partitions);
+
+    void onPartitionsAssigned(Collection<MQPartition> partitions);
+
 }

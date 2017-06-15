@@ -20,15 +20,16 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.AbstractCallablePool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals.ConsumerRunner;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -38,29 +39,45 @@ import java.util.concurrent.Callable;
  */
 public class ConsumerPool<M extends Message> extends AbstractCallablePool<ConsumerStatus> {
     private static final Log log = LogFactory.getLog(ConsumerPool.class);
-    private final MQueue<M> qm;
+    private final MQManager<M> manager;
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
-    private final List<MQTailer<M>> tailers;
+    private final String mqName;
+    private final List<List<MQPartition>> defaultAssignements;
 
-    public ConsumerPool(MQueue<M> qm, ConsumerFactory<M> factory, ConsumerPolicy policy) {
-        super(qm.size());
-        this.qm = qm;
+    public ConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy policy) {
+        super(computeNbThreads((short) manager.getAppender(mqName).size(), policy.getMaxThreads()));
+        this.mqName = mqName;
+        this.manager = manager;
         this.factory = factory;
         this.policy = policy;
-        this.tailers = new ArrayList<>(qm.size());
+        this.defaultAssignements = getDefaultAssignments();
+        if (manager.supportSubscribe()) {
+            log.info("Creating consumer pool using MQ subscribe on " + mqName);
+        } else {
+            log.info("Creating consumer pool using MQ assignments on " + mqName + ": " + defaultAssignements);
+        }
+    }
+
+    protected static short computeNbThreads(short maxConcurrency, short maxThreads) {
+        if (maxThreads > 0) {
+            return (short) Math.min(maxConcurrency, maxThreads);
+        }
+        return maxConcurrency;
+    }
+
+    public String getConsumerGroupName() {
+        return policy.getName();
     }
 
     @Override
     protected ConsumerStatus getErrorStatus() {
-        return new ConsumerStatus(0, 0, 0, 0, 0, 0, 0, true);
+        return new ConsumerStatus("error", 0, 0, 0, 0, 0, 0, true);
     }
 
     @Override
     protected Callable<ConsumerStatus> getCallable(int i) {
-        MQTailer<M> tailer = qm.createTailer(i);
-        tailers.add(tailer);
-        return new ConsumerRunner<>(factory, policy, tailer);
+        return new ConsumerRunner<>(factory, policy, manager, defaultAssignements.get(i));
     }
 
     @Override
@@ -70,24 +87,18 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
 
     @Override
     protected void afterCall(List<ConsumerStatus> ret) {
-        closeTailers();
         ret.forEach(log::info);
         log.warn(ConsumerStatus.toString(ret));
-    }
-
-    private void closeTailers() {
-        tailers.stream().filter(Objects::nonNull).forEach(tailer -> {
-            try {
-                tailer.close();
-            } catch (Exception e) {
-                log.error("Unable to close tailer: " + tailer.getQueue());
-            }
-        });
     }
 
     @Override
     public void close() throws Exception {
         super.close();
-        closeTailers();
     }
+
+    private List<List<MQPartition>> getDefaultAssignments() {
+        Map<String, Integer> streams = Collections.singletonMap(mqName, manager.getAppender(mqName).size());
+        return KafkaUtils.roundRobinAssignments(getNbThreads(), streams);
+    }
+
 }

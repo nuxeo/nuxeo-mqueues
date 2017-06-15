@@ -46,7 +46,7 @@ public class DocumentMessageConsumer extends AbstractConsumer<DocumentMessage> {
     private final String repositoryName;
     private CoreSession session;
 
-    public DocumentMessageConsumer(int consumerId, String repositoryName, String rootPath) {
+    public DocumentMessageConsumer(String consumerId, String repositoryName, String rootPath) {
         super(consumerId);
         this.rootPath = rootPath;
         this.repositoryName = repositoryName;

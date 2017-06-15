@@ -38,7 +38,6 @@ public class TestAutomationKafka extends TestAutomation {
 
     @Override
     public void addExtraParams(Map<String, Object> params) {
-        super.addExtraParams(params);
         params.put("kafkaConfig", "default");
     }
 }

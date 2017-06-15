@@ -19,10 +19,12 @@
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 /**
- * A {@link MQTailer} position.
+ * A message position in a MQueue.
  *
  * @since 9.1
  */
 public interface MQOffset extends Comparable<MQOffset> {
+    MQPartition partition();
 
+    long offset();
 }

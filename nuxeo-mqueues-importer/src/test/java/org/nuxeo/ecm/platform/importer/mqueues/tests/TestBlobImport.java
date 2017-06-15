@@ -25,8 +25,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.test.CoreFeature;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
@@ -58,22 +58,23 @@ public abstract class TestBlobImport {
     @Test
     public void randomStringBlob() throws Exception {
         final int NB_QUEUE = 10;
-        final int NB_PRODUCERS = 10;
+        final short NB_PRODUCERS = 10;
         final int NB_BLOBS = 2 * 1000;
 
         try (MQManager<BlobMessage> manager = getManager()) {
-            try (MQueue<BlobMessage> mQueue = manager.create("blob-import", NB_QUEUE)) {
-                ProducerPool<BlobMessage> producers = new ProducerPool<>(mQueue,
+            manager.createIfNotExists("blob-import", NB_QUEUE);
+            try (MQAppender<BlobMessage> appender = manager.getAppender("blob-import")) {
+                ProducerPool<BlobMessage> producers = new ProducerPool<>("blob-import", manager,
                         new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 1), NB_PRODUCERS);
                 List<ProducerStatus> ret = producers.start().get();
-                assertEquals(NB_PRODUCERS, (long) ret.size());
+                assertEquals(NB_PRODUCERS, ret.size());
                 assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
             }
 
             final Path output = folder.newFolder("blob-info").toPath();
-            try (MQueue<BlobMessage> mQueue = manager.open("blob-import")) {
+            try (MQAppender<BlobMessage> appender = manager.getAppender("blob-import")) {
                 String blobProviderName = "test";
-                ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mQueue,
+                ConsumerPool<BlobMessage> consumers = new ConsumerPool<>("blob-import", manager,
                         new BlobMessageConsumerFactory(blobProviderName, output),
                         ConsumerPolicy.builder().batchPolicy(BatchPolicy.NO_BATCH).build());
                 List<ConsumerStatus> ret = consumers.start().get();

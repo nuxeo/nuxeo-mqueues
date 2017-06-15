@@ -26,6 +26,11 @@ import net.jodah.failsafe.Execution;
 import net.openhft.chronicle.core.util.Time;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceException;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
@@ -34,17 +39,22 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerStatus;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import static java.lang.Thread.currentThread;
+import static org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy.StartOffset.LAST_COMMITTED;
 
 /**
  * Read messages from a tailer and drive a consumer according to its policy.
  *
  * @since 9.1
  */
-public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatus> {
+public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatus>, MQRebalanceListener {
     private static final Log log = LogFactory.getLog(ConsumerRunner.class);
 
     // This is the registry name used by Nuxeo without adding a dependency nuxeo-runtime
@@ -52,32 +62,41 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
 
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
-    private final int queue;
     private final MQTailer<M> tailer;
+    private String consumerId;
     private BatchPolicy currentBatchPolicy;
     private String threadName;
     private Consumer<M> consumer;
-
     protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(NUXEO_METRICS_REGISTRY_NAME);
-    protected final Timer acceptTimer;
-    protected final Counter committedCounter;
-    protected final Timer batchCommitTimer;
-    protected final Counter batchFailureCount;
-    protected final Counter consumersCount;
+    protected Timer acceptTimer;
+    protected Counter committedCounter;
+    protected Timer batchCommitTimer;
+    protected Counter batchFailureCount;
+    protected Counter consumersCount;
+    private boolean alreadySalted = false;
 
 
-    public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQTailer<M> tailer) {
+    public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQManager<M> manager,
+                          List<MQPartition> defaultAssignments) {
         this.factory = factory;
-        this.tailer = tailer;
         this.currentBatchPolicy = policy.getBatchPolicy();
         this.policy = policy;
-        queue = tailer.getQueue();
+        this.tailer = createTailer(manager, defaultAssignments);
+        consumerId = tailer.toString();
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
-        acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", String.valueOf(queue)));
-        committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", String.valueOf(queue)));
-        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", String.valueOf(queue)));
-        batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", String.valueOf(queue)));
-        log.debug("Consumer thread created tailing on queue: " + queue);
+        setTailerPosition(manager);
+        log.debug("Consumer thread created tailing on: " + consumerId);
+    }
+
+    private MQTailer<M> createTailer(MQManager<M> manager, List<MQPartition> defaultAssignments) {
+        MQTailer<M> tailer;
+        if (manager.supportSubscribe()) {
+            Set<String> names = defaultAssignments.stream().map(MQPartition::name).collect(Collectors.toSet());
+            tailer = manager.subscribe(policy.getName(), names, this);
+        } else {
+            tailer = manager.createTailer(policy.getName(), defaultAssignments);
+        }
+        return tailer;
     }
 
     private Counter newCounter(String name) {
@@ -93,29 +112,44 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     @Override
     public ConsumerStatus call() throws Exception {
         threadName = currentThread().getName();
+        setMetrics(threadName);
         consumersCount.inc();
         long start = Time.currentTimeMillis();
-        setTailerPosition();
-        consumer = factory.createConsumer(queue);
+        consumer = factory.createConsumer(consumerId);
         try {
-            addSalt();
             consumerLoop();
         } finally {
             consumer.close();
             consumersCount.dec();
         }
-        return new ConsumerStatus(queue, acceptTimer.getCount(), committedCounter.getCount(),
+        return new ConsumerStatus(consumerId, acceptTimer.getCount(), committedCounter.getCount(),
                 batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis(), false);
     }
 
-    private void addSalt() throws InterruptedException {
-        long randomDelay = ThreadLocalRandom.current().nextLong(policy.getBatchPolicy().getTimeThreshold().toMillis());
-        if (policy.isSalted()) {
-            Thread.sleep(randomDelay);
-        }
+    private void setMetrics(String name) {
+        acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", name));
+        committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", name));
+        batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", name));
+        batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", name));
     }
 
-    private void setTailerPosition() {
+    private void addSalt() throws InterruptedException {
+        if (alreadySalted) {
+            return;
+        }
+        // this random delay prevent consumers to be too much synchronized
+        if (policy.isSalted()) {
+            long randomDelay = ThreadLocalRandom.current().nextLong(policy.getBatchPolicy().getTimeThreshold().toMillis());
+            Thread.sleep(randomDelay);
+        }
+        alreadySalted = true;
+    }
+
+    private void setTailerPosition(MQManager<M> manager) {
+        ConsumerPolicy.StartOffset seekPosition = policy.getStartOffset();
+        if (manager.supportSubscribe() && seekPosition != LAST_COMMITTED) {
+            throw new UnsupportedOperationException("Tailer startOffset to " + seekPosition + " is not supported in subscribe mode");
+        }
         switch (policy.getStartOffset()) {
             case BEGIN:
                 tailer.toStart();
@@ -149,18 +183,24 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         while (!execution.isComplete()) {
             try {
                 end = processBatch();
-                execution.complete();
                 tailer.commit();
+                execution.complete();
             } catch (Throwable t) {
                 batchFailureCount.inc();
-                if (!execution.canRetryOn(t)) {
-                    if (t instanceof InterruptedException) {
-                        Thread.currentThread().interrupt();
-                    }
+                if (t instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
                     throw t;
                 }
-                setBatchRetryPolicy();
-                tailer.toLastCommitted();
+                if (t instanceof MQRebalanceException) {
+                    log.info("Rebalance");
+                    // the current batch is rollback because of this exception
+                    // we continue with the new tailer assignment
+                } else if (execution.canRetryOn(t)) {
+                    setBatchRetryPolicy();
+                    tailer.toLastCommitted();
+                } else {
+                    throw t;
+                }
             }
             restoreBatchPolicy();
         }
@@ -182,7 +222,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
             BatchState state = acceptBatch();
             commitBatch(state);
             if (state.getState() == BatchState.State.LAST) {
-                log.info(String.format("No more message on queue %02d", queue));
+                log.info("No more message on tailer: " + tailer);
                 end = true;
             }
         } catch (Exception e) {
@@ -205,6 +245,10 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         try (Timer.Context ignore = batchCommitTimer.time()) {
             consumer.commit();
             committedCounter.inc(state.getSize());
+            if (log.isDebugEnabled()) {
+                log.debug("Commit batch size: " + state.getSize() +
+                        ", total committed: " + committedCounter.getCount());
+            }
         }
     }
 
@@ -216,8 +260,11 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     private BatchState acceptBatch() throws InterruptedException {
         BatchState batch = new BatchState(currentBatchPolicy);
         batch.start();
+        MQRecord<M> record;
         M message;
-        while ((message = tailer.read(policy.getWaitMessageTimeout())) != null) {
+        while ((record = tailer.read(policy.getWaitMessageTimeout())) != null) {
+            // addSalt(); // do this here so kafka subscription happens concurrently
+            message = record.value();
             if (message.poisonPill()) {
                 log.warn("Receive a poison pill: " + message);
                 batch.last();
@@ -250,5 +297,17 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
             name += "-null";
         }
         currentThread().setName(name);
+    }
+
+    @Override
+    public void onPartitionsRevoked(Collection<MQPartition> partitions) {
+        // log.info("Partitions revoked: " + partitions);
+    }
+
+    @Override
+    public void onPartitionsAssigned(Collection<MQPartition> partitions) {
+        consumerId = tailer.toString();
+        // log.error("Partitions assigned: " + consumerId);
+        // partitions are opened on last committed by default
     }
 }

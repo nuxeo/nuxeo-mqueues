@@ -28,11 +28,10 @@ import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomDocumentMessageProducerFactory;
 import org.nuxeo.runtime.api.Framework;
@@ -67,6 +66,9 @@ public class RandomDocumentProducers {
     @Param(name = "mqName", required = false)
     protected String mqName;
 
+    @Param(name = "mqSize", required = false)
+    protected Integer mqSize;
+
     @Param(name = "blobInfoPath", required = false)
     protected String blobInfoPath;
 
@@ -77,19 +79,26 @@ public class RandomDocumentProducers {
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         try (MQManager<DocumentMessage> manager = getManager()) {
-            MQueue<DocumentMessage> mQueue = manager.openOrCreate(getMQName(), nbThreads);
+            manager.createIfNotExists(getMQName(), getMQSize());
             ProducerPool<DocumentMessage> producers;
             if (blobInfoPath != null) {
-                producers = new ProducerPool<>(mQueue,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, Paths.get(blobInfoPath)), nbThreads);
+                producers = new ProducerPool<>(getMQName(), manager,
+                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, Paths.get(blobInfoPath)), nbThreads.shortValue());
             } else {
-                producers = new ProducerPool<>(mQueue,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads);
+                producers = new ProducerPool<>(getMQName(), manager,
+                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads.shortValue());
             }
             producers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    protected int getMQSize() {
+        if (mqSize != null && mqSize > 0) {
+            return mqSize;
+        }
+        return nbThreads;
     }
 
     protected String getMQName() {

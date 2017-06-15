@@ -30,7 +30,6 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
@@ -55,6 +54,9 @@ public class BlobConsumers {
 
     @Context
     protected OperationContext ctx;
+
+    @Param(name = "nbThreads", required = false)
+    protected Integer nbThreads;
 
     @Param(name = "blobInfoPath")
     protected String blobInfoPath;
@@ -84,17 +86,26 @@ public class BlobConsumers {
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         try (MQManager<BlobMessage> manager = getManager()) {
-            MQueue<BlobMessage> mq = manager.open(getMQName());
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(mq,
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
                     ConsumerPolicy.builder()
+                            .name(ID)
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)
                                     .timeThreshold(Duration.ofSeconds(batchThresholdS)).build())
-                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS)).build());
+                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                            .maxThreads(getNbThreads())
+                            .build());
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    protected short getNbThreads() {
+        if (nbThreads != null) {
+            return nbThreads.shortValue();
+        }
+        return 0;
     }
 
     protected String getMQName() {

@@ -22,9 +22,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
 
 import java.io.Externalizable;
@@ -42,14 +43,14 @@ import java.util.stream.Stream;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
 /**
- * Chronicle Queue implementation of MQueue.
+ * Chronicle Queue implementation of MQAppender.
  *
  * Note that for performance reason the class loader assertion are disabled.
  *
  * @since 9.1
  */
-public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
-    private static final Log log = LogFactory.getLog(ChronicleMQueue.class);
+public class ChronicleMQAppender<M extends Externalizable> implements MQAppender<M> {
+    private static final Log log = LogFactory.getLog(ChronicleMQAppender.class);
     private static final String QUEUE_PREFIX = "Q-";
     private static final int POLL_INTERVAL_MS = 100;
 
@@ -60,6 +61,7 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
 
     // keep track of created tailers to make sure they are closed before the mq
     private final ConcurrentLinkedQueue<ChronicleMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
+    private boolean closed = false;
 
     static public boolean exists(File basePath) {
         return basePath.isDirectory() && basePath.list().length > 0;
@@ -72,19 +74,19 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
     /**
      * Create a new mqueues.
      */
-    static public <M extends Externalizable> ChronicleMQueue<M> create(File basePath, int size) {
-        return new ChronicleMQueue<>(basePath, size);
+    static public <M extends Externalizable> ChronicleMQAppender<M> create(File basePath, int size) {
+        return new ChronicleMQAppender<>(basePath, size);
     }
 
     /**
      * Open an existing mqueues.
      */
-    static public <M extends Externalizable> ChronicleMQueue<M> open(File basePath) {
-        return new ChronicleMQueue<>(basePath, 0);
+    static public <M extends Externalizable> ChronicleMQAppender<M> open(File basePath) {
+        return new ChronicleMQAppender<>(basePath, 0);
     }
 
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -94,15 +96,20 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
     }
 
     @Override
-    public MQOffsetImpl append(int queue, M message) {
-        ExcerptAppender appender = queues.get(queue).acquireAppender();
+    public MQOffset append(int partition, M message) {
+        ExcerptAppender appender = queues.get(partition).acquireAppender();
         appender.writeDocument(w -> w.write("msg").object(message));
-        return new MQOffsetImpl(queue, appender.lastIndexAppended());
+        long offset = appender.lastIndexAppended();
+        MQOffset ret = new MQOffsetImpl(name, partition, offset);
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("append to %s, value: %s", ret, message));
+        }
+        return ret;
     }
 
-    @Override
-    public MQTailer<M> createTailer(int queue, String nameSpace) {
-        return addTailer(new ChronicleMQTailer<>(basePath.toString(), queues.get(queue).createTailer(), queue, nameSpace));
+    public MQTailer<M> createTailer(MQPartition partition, String group) {
+        return addTailer(new ChronicleMQTailer<>(basePath.toString(),
+                queues.get(partition.partition()).createTailer(), partition, group));
     }
 
     private MQTailer<M> addTailer(ChronicleMQTailer<M> tailer) {
@@ -111,11 +118,11 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
     }
 
     @Override
-    public boolean waitFor(MQOffset offset, String nameSpace, Duration timeout) throws InterruptedException {
+    public boolean waitFor(MQOffset offset, String group, Duration timeout) throws InterruptedException {
         boolean ret;
-        long offsetPosition = ((MQOffsetImpl) offset).getOffset();
-        int queue = ((MQOffsetImpl) offset).getQueue();
-        try (ChronicleMQOffsetTracker offsetTracker = new ChronicleMQOffsetTracker(basePath.toString(), queue, nameSpace)) {
+        long offsetPosition = offset.offset();
+        int partition = offset.partition().partition();
+        try (ChronicleMQOffsetTracker offsetTracker = new ChronicleMQOffsetTracker(basePath.toString(), partition, group)) {
             ret = isProcessed(offsetTracker, offsetPosition);
             if (ret) {
                 return true;
@@ -129,6 +136,11 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
             }
         }
         return ret;
+    }
+
+    @Override
+    public boolean closed() {
+        return closed;
     }
 
     private boolean isProcessed(ChronicleMQOffsetTracker tracker, long offset) {
@@ -150,9 +162,10 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
         tailers.clear();
         queues.stream().filter(Objects::nonNull).forEach(ChronicleQueue::close);
         queues.clear();
+        closed = true;
     }
 
-    private ChronicleMQueue(File basePath, int size) {
+    private ChronicleMQAppender(File basePath, int size) {
         if (size == 0) {
             // open
             if (!exists(basePath)) {
@@ -178,7 +191,8 @@ public class ChronicleMQueue<M extends Externalizable> implements MQueue<M> {
         this.name = basePath.getName();
         this.basePath = basePath;
         queues = new ArrayList<>(this.nbQueues);
-        log.info("Opening chronicle queues in: " + basePath);
+        log.debug(String.format("%s chronicle mqueue: %s, path: %s, size: %d",
+                (size == 0) ? "Opening" : "Creating", name, basePath, nbQueues));
 
         for (int i = 0; i < nbQueues; i++) {
             File path = new File(basePath, String.format("%s%02d", QUEUE_PREFIX, i));

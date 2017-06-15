@@ -18,58 +18,68 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
+import java.io.Externalizable;
 import java.time.Duration;
+import java.util.Collection;
 
 /**
- * Sequential reader for a queue.
+ * Sequential reader for a partition or multiple partitions.
  *
  * A tailer is not thread safe and should not be shared by multiple threads.
  *
  */
-public interface MQTailer<M> extends AutoCloseable {
+public interface MQTailer<M extends Externalizable> extends AutoCloseable {
 
     /**
-     * Read a message from the queue within the timeout.
+     * Returns the consumer group.
+     *
+     */
+    String group();
+
+    /**
+     * Returns the list of partitions currently assigned to this tailer.
+     * Assignments can change only if the tailer has been created using {@link MQManager#subscribe}.
+     */
+    Collection<MQPartition> assignments();
+
+    /**
+     * Read a message from assigned partitions within the timeout.
      *
      * @return null if there is no message in the queue after the timeout.
+     * @throws MQRebalanceException if a partition rebalancing happen during the read,
+     * this is possible only when using {@link MQManager#subscribe}.
      */
-    M read(Duration timeout) throws InterruptedException;
+    MQRecord<M> read(Duration timeout) throws InterruptedException;
 
     /**
-     * Commit the offset of the last message returned by read.
+     * Commit current positions for all partitions (last message offset returned by read).
      */
-    MQOffset commit();
+    void commit();
 
     /**
-     * Position the current offset to the end of queue.
+     * Commit current position for the partition.
+     *
+     * @return the committed offset, can return null if there was no previous read done on this partition.
+     */
+    MQOffset commit(MQPartition partition);
+
+    /**
+     * Set the current positions to the end of all partitions.
      */
     void toEnd();
 
     /**
-     * Position the current offset to the beginning of the queue.
+     * Set the current position to the fist message of all partitions.
      */
     void toStart();
 
     /**
-     * Position the current offset just after the last committed message.
+     * Set the current positions to previously committed positions.
      */
     void toLastCommitted();
 
-
     /**
-     * Returns the associated queue index.
+     * Returns {@code true} if the tailer has been closed.
      */
-    int getQueue();
-
-    /**
-     * Returns the name of the MQueue.
-     *
-     */
-    String getMQueueName();
-
-    /**
-     * Return the tailer name space.
-     *
-     */
-    String getNameSpace();
+    boolean closed();
 }

@@ -28,6 +28,8 @@ import java.time.Duration;
  * @since 9.1
  */
 public class ConsumerPolicy {
+    public static final String DEFAULT_NAME = "default";
+
     public enum StartOffset {BEGIN, END, LAST_COMMITTED}
 
     public static final RetryPolicy NO_RETRY = new RetryPolicy().withMaxRetries(0);
@@ -37,11 +39,22 @@ public class ConsumerPolicy {
     public static final ConsumerPolicy BOUNDED = builder()
             .waitMessageTimeout(Duration.ofSeconds(5))
             .continueOnFailure(false).build();
+
+    public static final ConsumerPolicy BOUNDED_RETRY = builder()
+            .waitMessageTimeout(Duration.ofSeconds(5))
+            .retryPolicy(new RetryPolicy().withMaxRetries(3))
+            .continueOnFailure(false).build();
+
     /**
      * Consumer policy that wait for ever for new message and skip failure.
      */
     public static final ConsumerPolicy UNBOUNDED = builder()
             .continueOnFailure(true)
+            .waitMessageForEver().build();
+
+    public static final ConsumerPolicy UNBOUNDED_RETRY = builder()
+            .continueOnFailure(true)
+            .retryPolicy(new RetryPolicy().withMaxRetries(3))
             .waitMessageForEver().build();
 
     private final BatchPolicy batchPolicy;
@@ -50,6 +63,8 @@ public class ConsumerPolicy {
     private final Duration waitMessageTimeout;
     private final StartOffset startOffset;
     private final boolean salted;
+    private final String name;
+    private final short maxThreads;
 
     public ConsumerPolicy(Builder builder) {
         batchPolicy = builder.batchPolicy;
@@ -58,6 +73,12 @@ public class ConsumerPolicy {
         waitMessageTimeout = builder.waitMessageTimeout;
         startOffset = builder.startOffset;
         salted = builder.salted;
+        maxThreads = builder.maxThreads;
+        if (builder.name != null) {
+            name = builder.name;
+        } else {
+            name = DEFAULT_NAME;
+        }
     }
 
     public BatchPolicy getBatchPolicy() {
@@ -84,6 +105,13 @@ public class ConsumerPolicy {
         return salted;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public short getMaxThreads() {
+        return maxThreads;
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -96,6 +124,8 @@ public class ConsumerPolicy {
         private Duration waitMessageTimeout = Duration.ofSeconds(2);
         private StartOffset startOffset = StartOffset.LAST_COMMITTED;
         private boolean salted = false;
+        private String name;
+        private short maxThreads = 0;
 
         protected Builder() {
 
@@ -116,6 +146,14 @@ public class ConsumerPolicy {
          */
         public Builder continueOnFailure(boolean value) {
             skipFailure = value;
+            return this;
+        }
+
+        /**
+         * Maximum consumer threads to use. The number of threads is limited by the size of the MQueue.
+         */
+        public Builder maxThreads(short maxThreads) {
+            this.maxThreads = maxThreads;
             return this;
         }
 
@@ -148,6 +186,14 @@ public class ConsumerPolicy {
          */
         public Builder salted() {
             salted = true;
+            return this;
+        }
+
+        /**
+         * Consumer group name.
+         */
+        public Builder name(String name) {
+            this.name = name;
             return this;
         }
 

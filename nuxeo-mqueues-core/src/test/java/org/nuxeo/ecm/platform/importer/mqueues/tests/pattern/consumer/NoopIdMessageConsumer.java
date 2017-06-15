@@ -27,7 +27,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.AbstractConsumer
  */
 public class NoopIdMessageConsumer extends AbstractConsumer<IdMessage> {
 
-    public NoopIdMessageConsumer(int consumerId) {
+    public NoopIdMessageConsumer(String consumerId) {
         super(consumerId);
     }
 

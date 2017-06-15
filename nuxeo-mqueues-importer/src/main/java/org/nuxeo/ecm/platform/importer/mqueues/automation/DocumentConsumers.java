@@ -30,7 +30,6 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
@@ -54,6 +53,9 @@ public class DocumentConsumers {
 
     @Context
     protected OperationContext ctx;
+
+    @Param(name = "nbThreads", required = false)
+    protected Integer nbThreads;
 
     @Param(name = "rootFolder")
     protected String rootFolder;
@@ -84,21 +86,29 @@ public class DocumentConsumers {
         RandomBlobProducers.checkAccess(ctx);
         repositoryName = getRepositoryName();
         try (MQManager<DocumentMessage> manager = getManager()) {
-            MQueue<DocumentMessage> mq = manager.open(getMQName());
-            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(mq,
+            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
                     ConsumerPolicy.builder()
+                            .name(ID)
                             .batchPolicy(BatchPolicy.builder().capacity(batchSize)
                                     .timeThreshold(Duration.ofSeconds(batchThresholdS))
                                     .build())
                             .retryPolicy(
                                     new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                            .maxThreads(getNbThreads())
                             .salted()
                             .build());
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    private short getNbThreads() {
+        if (nbThreads != null) {
+            return nbThreads.shortValue();
+        }
+        return 0;
     }
 
     protected String getRepositoryName() {

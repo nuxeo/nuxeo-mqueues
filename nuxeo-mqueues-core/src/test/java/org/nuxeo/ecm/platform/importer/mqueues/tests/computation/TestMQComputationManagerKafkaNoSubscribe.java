@@ -16,27 +16,24 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
+package org.nuxeo.ecm.platform.importer.mqueues.tests.computation;
 
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
+
+import java.util.Properties;
 
 /**
- * @since 9.1
+ * Kafka test using manual assignment of topic/partitions
+ * @since 9.2
  */
-public abstract class AbstractConsumer<M extends Message> implements Consumer<M> {
-
-    private final String consumerId;
-
-    public AbstractConsumer(String consumerId) {
-        this.consumerId = consumerId;
-    }
-
-    public String getConsumerId() {
-        return consumerId;
-    }
+public class TestMQComputationManagerKafkaNoSubscribe extends TestMQComputationManagerKafka {
 
     @Override
-    public void close() throws Exception {
-
+    protected Properties getConsumerProps() {
+        Properties ret = (Properties) TestMQueueKafka.getConsumerProps().clone();
+        ret.put(KafkaMQManager.DISABLE_SUBSCRIBE_PROP, "true");
+        return ret;
     }
+
 }

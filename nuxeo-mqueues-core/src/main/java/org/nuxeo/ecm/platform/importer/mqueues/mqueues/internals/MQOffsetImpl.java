@@ -19,30 +19,38 @@
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals;
 
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 
 /**
  * @since 9.1
  */
 public class MQOffsetImpl implements MQOffset {
-    private final long offset;
-    private final int queue;
+    protected MQPartition partition;
+    protected final long offset;
 
-    public MQOffsetImpl(int queue, long offset) {
-        this.queue = queue;
+    public MQOffsetImpl(MQPartition partition, long offset) {
+        this.partition = partition;
         this.offset = offset;
     }
 
-    public long getOffset() {
-        return offset;
+    public MQOffsetImpl(String name, int partition, long offset) {
+        this.partition = MQPartition.of(name, partition);
+        this.offset = offset;
     }
 
-    public int getQueue() {
-        return queue;
+    @Override
+    public MQPartition partition() {
+        return partition;
+    }
+
+    @Override
+    public long offset() {
+        return offset;
     }
 
     @Override
     public String toString() {
-        return String.format("MQOffsetImpl(%d, %d)", queue, offset);
+        return String.format("%s:+%d", partition, offset);
     }
 
     @Override
@@ -52,14 +60,14 @@ public class MQOffsetImpl implements MQOffset {
 
         MQOffsetImpl offsetImpl = (MQOffsetImpl) o;
 
-        if (queue != offsetImpl.queue) return false;
+        if (partition.equals(offsetImpl.partition)) return false;
         return offset == offsetImpl.offset;
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (offset ^ (offset >>> 32));
-        result = 31 * result + queue;
+        int result = partition != null ? partition.hashCode() : 0;
+        result = 31 * result + (int) (offset ^ (offset >>> 32));
         return result;
     }
 
@@ -70,8 +78,8 @@ public class MQOffsetImpl implements MQOffset {
             throw new IllegalArgumentException("Can not compare offsets with different classes");
         }
         MQOffsetImpl offsetImpl = (MQOffsetImpl) o;
-        if (queue != offsetImpl.queue) {
-            throw new IllegalArgumentException("Can not compare offsets from different queues");
+        if (partition.equals(offsetImpl.partition)) {
+            throw new IllegalArgumentException("Can not compare offsets from different partitions");
         }
         return (int) (offset - offsetImpl.offset);
     }

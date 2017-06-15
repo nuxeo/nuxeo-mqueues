@@ -51,7 +51,7 @@ public class TestMQComputationManagerChronicle extends TestComputationManager {
     }
 
     @Override
-    public ComputationManager getManager(MQManager<Record> streams, Topology topology, Settings settings) {
-        return new MQComputationManager(streams, topology, settings);
+    public ComputationManager getManager(MQManager<Record> mqManager, Topology topology, Settings settings) {
+        return new MQComputationManager(mqManager, topology, settings);
     }
 }

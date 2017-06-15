@@ -29,11 +29,10 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.api.Framework;
@@ -66,6 +65,9 @@ public class RandomBlobProducers {
     @Param(name = "mqName", required = false)
     protected String mqName;
 
+    @Param(name = "mqSize", required = false)
+    protected Integer mqSize;
+
     @Param(name = "kafkaConfig", required = false)
     protected String kafkaConfig;
 
@@ -74,9 +76,9 @@ public class RandomBlobProducers {
     public void run() {
         checkAccess(ctx);
         try (MQManager<BlobMessage> manager = getManager()) {
-            MQueue<BlobMessage> mq = manager.openOrCreate(getMQName(), nbThreads);
-            ProducerPool<BlobMessage> producers = new ProducerPool<>(mq,
-                    new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads);
+            manager.createIfNotExists(getMQName(), getMQSize());
+            ProducerPool<BlobMessage> producers = new ProducerPool<>(getMQName(), manager,
+                    new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads.shortValue());
             producers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -88,6 +90,13 @@ public class RandomBlobProducers {
             return mqName;
         }
         return DEFAULT_MQ_NAME;
+    }
+
+    protected int getMQSize() {
+        if (mqSize != null && mqSize > 0) {
+            return mqSize;
+        }
+        return nbThreads;
     }
 
     protected MQManager<BlobMessage> getManager() {

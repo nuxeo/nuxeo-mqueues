@@ -16,22 +16,20 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern;
+package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
-import org.junit.After;
 import org.junit.Assume;
 import org.junit.BeforeClass;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
+import org.nuxeo.runtime.test.runner.LocalDeploy;
+
+import java.util.Map;
 
 /**
  * @since 9.2
  */
-public class TestPatternQueuingKafka extends TestPatternQueuing {
-    private String prefix;
+@LocalDeploy("org.nuxeo.ecm.mqueues.kafka.tests.contrib:test-kafka-config-contrib.xml")
+public class TestAutomationKafkaNoSubscribe extends TestAutomation {
 
     @BeforeClass
     public static void assumeKafkaEnabled() {
@@ -39,18 +37,7 @@ public class TestPatternQueuingKafka extends TestPatternQueuing {
     }
 
     @Override
-    public MQManager<IdMessage> createManager() throws Exception {
-        if (prefix == null) {
-            prefix = TestMQueueKafka.getPrefix();
-        }
-        return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
-                TestMQueueKafka.getProducerProps(),
-                TestMQueueKafka.getConsumerProps());
+    public void addExtraParams(Map<String, Object> params) {
+        params.put("kafkaConfig", "no-subscribe");
     }
-
-    @After
-    public void resetPrefix() {
-        prefix = null;
-    }
-
 }

@@ -20,60 +20,65 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 
 import java.io.Externalizable;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collection;
 
 /**
- * Manage {@link MQueue} access.
+ * Manage MQueue and give access to appender and tailers.
  *
  * @since 9.2
  */
-public abstract class MQManager<M extends Externalizable> implements AutoCloseable {
-    private final Map<String, MQueue<M>> mqueues = new ConcurrentHashMap<>();
+public interface MQManager<M extends Externalizable> extends AutoCloseable {
 
     /**
-     * Check if a MQueue exists.
+     * Returns true if a MQueue with this {@code name} exists.
      */
-    public abstract boolean exists(String name);
+    boolean exists(String name);
 
     /**
-     * Open an existing MQueue.
+     * Create a new MQueue with {@code size} partitions, only if it does not exists.
+     * Returns true it the MQueue has been created.
      */
-    public abstract MQueue<M> open(String name);
+    boolean createIfNotExists(String name, int size);
 
     /**
-     * Create a new MQueue.
+     * Try to delete a MQueue.
+     * Returns true if successfully deleted, might not be possible depending on the implementation.
      */
-    public abstract MQueue<M> create(String name, int size);
+    boolean delete(String name);
 
     /**
-     * Open an existing MQueue or create it.
+     * Get an appender for the MQueue named {@code name}.
+     * An appender is thread safe.
      */
-    public synchronized MQueue<M> openOrCreate(String name, int size) {
-        if (!mqueues.containsKey(name)) {
-            if (exists(name)) {
-                mqueues.put(name, open(name));
-            } else {
-                mqueues.put(name, create(name, size));
-            }
-        }
-        return get(name);
-    }
+    MQAppender<M> getAppender(String name);
 
     /**
-     * Getter for a MQueue created or opened.
+     * Create a tailer for a consumer {@code group} and assign a single {@code partition}.
+     * A tailer is NOT thread safe.
      */
-    public MQueue<M> get(String name) {
-        return mqueues.get(name);
-    }
+    MQTailer<M> createTailer(String group, MQPartition partition);
 
+    /**
+     * Create a tailer for a consumer {@code group} and assign multiple {@code partitions}.
+     * A tailer is NOT thread safe.
+     */
+    MQTailer<M> createTailer(String group, Collection<MQPartition> partitions);
 
-    @Override
-    public void close() throws Exception {
-        // TODO: check if we want this behavior, closing the manager close all MQueue
-        for (MQueue<M> mq : mqueues.values()) {
-            mq.close();
-        }
-        mqueues.clear();
-    }
+    /**
+     * Returns {@code true} if the MQueue {@link #subscribe} method is supported.
+     */
+    boolean supportSubscribe();
+
+    /**
+     * Create a tailer for a consumer {@code group} and subscribe to multiple MQueues.
+     * The partitions assignment is done dynamically depending on the subscribers.
+     * The partitions can change during tailers life, this is called a rebalancing.
+     * A listener can be used to be notified on assignment changes.
+     * <p/>
+     * A tailer is NOT thread safe.
+     * <p/>
+     * You should not mix {@link #createTailer} and {@code subscribe} usage using the same {@code group}.
+     */
+    MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener);
+
 }

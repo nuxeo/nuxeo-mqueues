@@ -30,7 +30,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.mqueue.MQComputationManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
@@ -62,7 +62,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
     protected Topology topology;
     protected Settings settings;
     protected MQComputationManager manager;
-    protected MQManager<Record> streams;
+    protected MQManager<Record> mqManager;
     protected final Set<String> streamIds = new HashSet<>();
 
     protected abstract MQManager<Record> initStream();
@@ -111,13 +111,13 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
         // TODO: may be choose a key with a transaction id so all jobs from the same tx are ordered ?
         String key = work.getId();
-        MQueue<Record> stream = streams.get(getStreamForCategory(work.getCategory()));
-        if (stream == null) {
+        MQAppender<Record> appender = mqManager.getAppender(getStreamForCategory(work.getCategory()));
+        if (appender == null) {
             log.error(String.format("Not scheduled work, unknown category: %s, mapped to %s", work.getCategory(),
                     getStreamForCategory(work.getCategory())));
             return;
         }
-        stream.append(key, Record.of(key, ComputationWork.serialize(work)));
+        appender.append(key, Record.of(key, ComputationWork.serialize(work)));
     }
 
     public String getStreamForCategory(String category) {
@@ -134,7 +134,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
     }
 
     @Override
-    public void applicationStarted(ComponentContext context) {
+    public void start(ComponentContext context) {
         init();
     }
 
@@ -149,7 +149,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
             }
             supplantWorkManagerImpl();
             initTopology();
-            this.streams = initStream();
+            this.mqManager = initStream();
             startComputation();
             started = true;
             log.info("Initialized");
@@ -186,7 +186,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
 
     protected void startComputation() {
-        this.manager = new MQComputationManager(streams, topology, settings);
+        this.manager = new MQComputationManager(mqManager, topology, settings);
         manager.start();
     }
 
@@ -194,7 +194,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
         Topology.Builder builder = Topology.builder();
         workQueueConfig.getQueueIds().forEach(item -> builder.addComputation(() -> new ComputationWork(item), Collections.singletonList("i1:" + item)));
         this.topology = builder.build();
-        this.settings = new Settings(DEFAULT_CONCURRENCY);
+        this.settings = new Settings(DEFAULT_CONCURRENCY, DEFAULT_CONCURRENCY);
         workQueueConfig.getQueueIds().forEach(item -> settings.setConcurrency(item, workQueueConfig.get(item).getMaxThreads()));
     }
 
@@ -210,9 +210,9 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
         log.info("Shutdown WorkManager in " + timeUnit.toMillis(timeout) + " ms");
         boolean ret = manager.stop(Duration.ofMillis(timeUnit.toMillis(timeout)));
         try {
-            streams.close();
+            mqManager.close();
         } catch (Exception e) {
-            log.error("Error while closing WorkManager streams", e);
+            log.error("Error while closing WorkManager mqManager", e);
         }
         return ret;
     }

@@ -23,14 +23,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.MQOffsetImpl;
 
 import java.io.ByteArrayOutputStream;
@@ -51,8 +49,8 @@ import java.util.concurrent.Future;
  *
  * @since 9.2
  */
-public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
-    private static final Log log = LogFactory.getLog(KafkaMQueue.class);
+public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> {
+    private static final Log log = LogFactory.getLog(KafkaMQAppender.class);
     private final String topic;
     private final Properties consumerProps;
     private final Properties producerProps;
@@ -61,49 +59,24 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
     // keep track of created tailers to make sure they are closed
     private final ConcurrentLinkedQueue<KafkaMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
     private final String name;
+    private boolean closed;
 
-    static public <M extends Externalizable> KafkaMQueue<M> open(String topic, String name, Properties producerProperties, Properties consumerProperties) {
-        return new KafkaMQueue<>(topic, name, producerProperties, consumerProperties);
+    static public <M extends Externalizable> KafkaMQAppender<M> open(String topic, String name, Properties producerProperties, Properties consumerProperties) {
+        return new KafkaMQAppender<>(topic, name, producerProperties, consumerProperties);
     }
 
-    private KafkaMQueue(String topic, String name, Properties producerProperties, Properties consumerProperties) {
+    private KafkaMQAppender(String topic, String name, Properties producerProperties, Properties consumerProperties) {
         this.topic = topic;
         this.name = name;
-        this.producerProps = normalizeProducerProperties(producerProperties);
-        this.consumerProps = normalizeConsumerProperties(consumerProperties);
+        this.producerProps = producerProperties;
+        this.consumerProps = consumerProperties;
         this.producer = new KafkaProducer<>(this.producerProps);
         this.size = producer.partitionsFor(topic).size();
-    }
-
-    private Properties normalizeConsumerProperties(Properties consumerProperties) {
-        Properties ret;
-        if (consumerProperties != null) {
-            ret = (Properties) consumerProperties.clone();
-        } else {
-            ret = new Properties();
-        }
-        ret.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
-        ret.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesDeserializer");
-        ret.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-        ret.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
-        return ret;
-    }
-
-    private Properties normalizeProducerProperties(Properties producerProperties) {
-        Properties ret;
-        if (producerProperties != null) {
-            ret = (Properties) producerProperties.clone();
-        } else {
-            ret = new Properties();
-        }
-        ret.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
-        ret.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesSerializer");
-        return ret;
+        log.debug(String.format("Created appender: %s on topic: %s with %d partitions", name, topic, size));
     }
 
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -117,21 +90,27 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
     }
 
     @Override
-    public MQOffset append(int queue, Externalizable message) {
+    public MQOffset append(int partition, Externalizable message) {
         Bytes value = Bytes.wrap(messageAsByteArray(message));
-        ProducerRecord<String, Bytes> record = new ProducerRecord<>(topic, queue, Integer.toString(queue), value);
-        Future<RecordMetadata> result = producer.send(record);
-        RecordMetadata ret;
+        String key = String.valueOf(partition);
+        ProducerRecord<String, Bytes> record = new ProducerRecord<>(topic, partition, key, value);
+        Future<RecordMetadata> future = producer.send(record);
+        RecordMetadata result;
         try {
-            ret = result.get();
-        } catch (InterruptedException | ExecutionException e) {
+            result = future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Unable to send record: " + record, e);
+        } catch (ExecutionException e) {
             throw new RuntimeException("Unable to send record: " + record, e);
         }
+        MQOffset ret = new MQOffsetImpl(name, partition, result.offset());
         if (log.isDebugEnabled()) {
             int len = record.value().get().length;
-            log.debug("append to " + topic + ":" + queue + ":+" + ret.offset() + ", msg: " + message + " length: " + len);
+            log.debug(String.format("append to %s-%02d:+%d, len: %d, key: %s, value: %s", name,
+                    partition, ret.offset(), len, key, message));
         }
-        return new MQOffsetImpl(queue, ret.offset());
+        return ret;
     }
 
     private byte[] messageAsByteArray(Externalizable message) {
@@ -147,21 +126,14 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
     }
 
     @Override
-    public MQTailer<M> createTailer(int queue, String nameSpace) {
-        KafkaMQTailer ret = new KafkaMQTailer<>(name, topic, queue, nameSpace,
-                (Properties) consumerProps.clone());
-        tailers.add(ret);
-        return ret;
-    }
-
-    @Override
-    public boolean waitFor(MQOffset offset, String nameSpace, Duration timeout) throws InterruptedException {
+    public boolean waitFor(MQOffset offset, String group, Duration timeout) throws InterruptedException {
         boolean ret = false;
-        long offsetPosition = ((MQOffsetImpl) offset).getOffset();
-        int partition = ((MQOffsetImpl) offset).getQueue();
-        TopicPartition topicPartition = new TopicPartition(topic, partition);
+        if (!name.equals(offset.partition().name())) {
+            throw new IllegalArgumentException(name + " can not wait for an offset of a different MQueue: " + offset);
+        }
+        TopicPartition topicPartition = new TopicPartition(topic, offset.partition().partition());
         try {
-            ret = isProcessed(nameSpace, topicPartition, offsetPosition);
+            ret = isProcessed(group, topicPartition, offset.offset());
             if (ret) {
                 return true;
             }
@@ -170,15 +142,19 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
             final long delay = Math.min(100, timeoutMs);
             while (!ret && System.currentTimeMillis() < deadline) {
                 Thread.sleep(delay);
-                ret = isProcessed(nameSpace, topicPartition, offsetPosition);
+                ret = isProcessed(group, topicPartition, offset.offset());
             }
             return ret;
         } finally {
             if (log.isDebugEnabled()) {
-                log.debug("waitFor " + topicPartition.topic() + ":" + topicPartition.partition() + "/" + nameSpace
-                        + ":+" + offsetPosition + " returns: " + ret);
+                log.debug("waitFor " + offset + "/" + group + " returns: " + ret);
             }
         }
+    }
+
+    @Override
+    public boolean closed() {
+        return closed;
     }
 
     private boolean isProcessed(String group, TopicPartition topicPartition, long offset) {
@@ -206,6 +182,7 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
 
     @Override
     public void close() throws Exception {
+        log.debug("Closing appender: " + name);
         tailers.stream().filter(Objects::nonNull).forEach(tailer -> {
             try {
                 tailer.close();
@@ -218,5 +195,6 @@ public class KafkaMQueue<M extends Externalizable> implements MQueue<M> {
             producer.close();
             producer = null;
         }
+        closed = true;
     }
 }

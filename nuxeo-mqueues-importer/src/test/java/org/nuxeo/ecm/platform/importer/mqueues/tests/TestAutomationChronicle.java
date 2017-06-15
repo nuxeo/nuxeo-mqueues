@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+ * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
+package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
+import java.util.Map;
 
 /**
- * @since 9.1
+ * @since 9.2
  */
-public interface ConsumerFactory<M extends Message> {
+public class TestAutomationChronicle extends TestAutomation {
 
-    /**
-     * @param consumerId the consumer identifier
-     */
-    Consumer<M> createConsumer(String consumerId);
+    @Override
+    public void addExtraParams(Map<String, Object> params) {
+
+    }
 }

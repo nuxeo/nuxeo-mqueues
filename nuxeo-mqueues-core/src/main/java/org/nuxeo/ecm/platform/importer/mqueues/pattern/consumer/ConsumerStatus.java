@@ -28,7 +28,7 @@ import java.util.List;
  * @since 9.1
  */
 public class ConsumerStatus {
-    public final int consumer;
+    public final String consumerId;
     public final long startTime;
     public final long stopTime;
     public final long accepted;
@@ -37,8 +37,8 @@ public class ConsumerStatus {
     public final long batchCommit;
     public final boolean fail;
 
-    public ConsumerStatus(int consumer, long accepted, long committed, long batchCommit, long batchFailure, long startTime, long stopTime, boolean fail) {
-        this.consumer = consumer;
+    public ConsumerStatus(String consumerId, long accepted, long committed, long batchCommit, long batchFailure, long startTime, long stopTime, boolean fail) {
+        this.consumerId = consumerId;
         this.accepted = accepted;
         this.committed = committed;
         this.batchCommit = batchCommit;
@@ -55,8 +55,8 @@ public class ConsumerStatus {
         }
         double elapsed = (stopTime - startTime) / 1000.;
         double mps = (elapsed != 0) ? committed / elapsed : 0.0;
-        return String.format("Consumer %02d status: accepted (include retries): %d, committed: %d, batch: %d, batchFailure: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
-                consumer, accepted, committed, batchCommit, batchFailure, elapsed, mps);
+        return String.format("Consumer %s status: accepted (include retries): %s, committed: %d, batch: %d, batchFailure: %d, elapsed: %.2fs, throughput: %.2f msg/s.",
+                consumerId, accepted, committed, batchCommit, batchFailure, elapsed, mps);
     }
 
     static String toString(List<ConsumerStatus> stats) {

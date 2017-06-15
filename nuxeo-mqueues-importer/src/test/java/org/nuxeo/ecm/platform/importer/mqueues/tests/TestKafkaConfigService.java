@@ -47,7 +47,7 @@ public class TestKafkaConfigService {
         KafkaConfigService service = Framework.getService(KafkaConfigService.class);
         assertNotNull(service);
         assertFalse(service.getConfigNames().isEmpty());
-        assertEquals(2, service.getConfigNames().size());
+        assertEquals(3, service.getConfigNames().size());
 
         String config1 = "default";
         assertEquals("localhost:2181", service.getZkServers(config1));

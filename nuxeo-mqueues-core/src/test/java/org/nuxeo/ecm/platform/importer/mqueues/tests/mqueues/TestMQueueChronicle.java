@@ -18,19 +18,19 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues;
 
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQueue;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
 
 import java.io.File;
-import java.time.Duration;
+import java.io.IOException;
+import java.nio.file.Path;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 
@@ -38,36 +38,41 @@ import static org.junit.Assert.fail;
  * @since 9.2
  */
 public class TestMQueueChronicle extends TestMQueue {
-    private final static Duration MIN_DURATION = Duration.ofMillis(1);
+    private Path basePath;
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    @Override
-    public Duration getMinDuration() {
-        return MIN_DURATION;
+    @After
+    public void resetBasePath() throws IOException {
+        basePath = null;
     }
 
     @Override
     public MQManager<IdMessage> createManager() throws Exception {
-        return new ChronicleMQManager<>(folder.newFolder().toPath());
+        if (basePath == null) {
+            basePath = folder.newFolder().toPath();
+        }
+        return new ChronicleMQManager<>(basePath);
     }
 
     @Test
-    public void openInvalidCQMQueue() throws Exception {
+    public void deleteInvalidPath() throws Exception {
         final int NB_QUEUES = 5;
-        String basePath;
-        try (MQueue<IdMessage> mQueue = createMQ(NB_QUEUES)) {
-            assertEquals(NB_QUEUES, mQueue.size());
-            basePath = ((ChronicleMQueue<IdMessage>) mQueue).getBasePath();
-        }
-        // add a file in the basePath
-        File aFile = new File(basePath, "foo.txt");
-        aFile.createNewFile();
 
-        // create a new mqueues but fails because it does not looks like a mqueues
-        try (MQueue<IdMessage> mQueue = createMQ(1)) {
-            fail("Create a mqueue on an existing folder with extra data is not allowed");
+        ChronicleMQManager<IdMessage> manager = (ChronicleMQManager<IdMessage>) createManager();
+        assertTrue(manager.createIfNotExists("foo", NB_QUEUES));
+        String basePath = manager.getBasePath();
+        assertTrue(manager.delete("foo"));
+
+        // recreate
+        assertTrue(manager.createIfNotExists("foo", NB_QUEUES));
+        // add a file in the basePath
+        File aFile = new File(basePath, "foo/foo.txt");
+        aFile.createNewFile();
+        try {
+            manager.delete("foo");
+            fail("Can not delete a mqueue with external data");
         } catch (IllegalArgumentException e) {
             // expected
         }

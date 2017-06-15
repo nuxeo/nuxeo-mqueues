@@ -56,7 +56,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
 @Deploy({"org.nuxeo.ecm.mqueues.importer", "org.nuxeo.ecm.automation.core", "org.nuxeo.ecm.core.io"})
-public class TestAutomation {
+public abstract class TestAutomation {
 
     @Inject
     CoreSession session;
@@ -67,9 +67,7 @@ public class TestAutomation {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    public void addExtraParams(Map<String, Object> params) {
-        // for overriding
-    }
+    public abstract void addExtraParams(Map<String, Object> params);
 
     @Test
     public void testBlobImport() throws Exception {
@@ -79,6 +77,7 @@ public class TestAutomation {
         Map<String, Object> params = new HashMap<>();
         params.put("nbBlobs", 100);
         params.put("nbThreads", nbThreads);
+        params.put("mqSize", 2 * nbThreads);
         addExtraParams(params);
         automationService.run(ctx, RandomBlobProducers.ID, params);
 
@@ -86,6 +85,7 @@ public class TestAutomation {
         params.clear();
         params.put("blobProviderName", "test");
         params.put("blobInfoPath", blobInfo.toString());
+        params.put("nbThreads", nbThreads);
         addExtraParams(params);
         automationService.run(ctx, BlobConsumers.ID, params);
 
@@ -136,6 +136,7 @@ public class TestAutomation {
         // 2. import blobs into the binarystore, saving blob infos into csv
         params.clear();
         params.put("blobProviderName", "test");
+        params.put("nbThreads", nbThreads);
         params.put("blobInfoPath", blobInfo.toString());
         addExtraParams(params);
         automationService.run(ctx, BlobConsumers.ID, params);
@@ -151,6 +152,7 @@ public class TestAutomation {
         // 4. import document into the repository
         params.clear();
         params.put("rootFolder", "/");
+        params.put("nbThreads", nbThreads);
         addExtraParams(params);
         automationService.run(ctx, DocumentConsumers.ID, params);
 
