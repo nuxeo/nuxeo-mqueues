@@ -87,7 +87,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
 
     @Override
     protected void afterCall(List<ConsumerStatus> ret) {
-        ret.forEach(log::warn);
+        ret.forEach(log::info);
         log.warn(ConsumerStatus.toString(ret));
     }
 

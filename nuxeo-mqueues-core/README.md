@@ -3,26 +3,25 @@ nuxeo-mqueues-core
 
 ## About
 
- This module implements an asynchronous message passing system called MQueue. 
- 
+ This module implements an asynchronous message passing system called MQueue.
+
  MQueue is used in different producer consumer patterns described below.
 
- This module has no dependency on Nuxeo framework to ease integration with third party.
+ This module has no dependency on Nuxeo framework to ease integration with third parties.
 
 ## Warning
 
   This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
-## MQueue 
+## MQueue
 
 ### Features
 
  A MQueue can be seen as an array of queues, MQueue stands for Multi Queue.
- A MQueue acts as a partitioned queue, queues that are part of a MQueue are called partitions.  
 
- To write to a MQueue a producer need to acquire an appender.
- 
- A producer is responsible for choosing which message to assign to which partition:
+ A MQueue acts as a partitioned queue, queues that are part of a MQueue are called __partitions__.
+
+ To write to a MQueue a producer need to acquire an __appender__. Theproducer is responsible for choosing which message to assign to which partition:
 
  * Using a round robin algorithm a producer can balance messages between partitions.
  * Using a shard key it can group message by partition following its own semantic.
@@ -30,27 +29,24 @@ nuxeo-mqueues-core
  There is no back pressure on producer because the partition are unbounded (persisted outside of JVM memory),
  so the producer is never blocked when appending a message.
 
- To read from a MQueue a consumer need to create a tailer. The tailer don't destroy messages while reading from a partition.
- Each partition of a MQueue is an ordered immutable sequence of messages. 
+ To read from a MQueue a consumer need to create a __tailer__. The tailer don't destroy messages while reading from a partition.
+ Each partition of a MQueue is an ordered immutable sequence of messages.
 
- A tailer read from assigned partitions and it is part of a consumer group. 
- The consumer group is a name space to store tailer positions.
- This way consumers can stop and resume processing without loosing messages. 
- Tailer can also read message from the beginning or end of its assigned partitions.
- There can be only one tailer assigned to a group/partition tuple.
- The maximum consumer concurrency for a group is fixed by the number of partitions of the MQueue (its size).
- 
- Of course it is possible to create different group of consumers that process concurrently 
- the same MQueue at their own speed.
+ A tailer read message from one or more assigned partitions. It belongs to a consumer __group__.
+ which is a name space to store its positions (__offsets__).
+ By saving (__commit__) its offsets a consumer group can stop and resume processing without loosing messages.
+ By default a Tailer will read from the last committed offset, but it can also read from the beginning or end of its assigned partitions.
+ The maximum consumer gropu concurrency is fixed by the number of partitions of the MQueue (its size).
 
- The tailer partition assignment can be static or dynamic.
- The dynamic assignment use a subscribe API, a tailer that subscribe or terminate will
-  trigger a rebalancing of the partitions assignments of the group. 
+ Of course it is possible to create different group of consumers that process concurrently the same MQueue at their own speed.
+
+ The assignment of partitions to a tailer can be static (manual assignment) or dynamic using the __subscribe__ API.
+ A new tailer that subscribes or terminates will trigger a partition rebalancing between the tailers of the consumer group.
 
 ### MQueue Implementations
 
 #### Chronicle Queue
- 
+
   [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is a high performance off-Heap queue implementation.
 
   Each partition of a MQueue is materialized as a Chronicle Queue.
@@ -58,31 +54,31 @@ nuxeo-mqueues-core
 
   This implementation is limited to a single node because the Chronicle Queue can not be distributed
   with the open source version.
-  
+
   The dynamic assignment is not supported, therefore there is no rebalancing to handle.
-  
+
   The queues are persisted on disk, at the moment there is no retention policy so everything is kept for ever until [NXP-22113](https://jira.nuxeo.com/browse/NXP-22113)
-  
-  
+
+
 #### Kafka
 
   [Kafka](http://kafka.apache.org/) is a distributed streaming app framework.
-  
+
   A MQueue is simply a topic, partitions have the same meaning.
-  
-  Offsets are managed manually and persisted in the `__consumer_offsets` internal topic. 
- 
-  The dynamic assignment is supported and needed to support distributed consumers.      
+
+  Offsets are managed manually and persisted in the `__consumer_offsets` internal topic.
+
+  The dynamic assignment is supported and needed to support distributed consumers.
 
 
 ## Producer/Consumer Patterns
 
 MQueue can be used as is and provides benefits of a solid asynchronous message passing system.
  For instance you can impl a work queue or pub/sub on it.
-  
-But some pattern are generic and this module comes with 2 main implementations:
+
+That being said this module comes with battery included for 2 interesting patterns:
 - A simple producer/consumer pattern that handle retry and batching
-- A computation stream pattern to combine producer/consumer into compex topology
+- A computation stream pattern, where we can compose producer/consumer into compex topology
 
 ### Simple producer/consumer pattern
 
@@ -133,7 +129,7 @@ See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxe
 
 
 ### Stream and Computations
- 
+
 This pattern is taken from [Google MillWheel](https://research.google.com/pubs/pub41378.html) and is implemented in [Concord.io](http://concord.io/docs/guides/architecture.html
 ) and not far from  [Kafka Stream Processor](https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/Processor.java).
 
@@ -142,7 +138,7 @@ Instead of message we have record that hold some specific fields like the key an
 The key is used to route the record. Records with the same key are always routed to the same computation instance.
 
 The computation is defined almost like in [concord](http://concord.io/docs/guides/concepts.html).
- 
+
 The Topology represent a DAG of computations, that can be executed using a ComputationManager.
 Computation read from 0 to n streams and write from 0 to n streams.
 
@@ -165,7 +161,7 @@ To build and run the tests, simply start the Maven build:
 ### Run Unit Tests with Kafka
 
  Test with kafka implementation rely on an assumption, if the Kafka cluster is not accessible tests are not launched.
- 
+
  The easiest way to run a Kafka cluster is using [docker-compose](https://docs.docker.com/compose/install/):
 
     cd ./kafka-docker/

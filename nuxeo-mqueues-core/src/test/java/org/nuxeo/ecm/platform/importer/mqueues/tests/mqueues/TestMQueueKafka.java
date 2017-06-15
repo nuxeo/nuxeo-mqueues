@@ -152,9 +152,9 @@ public class TestMQueueKafka extends TestMQueue {
                 try {
                     consumerRecord = consumerTailer.read(Duration.ofMillis(200));
                     if (consumerRecord == null) {
-                        log.warn("returns " + count);
-                        // if we don't commit a thread can have consume all messages and returns
-                        // before being rebalanced
+                        // log.warn("returns " + count);
+                        // if we don't commit a thread can consume all messages and returns
+                        // before being rebalanced, the others will then consume the same message
                         consumerTailer.commit();
                         // if we leave without closing rebalance will wait max.poll.interval before taking decision
                         consumerTailer.close();

@@ -201,9 +201,8 @@ public abstract class TestPatternQueuing {
         appender.append(0, IdMessage.of("foo"));
         // close the mq
 
-        log.warn("RESET ...  ----------------");
+        log.warn("Close the MQManager (errors expected)");
         resetManager();
-        log.warn("RESET DONE ----------------");
 
         appender = manager.getAppender(mqName);
         // open a new mq
