@@ -47,6 +47,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import static java.lang.Thread.currentThread;
+import static org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy.StartOffset.LAST_COMMITTED;
 
 /**
  * Read messages from a tailer and drive a consumer according to its policy.
@@ -83,9 +84,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         this.tailer = createTailer(manager, defaultAssignments);
         consumerId = tailer.toString();
         consumersCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumers"));
-        if (!manager.supportSubscribe()) {
-            setTailerPosition();
-        }
+        setTailerPosition(manager);
         log.debug("Consumer thread created tailing on: " + consumerId);
     }
 
@@ -146,7 +145,11 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         alreadySalted = true;
     }
 
-    private void setTailerPosition() {
+    private void setTailerPosition(MQManager<M> manager) {
+        ConsumerPolicy.StartOffset seekPosition = policy.getStartOffset();
+        if (manager.supportSubscribe() && seekPosition != LAST_COMMITTED) {
+            throw new UnsupportedOperationException("Tailer startOffset to " + seekPosition + " is not supported in subscribe mode");
+        }
         switch (policy.getStartOffset()) {
             case BEGIN:
                 tailer.toStart();
@@ -189,7 +192,9 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
                     throw t;
                 }
                 if (t instanceof MQRebalanceException) {
-                    // the current batch is rollback we continue with new tailer assignment
+                    log.info("Rebalance");
+                    // the current batch is rollback because of this exception
+                    // we continue with the new tailer assignment
                 } else if (execution.canRetryOn(t)) {
                     setBatchRetryPolicy();
                     tailer.toLastCommitted();
@@ -239,9 +244,11 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     private void commitBatch(BatchState state) {
         try (Timer.Context ignore = batchCommitTimer.time()) {
             consumer.commit();
-            log.warn("commitBatch " + state.getSize());
-            // System.out.println("commitBatch " + state.getSize());
             committedCounter.inc(state.getSize());
+            if (log.isDebugEnabled()) {
+                log.debug("Commit batch size: " + state.getSize() +
+                        ", total committed: " + committedCounter.getCount());
+            }
         }
     }
 
@@ -294,13 +301,13 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
 
     @Override
     public void onPartitionsRevoked(Collection<MQPartition> partitions) {
-        log.info("Partitions revoked: " + partitions);
+        // log.info("Partitions revoked: " + partitions);
     }
 
     @Override
     public void onPartitionsAssigned(Collection<MQPartition> partitions) {
         consumerId = tailer.toString();
-        log.error("Partitions reassigned: " + consumerId);
+        // log.error("Partitions assigned: " + consumerId);
         // partitions are opened on last committed by default
     }
 }

@@ -45,6 +45,8 @@ public class ComputationRecordCounter extends AbstractComputation {
     @Override
     public void init(ComputationContext context) {
         context.setTimer("sum", System.currentTimeMillis() + intervalMs);
+        count = 0;
+        lastWatermark = 0;
     }
 
     @Override

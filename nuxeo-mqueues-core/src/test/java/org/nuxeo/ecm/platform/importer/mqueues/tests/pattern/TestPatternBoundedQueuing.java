@@ -123,10 +123,9 @@ public abstract class TestPatternBoundedQueuing {
     @Test
     public void producerAndBuggyConsumers() throws Exception {
         final int NB_QUEUE = 12;
-        // ordered message producer requires nb_producer <= nb consumer
-        final short NB_PRODUCERS = NB_QUEUE;
-        final int NB_DOCUMENTS = 127; // getNbDocumentForBuggyConsumerTest();
-        // final int NB_DOCUMENTS = 499999;
+        final short NB_PRODUCERS = 10;
+        final short NB_CONSUMERS = 7;
+        final int NB_DOCUMENTS = 127;
         final int BATCH_SIZE = 13;
 
         manager.createIfNotExists(MQ_NAME, NB_QUEUE);
@@ -141,7 +140,7 @@ public abstract class TestPatternBoundedQueuing {
 
         // 2. Use the mq and run the consumers
         ConsumerPolicy consumerPolicy = ConsumerPolicy.builder().waitMessageTimeout(Duration.ofSeconds(10))
-                .maxThreads((short) 7)
+                .maxThreads((short) NB_CONSUMERS)
                 .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
                 .retryPolicy(new RetryPolicy().withMaxRetries(10000)).build();
         ConsumerPool<IdMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,

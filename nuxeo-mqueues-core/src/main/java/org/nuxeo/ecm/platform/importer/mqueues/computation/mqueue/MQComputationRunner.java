@@ -52,7 +52,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
     private static final long STARVING_TIMEOUT_MS = 1000;
     public static final Duration READ_TIMEOUT = Duration.ofMillis(25);
 
-    private final ComputationContextImpl context;
+    private ComputationContextImpl context;
     private final MQManager<Record> mqManager;
     private final ComputationMetadataMapping metadata;
     private final MQTailer<Record> tailer;
@@ -70,6 +70,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
     private long lastReadTime = System.currentTimeMillis();
     private long lastTimerExecution = 0;
     private String threadName;
+    private boolean needContextInitialize = false;
 
     @SuppressWarnings("unchecked")
     public MQComputationRunner(Supplier<Computation> supplier, ComputationMetadataMapping metadata,
@@ -335,21 +336,19 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
 
     @Override
     public void onPartitionsRevoked(Collection<MQPartition> partitions) {
-        if (partitions.isEmpty()) {
-            return;
-        }
-        try {
-            checkpoint();
-            setThreadName("rebalance revoked");
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
+        setThreadName("rebalance revoked");
     }
 
     @Override
     public void onPartitionsAssigned(Collection<MQPartition> partitions) {
         lastReadTime = System.currentTimeMillis();
         setThreadName("rebalance assigned");
+        // reset the context
+        this.context = new ComputationContextImpl(metadata);
+        log.debug(metadata.name + ": Init");
+        computation.init(context);
+        lastReadTime = System.currentTimeMillis();
+        lastTimerExecution = 0;
+        // what about watermark ?
     }
 }

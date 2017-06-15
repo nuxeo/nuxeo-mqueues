@@ -226,6 +226,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
             log.info("toLastCommitted offsets: " + group + ":" + msg);
         }
         lastCommittedOffsets.clear();
+        lastOffsets.clear();
         records.clear();
     }
 
@@ -360,6 +361,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
                 .collect(Collectors.toList());
         id = buildId(group, partitions);
         lastCommittedOffsets.clear();
+        lastOffsets.clear();
         records.clear();
         isRebalanced = true;
         log.info(String.format("Rebalance assigned: %s", partitions));

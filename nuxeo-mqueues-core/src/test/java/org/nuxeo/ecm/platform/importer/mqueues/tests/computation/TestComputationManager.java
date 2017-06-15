@@ -256,7 +256,8 @@ public abstract class TestComputationManager {
                 long start = System.currentTimeMillis();
                 log.info("RESUME computations");
                 manager.start();
-                Thread.sleep(50 + i * 10);
+                // must be greater than kafka heart beat ?
+                Thread.sleep(400 + i * 10);
                 log.info("KILL computations pool");
                 manager.shutdown();
                 long processed = readCounterFrom(streams, "output");

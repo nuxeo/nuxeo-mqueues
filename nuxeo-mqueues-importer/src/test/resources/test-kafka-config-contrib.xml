@@ -8,10 +8,12 @@
         <property name="bootstrap.servers">localhost:9092</property>
       </producerProperties>
       <consumerProperties>
-        <!--<property name="max.poll.records">30</property>-->
-        <property name="max.poll.interval.ms">30000</property>
-        <!--<property name="request.timeout.ms">20000</property>-->
         <property name="bootstrap.servers">localhost:9092</property>
+        <property name="request.timeout.ms">30000</property>
+        <property name="max.poll.interval.ms">20000</property>
+        <property name="session.timeout.ms">10000</property>
+        <property name="heartbeat.interval.ms">400</property>
+        <property name="max.poll.records">25</property>
       </consumerProperties>
     </kafkaConfig>
 
@@ -20,9 +22,13 @@
         <property name="bootstrap.servers">localhost:9092</property>
       </producerProperties>
       <consumerProperties>
-        <property name="bootstrap.servers">localhost:9092</property>
-        <property name="max.poll.interval.ms">30000</property>
         <property name="subscribe.disable">true</property>
+        <property name="bootstrap.servers">localhost:9092</property>
+        <property name="request.timeout.ms">30000</property>
+        <property name="max.poll.interval.ms">20000</property>
+        <property name="session.timeout.ms">10000</property>
+        <property name="heartbeat.interval.ms">400</property>
+        <property name="max.poll.records">25</property>
       </consumerProperties>
     </kafkaConfig>
 

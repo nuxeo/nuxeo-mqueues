@@ -55,12 +55,12 @@ public class ComputationContextImpl implements ComputationContext {
 
     @Override
     public void setState(String key, byte[] binaryValue) {
-
+        throw new UnsupportedOperationException("setState is not yet implemented");
     }
 
     @Override
     public byte[] getState(String key) {
-        return new byte[0];
+        throw new UnsupportedOperationException("getState is not yet implemented");
     }
 
     @Override

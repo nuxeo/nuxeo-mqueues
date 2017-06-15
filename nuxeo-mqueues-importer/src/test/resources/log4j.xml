@@ -62,7 +62,7 @@
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka">
-    <priority value="DEBUG" />
+    <priority value="INFO" />
   </category>
 
   <root>
