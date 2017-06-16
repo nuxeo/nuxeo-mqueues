@@ -66,7 +66,7 @@ public class ConsumerPolicy {
     private final String name;
     private final short maxThreads;
 
-    public ConsumerPolicy(Builder builder) {
+    public ConsumerPolicy(ConsumerPolicyBuilder builder) {
         batchPolicy = builder.batchPolicy;
         retryPolicy = builder.retryPolicy;
         skipFailure = builder.skipFailure;
@@ -113,92 +113,8 @@ public class ConsumerPolicy {
         return maxThreads;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public static ConsumerPolicyBuilder builder() {
+        return new ConsumerPolicyBuilder();
     }
 
-    public static class Builder {
-        private BatchPolicy batchPolicy = BatchPolicy.DEFAULT;
-        private RetryPolicy retryPolicy = NO_RETRY;
-        private boolean skipFailure = false;
-        private Duration waitMessageTimeout = Duration.ofSeconds(2);
-        private StartOffset startOffset = StartOffset.LAST_COMMITTED;
-        private boolean salted = false;
-        private String name;
-        private short maxThreads = 0;
-
-        protected Builder() {
-
-        }
-
-        public Builder batchPolicy(BatchPolicy policy) {
-            batchPolicy = policy;
-            return this;
-        }
-
-        public Builder retryPolicy(RetryPolicy policy) {
-            retryPolicy = policy;
-            return this;
-        }
-
-        /**
-         * Continue on next message even if the retry policy has failed.
-         */
-        public Builder continueOnFailure(boolean value) {
-            skipFailure = value;
-            return this;
-        }
-
-        /**
-         * Maximum consumer threads to use. The number of threads is limited by the size of the MQueue.
-         */
-        public Builder maxThreads(short maxThreads) {
-            this.maxThreads = maxThreads;
-            return this;
-        }
-
-        /**
-         * Consumer will stop if there is no more message after this timeout.
-         */
-        public Builder waitMessageTimeout(Duration duration) {
-            waitMessageTimeout = duration;
-            return this;
-        }
-
-        /**
-         * Consumer will wait for ever message.
-         */
-        public Builder waitMessageForEver() {
-            waitMessageTimeout = Duration.ofSeconds(Integer.MAX_VALUE);
-            return this;
-        }
-
-        /**
-         * Where to read the first message.
-         */
-        public Builder startOffset(StartOffset startOffset) {
-            this.startOffset = startOffset;
-            return this;
-        }
-
-        /**
-         * Consumer will wait some random time before start, to prevent wave of concurrency in batch processing.
-         */
-        public Builder salted() {
-            salted = true;
-            return this;
-        }
-
-        /**
-         * Consumer group name.
-         */
-        public Builder name(String name) {
-            this.name = name;
-            return this;
-        }
-
-        public ConsumerPolicy build() {
-            return new ConsumerPolicy(this);
-        }
-    }
 }

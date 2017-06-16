@@ -85,16 +85,17 @@ public class BlobConsumers {
     @OperationMethod
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
-        try (MQManager<BlobMessage> manager = getManager()) {
-            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
-                    new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
-                    ConsumerPolicy.builder()
-                            .name(ID)
-                            .batchPolicy(BatchPolicy.builder().capacity(batchSize)
-                                    .timeThreshold(Duration.ofSeconds(batchThresholdS)).build())
-                            .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
-                            .maxThreads(getNbThreads())
-                            .build());
+        ConsumerPolicy consumerPolicy = ConsumerPolicy.builder()
+                .name(ID)
+                .batchPolicy(BatchPolicy.builder().capacity(batchSize)
+                        .timeThreshold(Duration.ofSeconds(batchThresholdS)).build())
+                .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                .maxThreads(getNbThreads())
+                .build();
+        try (MQManager<BlobMessage> manager = getManager();
+             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
+                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
+                     consumerPolicy)) {
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);

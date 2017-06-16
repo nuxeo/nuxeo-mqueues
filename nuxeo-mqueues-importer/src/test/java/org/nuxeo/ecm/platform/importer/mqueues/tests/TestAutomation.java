@@ -153,6 +153,11 @@ public abstract class TestAutomation {
         params.clear();
         params.put("rootFolder", "/");
         params.put("nbThreads", nbThreads);
+        params.put("useBulkMode", true);
+        params.put("blockDefaultSyncListeners", true);
+        params.put("blockPostCommitListeners", true);
+        params.put("blockAsyncListeners", true);
+        params.put("blockIndexing", true);
         addExtraParams(params);
         automationService.run(ctx, DocumentConsumers.ID, params);
 

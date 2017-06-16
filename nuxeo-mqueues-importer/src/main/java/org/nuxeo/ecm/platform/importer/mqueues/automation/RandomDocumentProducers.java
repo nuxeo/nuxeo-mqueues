@@ -89,6 +89,7 @@ public class RandomDocumentProducers {
                         new RandomDocumentMessageProducerFactory(nbDocuments, lang, avgBlobSizeKB), nbThreads.shortValue());
             }
             producers.start().get();
+            producers.close();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

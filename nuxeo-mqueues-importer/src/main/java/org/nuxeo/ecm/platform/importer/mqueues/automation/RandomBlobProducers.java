@@ -77,9 +77,10 @@ public class RandomBlobProducers {
         checkAccess(ctx);
         try (MQManager<BlobMessage> manager = getManager()) {
             manager.createIfNotExists(getMQName(), getMQSize());
-            ProducerPool<BlobMessage> producers = new ProducerPool<>(getMQName(), manager,
-                    new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads.shortValue());
-            producers.start().get();
+            try (ProducerPool<BlobMessage> producers = new ProducerPool<>(getMQName(), manager,
+                    new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads.shortValue())) {
+                producers.start().get();
+            }
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

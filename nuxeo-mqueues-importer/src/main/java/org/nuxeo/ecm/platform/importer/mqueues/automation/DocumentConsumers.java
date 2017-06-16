@@ -34,6 +34,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQMana
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
@@ -81,23 +82,45 @@ public class DocumentConsumers {
     @Param(name = "kafkaConfig", required = false)
     protected String kafkaConfig;
 
+    @Param(name = "blockIndexing", required = false)
+    protected Boolean blockIndexing = false;
+
+    @Param(name = "blockAsyncListeners", required = false)
+    protected Boolean blockAsyncListeners = false;
+
+    @Param(name = "blockPostCommitListeners", required = false)
+    protected Boolean blockPostCommitListeners = false;
+
+    @Param(name = "blockDefaultSyncListeners", required = false)
+    protected Boolean blockSyncListeners = false;
+
+    @Param(name = "useBulkMode", required = false)
+    protected Boolean useBulkMode = false;
+
+
     @OperationMethod
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
         repositoryName = getRepositoryName();
-        try (MQManager<DocumentMessage> manager = getManager()) {
-            DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
+        ConsumerPolicy consumerPolicy = DocumentConsumerPolicy.builder()
+                .blockIndexing(blockIndexing)
+                .blockAsyncListeners(blockAsyncListeners)
+                .blockPostCommitListeners(blockPostCommitListeners)
+                .blockDefaultSyncListener(blockSyncListeners)
+                .useBulkMode(useBulkMode)
+                .name(ID)
+                .batchPolicy(BatchPolicy.builder().capacity(batchSize)
+                        .timeThreshold(Duration.ofSeconds(batchThresholdS))
+                        .build())
+                .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
+                .maxThreads(getNbThreads())
+                .salted()
+                .build();
+
+        try (MQManager<DocumentMessage> manager = getManager();
+             DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
-                    ConsumerPolicy.builder()
-                            .name(ID)
-                            .batchPolicy(BatchPolicy.builder().capacity(batchSize)
-                                    .timeThreshold(Duration.ofSeconds(batchThresholdS))
-                                    .build())
-                            .retryPolicy(
-                                    new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
-                            .maxThreads(getNbThreads())
-                            .salted()
-                            .build());
+                    consumerPolicy)) {
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
