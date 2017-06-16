@@ -103,13 +103,13 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomDo
 
 | Params| Description |
 | --- | --- |
-| nbDocuments | The number of documents to generate per producer thread |
-| nbThreads | The number of concurrent producer to run |
-| avgBlobSizeKB | The average blob size fo each file documents in KB |
-| lang | The locale used for the generated content, can be "fr_FR" or "en_US" |
-| mqName |  The name of the MQueue|
-| mqSize | The size of the MQueue which will fix the maximum number of consumer threads |
-| kafkaConfig | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `nbDocuments` | The number of documents to generate per producer thread |
+| `nbThreads` | The number of concurrent producer to run |
+| `avgBlobSizeKB` | The average blob size fo each file documents in KB |
+| `lang` | The locale used for the generated content, can be `fr_FR` or `en_US` |
+| `mqName` |  The name of the MQueue|
+| `mqSize` | The size of the MQueue which will fix the maximum number of consumer threads |
+| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
 
 2. Run consumers of document messages creating Nuxeo documents, the concurrency will match the previous nbThreads producers parameters
   ```
@@ -119,20 +119,20 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runDocument
 
 | Params| Description |
 | --- | --- |
-| rootFolder | The path of the Nuxeo container to import documents, this document must exists |
-| repositoryName | The repository name used to import documents | 
-| nbThreads | The number of concurrent consumer, should not be greater than the mqSize |
-| batchSize | The consumer commit documents every batch size |
-| batchThresholdS | The consumer commit documents if the transaction is longer that this threshold |
-| retryMax | Number of time a consumer retry to import in case of failure |
-| retryDelayS | Delay between retries |
-| mqName | The name of the MQueue to tail |
-| kafkaConfig | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
-| useBulkMode | Process asynchronous listeners in bulk mode |
-| blockIndexing| Do not index created document with Elasticsearch|
-| blockAsyncListeners | Do not process any asynchronous listeners|
-| blockPostCommitListeners | Do not process any post commit listeners |
-| blockDefaultSyncListeners| Disable some default synchronous listeners: dublincore, mimetype, notification, template, binarymetadata and uid |
+| `rootFolder` | The path of the Nuxeo container to import documents, this document must exists |
+| `repositoryName` | The repository name used to import documents | 
+| `nbThreads` | The number of concurrent consumer, should not be greater than the mqSize |
+| `batchSize` | The consumer commit documents every batch size |
+| `batchThresholdS` | The consumer commit documents if the transaction is longer that this threshold |
+| `retryMax` | Number of time a consumer retry to import in case of failure |
+| `retryDelayS` | Delay between retries |
+| `mqName` | The name of the MQueue to tail |
+| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `useBulkMode` | Process asynchronous listeners in bulk mode |
+| `blockIndexing` | Do not index created document with Elasticsearch|
+| `blockAsyncListeners` | Do not process any asynchronous listeners|
+| `blockPostCommitListeners` | Do not process any post commit listeners |
+| `blockDefaultSyncListeners` | Disable some default synchronous listeners: dublincore, mimetype, notification, template, binarymetadata and uid |
 
 ### 4 steps import: generate and import blobs then generate and import documents
 
@@ -144,13 +144,13 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomBl
 
 | Params| Description |
 | --- | --- |
-| nbBlobs | The number of blobs to generate per producer thread |
-| nbThreads | The number of concurrent producer to run |
-| avgBlobSizeKB | The average blob size fo each file documents in KB |
-| lang | The locale used for the generated content, can be "fr_FR" or "en_US" |
-| mqName |  The name of the MQueue|
-| mqSize | The size of the MQueue which will fix the maximum number of consumer threads |
-| kafkaConfig | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `nbBlobs` | The number of blobs to generate per producer thread |
+| `nbThreads` | The number of concurrent producer to run |
+| `avgBlobSizeKB` | The average blob size fo each file documents in KB |
+| `lang` | The locale used for the generated content, can be "fr_FR" or "en_US" |
+| `mqName` |  The name of the MQueue|
+| `mqSize` | The size of the MQueue which will fix the maximum number of consumer threads |
+| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
 
 2. Run consumers of blob messages importing into the Nuxeo binary store.
   ```
@@ -161,13 +161,13 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runBlobCons
 
 | Params| Description |
 | --- | --- |
-| blobProviderName | The name of the binary store blob provider |
-| blobInfoPath | The path to store blob information csv files, this will be used to link documents with blobs later |
-| nbThreads | The number of concurrent consumer, should not be greater than the mqSize |
-| retryMax | Number of time a consumer retry to import in case of failure |
-| retryDelayS | Delay between retries |
-| mqName | The name of the MQueue to tail |
-| kafkaConfig | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `blobProviderName` | The name of the binary store blob provider |
+| `blobInfoPath` | The path to store blob information csv files, this will be used to link documents with blobs later |
+| `nbThreads` | The number of concurrent consumer, should not be greater than the mqSize |
+| `retryMax` | Number of time a consumer retry to import in case of failure |
+| `retryDelayS` | Delay between retries |
+| `mqName` | The name of the MQueue to tail |
+| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
 
 3. Run producers of document messages which refer to produced blobs created in step 2
   ```
@@ -176,13 +176,13 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomDo
 ```
 | Params| Description |
 | --- | --- |
-| nbDocuments | The number of documents to generate per producer thread |
-| nbThreads | The number of concurrent producer to run |
-| blobInfoPath | The blob information csv files path generated by runBlobConsumers |
-| lang | The locale used for the generated content, can be "fr_FR" or "en_US" |
-| mqName |  The name of the MQueue|
-| mqSize | The size of the MQueue which will fix the maximum number of consumer threads |
-| kafkaConfig | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `nbDocuments` | The number of documents to generate per producer thread |
+| `nbThreads` | The number of concurrent producer to run |
+| `blobInfoPath` | The blob information csv files path generated by runBlobConsumers |
+| `lang` | The locale used for the generated content, can be "fr_FR" or "en_US" |
+| `mqName` |  The name of the MQueue|
+| `mqSize` | The size of the MQueue which will fix the maximum number of consumer threads |
+| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
 
 4. Run consumers of document messages
   ```
