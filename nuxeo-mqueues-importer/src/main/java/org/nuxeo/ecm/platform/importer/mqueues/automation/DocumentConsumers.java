@@ -120,8 +120,8 @@ public class DocumentConsumers {
                 getMQName(), repositoryName, rootFolder, (DocumentConsumerPolicy) consumerPolicy));
         try (MQManager<DocumentMessage> manager = getManager();
              DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
-                    new DocumentMessageConsumerFactory(repositoryName, rootFolder),
-                    consumerPolicy)) {
+                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
+                     consumerPolicy)) {
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);

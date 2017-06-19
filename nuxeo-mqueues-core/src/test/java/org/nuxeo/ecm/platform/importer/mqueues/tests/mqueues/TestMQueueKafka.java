@@ -17,10 +17,8 @@
 package org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues;
 
 
-import net.openhft.chronicle.threads.NamedThreadFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -175,7 +173,7 @@ public class TestMQueueKafka extends TestMQueue {
             private final AtomicInteger count = new AtomicInteger(0);
 
             @Override
-            public Thread newThread(@NotNull Runnable r) {
+            public Thread newThread(Runnable r) {
                 Thread t = new Thread(r, String.format("%s-%02d", "consumer", count.getAndIncrement()));
                 t.setUncaughtExceptionHandler((t1, e) -> log.error("Uncaught exception: " + e.getMessage(), e));
                 return t;
