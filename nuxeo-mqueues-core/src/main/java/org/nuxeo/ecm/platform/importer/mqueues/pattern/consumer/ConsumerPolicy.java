@@ -116,6 +116,7 @@ public class ConsumerPolicy {
     public static ConsumerPolicyBuilder builder() {
         return new ConsumerPolicyBuilder();
     }
+
     @Override
     public String toString() {
         return "ConsumerPolicy{" +
