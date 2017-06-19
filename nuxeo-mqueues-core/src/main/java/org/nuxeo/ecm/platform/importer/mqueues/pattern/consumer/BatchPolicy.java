@@ -78,4 +78,12 @@ public class BatchPolicy {
         }
 
     }
+
+    @Override
+    public String toString() {
+        return "BatchPolicy{" +
+                "capacity=" + capacity +
+                ", threshold=" + threshold +
+                '}';
+    }
 }

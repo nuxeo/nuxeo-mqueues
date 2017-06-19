@@ -116,7 +116,8 @@ public class DocumentConsumers {
                 .maxThreads(getNbThreads())
                 .salted()
                 .build();
-
+        log.warn(String.format("Import documents from mqueue: %s into: %s/%s, with policy: %s",
+                getMQName(), repositoryName, rootFolder, (DocumentConsumerPolicy) consumerPolicy));
         try (MQManager<DocumentMessage> manager = getManager();
              DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),

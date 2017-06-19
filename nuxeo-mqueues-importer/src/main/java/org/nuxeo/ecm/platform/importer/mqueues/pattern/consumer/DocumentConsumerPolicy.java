@@ -61,4 +61,15 @@ public class DocumentConsumerPolicy extends ConsumerPolicy {
         return new DocumentConsumerPolicyBuilder();
     }
 
+    @Override
+    public String toString() {
+        return "DocumentConsumerPolicy{" +
+                "blockIndexing=" + blockIndexing +
+                ", bulkMode=" + bulkMode +
+                ", blockAsyncListeners=" + blockAsyncListeners +
+                ", blockPostCommitListeners=" + blockPostCommitListeners +
+                ", blockDefaultSyncListeners=" + blockDefaultSyncListeners +
+                ", " + super.toString() +
+                '}';
+    }
 }

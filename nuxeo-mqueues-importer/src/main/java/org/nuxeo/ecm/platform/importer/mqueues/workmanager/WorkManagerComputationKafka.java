@@ -40,7 +40,7 @@ public class WorkManagerComputationKafka extends WorkManagerComputation {
     protected MQManager<Record> initStream() {
         KafkaConfigService service = Framework.getService(KafkaConfigService.class);
         String kafkaConfig = Framework.getProperty(NUXEO_WORKMANAGER_KAFKA_CONFIG_PROP, DEFAULT_CONFIG);
-        log.info("Init WorkManagerComputation with Kafka MQueue: " + kafkaConfig);
+        log.info("Init WorkManagerComputation with Kafka, using configuration: " + kafkaConfig);
         return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
                 service.getTopicPrefix(kafkaConfig),
                 service.getProducerProperties(kafkaConfig),

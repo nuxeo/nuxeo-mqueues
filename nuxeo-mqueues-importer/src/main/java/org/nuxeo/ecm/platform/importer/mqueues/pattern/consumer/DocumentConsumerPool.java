@@ -21,18 +21,18 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.event.EventServiceAdmin;
+import org.nuxeo.ecm.core.event.impl.EventListenerDescriptor;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
 import org.nuxeo.runtime.api.Framework;
 
 /**
- * Block Nuxeo listeners during import.
+ * Consumer Pool that block Nuxeo listeners during import.
  *
  * @since 9.1
  */
 public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
     private static final Log log = LogFactory.getLog(DocumentConsumerPool.class);
-    protected final DocumentConsumerPolicy policy;
     protected static final String NOTIF_LISTENER = "notificationListener";
     protected static final String MIME_LISTENER = "mimetypeIconUpdater";
     protected static final String INDEXING_LISTENER = "elasticSearchInlineListener";
@@ -40,41 +40,65 @@ public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
     protected static final String TPL_LISTENER = "templateCreator";
     protected static final String BINARY_LISTENER = "binaryMetadataSyncListener";
     protected static final String UID_LISTENER = "uidlistener";
+    protected boolean blockAsync;
+
+    protected final DocumentConsumerPolicy policy;
+    protected boolean blockPostCommit;
+    protected boolean bulkMode;
+    protected boolean listenerIndexingEnabled;
+    protected boolean listenerNotifEnabled;
+    protected boolean listenerMimeEnabled;
+    protected boolean listenerDublincoreEnabled;
+    protected boolean listenerTplEnabled;
+    protected boolean listenerBinaryEnabled;
+    protected boolean listenerUidEnabled;
 
     public DocumentConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy consumerPolicy) {
         super(mqName, manager, factory, consumerPolicy);
         EventServiceAdmin eventAdmin = Framework.getLocalService(EventServiceAdmin.class);
         policy = (DocumentConsumerPolicy) consumerPolicy;
         if (eventAdmin == null) {
+            log.info("Can not apply document policy there is no event service available");
             return;
         }
-        if (policy.blockIndexing()) {
-            eventAdmin.setListenerEnabledFlag(INDEXING_LISTENER, false);
-            log.info("Block ES indexing");
-        }
         if (policy.blockAsyncListeners()) {
+            blockAsync = eventAdmin.isBlockAsyncHandlers();
             eventAdmin.setBlockAsyncHandlers(true);
-            log.info("Block asynchronous listeners");
+            log.debug("Block asynchronous listeners");
         }
         if (policy.blockPostCommitListeners()) {
+            blockPostCommit = eventAdmin.isBlockSyncPostCommitHandlers();
             eventAdmin.setBlockSyncPostCommitHandlers(true);
-            log.info("Block post commit listeners");
-        }
-        if (policy.blockDefaultSyncListeners()) {
-            eventAdmin.setListenerEnabledFlag(NOTIF_LISTENER, false);
-            eventAdmin.setListenerEnabledFlag(MIME_LISTENER, false);
-            eventAdmin.setListenerEnabledFlag(DUBLICORE_LISTENER, false);
-            eventAdmin.setListenerEnabledFlag(TPL_LISTENER, false);
-            eventAdmin.setListenerEnabledFlag(BINARY_LISTENER, false);
-            eventAdmin.setListenerEnabledFlag(UID_LISTENER, false);
-            log.info("Block some default synchronous listener");
+            log.debug("Block post commit listeners");
         }
         if (policy.bulkMode()) {
+            bulkMode = eventAdmin.isBulkModeEnabled();
             eventAdmin.setBulkModeEnabled(true);
-            log.info("Enable bulk mode");
+            log.debug("Enable bulk mode");
+        }
+        if (policy.blockIndexing()) {
+            listenerIndexingEnabled = disableSyncListner(eventAdmin, INDEXING_LISTENER);
+            log.debug("Block ES indexing");
+        }
+        if (policy.blockDefaultSyncListeners()) {
+            listenerNotifEnabled = disableSyncListner(eventAdmin, NOTIF_LISTENER);
+            listenerMimeEnabled = disableSyncListner(eventAdmin, MIME_LISTENER);
+            listenerDublincoreEnabled = disableSyncListner(eventAdmin, DUBLICORE_LISTENER);
+            listenerTplEnabled = disableSyncListner(eventAdmin, TPL_LISTENER);
+            listenerBinaryEnabled = disableSyncListner(eventAdmin, BINARY_LISTENER);
+            listenerUidEnabled = disableSyncListner(eventAdmin, UID_LISTENER);
+            log.debug("Block some default synchronous listener");
         }
     }
 
+    protected boolean disableSyncListner(EventServiceAdmin eventAdmin, String name) {
+        EventListenerDescriptor desc = eventAdmin.getListenerList().getDescriptor(name);
+        if (desc != null && desc.isEnabled()) {
+            eventAdmin.setListenerEnabledFlag(name, false);
+            return true;
+        }
+        return false;
+    }
 
     @Override
     public void close() throws Exception {
@@ -84,30 +108,42 @@ public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
         if (eventAdmin == null) {
             return;
         }
-        if (policy.blockIndexing()) {
-            eventAdmin.setListenerEnabledFlag(INDEXING_LISTENER, true);
-            log.info("Unblock ES indexing");
-        }
         if (policy.blockAsyncListeners()) {
-            eventAdmin.setBlockAsyncHandlers(false);
-            log.info("Unblock asynchronous listeners");
+            eventAdmin.setBlockAsyncHandlers(blockAsync);
+            log.debug("Restore asynchronous listeners blocking state: " + blockAsync);
         }
         if (policy.blockPostCommitListeners()) {
-            eventAdmin.setBlockSyncPostCommitHandlers(false);
-            log.info("Unblock post commit listeners");
-        }
-        if (policy.blockDefaultSyncListeners()) {
-            eventAdmin.setListenerEnabledFlag(NOTIF_LISTENER, true);
-            eventAdmin.setListenerEnabledFlag(MIME_LISTENER, true);
-            eventAdmin.setListenerEnabledFlag(DUBLICORE_LISTENER, true);
-            eventAdmin.setListenerEnabledFlag(TPL_LISTENER, true);
-            eventAdmin.setListenerEnabledFlag(BINARY_LISTENER, true);
-            eventAdmin.setListenerEnabledFlag(UID_LISTENER, true);
-            log.info("Unblock some default synchronous listener");
+            eventAdmin.setBlockSyncPostCommitHandlers(blockPostCommit);
+            log.debug("Restore post commit listeners blocking state: " + blockPostCommit);
         }
         if (policy.bulkMode()) {
-            eventAdmin.setBulkModeEnabled(false);
-            log.info("Disable bulk mode");
+            eventAdmin.setBulkModeEnabled(bulkMode);
+            log.debug("Restore bulk mode: " + bulkMode);
+        }
+        if (policy.blockIndexing() && listenerIndexingEnabled) {
+            eventAdmin.setListenerEnabledFlag(INDEXING_LISTENER, true);
+            log.debug("Unblock ES indexing");
+        }
+        if (policy.blockDefaultSyncListeners()) {
+            if (listenerNotifEnabled) {
+                eventAdmin.setListenerEnabledFlag(NOTIF_LISTENER, true);
+            }
+            if (listenerMimeEnabled) {
+                eventAdmin.setListenerEnabledFlag(MIME_LISTENER, true);
+            }
+            if (listenerDublincoreEnabled) {
+                eventAdmin.setListenerEnabledFlag(DUBLICORE_LISTENER, true);
+            }
+            if (listenerTplEnabled) {
+                eventAdmin.setListenerEnabledFlag(TPL_LISTENER, true);
+            }
+            if (listenerBinaryEnabled) {
+                eventAdmin.setListenerEnabledFlag(BINARY_LISTENER, true);
+            }
+            if (listenerUidEnabled) {
+                eventAdmin.setListenerEnabledFlag(UID_LISTENER, true);
+            }
+            log.debug("Unblock some default synchronous listener");
         }
     }
 
