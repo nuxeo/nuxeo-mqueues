@@ -34,7 +34,9 @@ import org.nuxeo.runtime.api.Framework;
 public class WorkManagerComputationKafka extends WorkManagerComputation {
     protected static final Log log = LogFactory.getLog(WorkManagerComputationKafka.class);
     public static final String NUXEO_WORKMANAGER_KAFKA_CONFIG_PROP = "nuxeo.mqueue.work.kafka.config";
+    public static final String NUXEO_WORKMANAGER_KAFKA_OVERPROVISIONING_PROP = "nuxeo.mqueue.work.kafka.overprovisioning";
     public static final String DEFAULT_CONFIG = "default";
+    public static final String DEFAULT_OVERPROVISIONING = "3";
 
     @Override
     protected MQManager<Record> initStream() {
@@ -45,5 +47,11 @@ public class WorkManagerComputationKafka extends WorkManagerComputation {
                 service.getTopicPrefix(kafkaConfig),
                 service.getProducerProperties(kafkaConfig),
                 service.getConsumerProperties(kafkaConfig));
+    }
+
+    @Override
+    protected int getOverProvisioningFactor() {
+        return Integer.valueOf(Framework.getProperty(NUXEO_WORKMANAGER_KAFKA_OVERPROVISIONING_PROP,
+                DEFAULT_OVERPROVISIONING));
     }
 }

@@ -67,6 +67,8 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
     protected abstract MQManager<Record> initStream();
 
+    protected abstract int getOverProvisioningFactor();
+
     public class WorkScheduling implements Synchronization {
         public final Work work;
         public final Scheduling scheduling;
@@ -194,8 +196,17 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
         Topology.Builder builder = Topology.builder();
         workQueueConfig.getQueueIds().forEach(item -> builder.addComputation(() -> new ComputationWork(item), Collections.singletonList("i1:" + item)));
         this.topology = builder.build();
-        this.settings = new Settings(DEFAULT_CONCURRENCY, DEFAULT_CONCURRENCY);
+        this.settings = new Settings(DEFAULT_CONCURRENCY, getPartitions(DEFAULT_CONCURRENCY));
         workQueueConfig.getQueueIds().forEach(item -> settings.setConcurrency(item, workQueueConfig.get(item).getMaxThreads()));
+        workQueueConfig.getQueueIds().forEach(item -> settings.setPartitions(item, getPartitions(workQueueConfig.get(item).getMaxThreads())));
+    }
+
+    protected int getPartitions(int maxThreads) {
+        if (maxThreads == 1) {
+            // when the pool size is 1, we don't want any concurrency
+            return 1;
+        }
+        return getOverProvisioningFactor() * maxThreads;
     }
 
     @Override

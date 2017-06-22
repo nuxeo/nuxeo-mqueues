@@ -53,30 +53,31 @@ For instance by default the automation import will use a MQueue named `mq-doc` w
  
  To use the Kafka implementation you need to register Kafka configuration.
 
+```
+<?xml version="1.0"?>
+<component name="my.project.kafka.contrib">
 
-      <?xml version="1.0"?>
-      <component name="my.project.kafka.contrib">
-      
-        <extension target="org.nuxeo.ecm.mqueues.importer.kafka.service" point="kafkaConfig">
-          
-          <kafkaConfig name="default" zkServers="localhost:2181" topicPrefix="nuxeo-">
-            <producerProperties>
-              <property name="bootstrap.servers">localhost:9092</property>
-            </producerProperties>
-            <consumerProperties>
-              <property name="bootstrap.servers">localhost:9092</property>
-              <property name="request.timeout.ms">65000</property>
-              <property name="max.poll.interval.ms">60000</property>
-              <property name="session.timeout.ms">20000</property>
-              <property name="heartbeat.interval.ms">1000</property>
-              <property name="max.poll.records">50</property>
-            </consumerProperties>
-          </kafkaConfig>
-      
-        </extension>
-      </component>
+  <extension target="org.nuxeo.ecm.mqueues.importer.kafka.service" point="kafkaConfig">
+    
+    <kafkaConfig name="default" zkServers="localhost:2181" topicPrefix="nuxeo-">
+      <producerProperties>
+        <property name="bootstrap.servers">localhost:9092</property>
+      </producerProperties>
+      <consumerProperties>
+        <property name="bootstrap.servers">localhost:9092</property>
+        <property name="request.timeout.ms">65000</property>
+        <property name="max.poll.interval.ms">60000</property>
+        <property name="session.timeout.ms">20000</property>
+        <property name="heartbeat.interval.ms">1000</property>
+        <property name="max.poll.records">50</property>
+      </consumerProperties>
+    </kafkaConfig>
 
- Then you can refer to this configuration `default` to force MQueue to use the Kafka implementation.
+  </extension>
+</component>
+``` 
+
+Then you can refer to this configuration `default` to force MQueue to use the Kafka implementation.
 
 
 ## Producer/Consumer pattern with automation operations 
@@ -199,29 +200,46 @@ you can queue job in a MQueue without worries about the memory limits.
 
 To do so, add the following contribution to override the default WorkManagerImpl:
 
-    <?xml version="1.0"?>
-    <component name="my.project.work.service" version="1.0">
-    
-      <require>org.nuxeo.ecm.core.work.service</require>
-    
-      <service>
-        <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
-      </service>
-    
-      <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationChronicle" />
-      <!-- implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationKafka" /-->
-    
-      <extension-point name="queues">
-        <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />
-      </extension-point>
-    
-    </component>
+```
+<?xml version="1.0"?>
+<component name="my.project.work.service" version="1.0">
 
+  <require>org.nuxeo.ecm.core.work.service</require>
+
+  <service>
+    <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
+  </service>
+
+  <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationChronicle" />
+ 
+  <!-- <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationKafka" /> -->
+
+  <extension-point name="queues">
+    <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />
+  </extension-point>
+
+</component>
+```
 
 When using the Kafka implementation you need to contribute a configuration (see above).
 
 The Kafka default configuration used is named "default", you can choose another one using
 using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.config`.
+
+The goal when using Kafka is to scale horizontally, so that adding a Nuxeo node supports more load.
+To do so the number of partitions that fix the maximum concurrency must be greater than 
+the thread pool size of a single node. This strategy is called partition over provisioning. 
+
+By default there is an over provisioning factor of 3. For instance for a work pool of size 4,
+we have 12 partitions in the MQueue: 
+- With one node we have 4 threads, each reading from 3 partitions.
+- With 2 nodes we have 8 threads some reading from 2 or 1 partitions.
+- With 3 nodes we reach the maximum concurrency of 12 threads, each thread reading from one partition.
+- With more than 3 nodes some threads in the work pool will be unused, reducing the node load. 
+
+You can change the over provisioning factor using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.overprovisioning`.
+
+Note that work pool of size 1 are not over provisioned because we want any concurrency.
 
 ## Building
 

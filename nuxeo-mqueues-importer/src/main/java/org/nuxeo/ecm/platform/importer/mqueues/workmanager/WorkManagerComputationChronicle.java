@@ -43,4 +43,10 @@ public class WorkManagerComputationChronicle extends WorkManagerComputation {
                 + " and retention duration: " + retentionDuration);
         return new ChronicleMQManager<>(basePath, retentionDuration);
     }
+
+    @Override
+    protected int getOverProvisioningFactor() {
+        // Chronicle is for single node mode so we don't over provision partitions
+        return 1;
+    }
 }
