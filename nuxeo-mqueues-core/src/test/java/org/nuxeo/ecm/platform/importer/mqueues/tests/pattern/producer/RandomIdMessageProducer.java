@@ -18,7 +18,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern.producer;
  *     bdelbosc
  */
 
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.keyValueMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.AbstractProducer;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @since 9.1
  */
-public class RandomIdMessageProducer extends AbstractProducer<IdMessage> {
+public class RandomIdMessageProducer extends AbstractProducer<keyValueMessage> {
 
     private final long nbMessage;
     private final AtomicLong totalCount = new AtomicLong(0);
@@ -39,9 +39,9 @@ public class RandomIdMessageProducer extends AbstractProducer<IdMessage> {
     }
 
     @Override
-    public int getShard(IdMessage message, int shards) {
+    public int getPartition(keyValueMessage message, int partitions) {
         // random attribution
-        return ThreadLocalRandom.current().nextInt(0, shards);
+        return ThreadLocalRandom.current().nextInt(0, partitions);
     }
 
     @Override
@@ -50,8 +50,8 @@ public class RandomIdMessageProducer extends AbstractProducer<IdMessage> {
     }
 
     @Override
-    public IdMessage next() {
-        IdMessage ret = IdMessage.of("Random message " + totalCount.getAndIncrement());
+    public keyValueMessage next() {
+        keyValueMessage ret = keyValueMessage.of("Random message " + totalCount.getAndIncrement());
         count += 1;
         return ret;
     }

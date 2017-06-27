@@ -82,7 +82,7 @@ public class ComputationContextImpl implements ComputationContext {
     @Override
     public void produceRecord(String streamName, Record record) {
         String targetStream = metadata.map(streamName);
-        if (!metadata.ostreams.contains(targetStream)) {
+        if (!metadata.outputStreams().contains(targetStream)) {
             throw new IllegalArgumentException("Stream not registered as output: " + targetStream + ":" + streamName);
         }
         List<Record> records = streamRecords.getOrDefault(targetStream, new ArrayList<>());

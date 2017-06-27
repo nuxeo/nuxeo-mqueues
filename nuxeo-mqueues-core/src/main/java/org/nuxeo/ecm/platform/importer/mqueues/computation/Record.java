@@ -33,6 +33,7 @@ public class Record implements Externalizable {
     // Externalizable do rely on serialVersionUID
     static final long serialVersionUID = 20170529L;
     private static final EnumSet<Flag> DEFAULT_FLAG = EnumSet.of(Flag.DEFAULT);
+
     public long watermark;
     public EnumSet<Flag> flags;
     public String key;

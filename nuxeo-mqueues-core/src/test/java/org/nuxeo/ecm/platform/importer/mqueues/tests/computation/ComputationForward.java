@@ -40,7 +40,7 @@ public class ComputationForward extends AbstractComputation {
         if (inputs <= 0) {
             throw new IllegalArgumentException("Can not forward without inputs");
         }
-        ostreamList = new ArrayList<>(metadata.ostreams);
+        ostreamList = new ArrayList<>(metadata.outputStreams());
     }
 
     @Override

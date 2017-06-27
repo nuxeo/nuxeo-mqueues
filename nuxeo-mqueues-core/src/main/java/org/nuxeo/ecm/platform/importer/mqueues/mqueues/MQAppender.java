@@ -24,7 +24,7 @@ import java.util.Objects;
 
 /**
  * An appender is used to append message into a MQueue.
- * Implementation are thread safe.
+ * Implementations must be thread safe.
  *
  * @since 9.2
  */

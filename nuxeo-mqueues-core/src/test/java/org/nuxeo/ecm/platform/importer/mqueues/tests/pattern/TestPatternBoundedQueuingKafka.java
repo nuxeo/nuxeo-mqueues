@@ -22,7 +22,7 @@ import org.junit.BeforeClass;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.keyValueMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
 
 public class TestPatternBoundedQueuingKafka extends TestPatternBoundedQueuing {
@@ -35,7 +35,7 @@ public class TestPatternBoundedQueuingKafka extends TestPatternBoundedQueuing {
     }
 
     @Override
-    public MQManager<IdMessage> createManager() throws Exception {
+    public MQManager<keyValueMessage> createManager() throws Exception {
         prefix = TestMQueueKafka.getPrefix();
         return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),

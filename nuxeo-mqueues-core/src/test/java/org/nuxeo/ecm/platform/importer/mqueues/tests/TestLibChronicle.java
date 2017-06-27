@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.keyValueMessage;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,7 +75,7 @@ public class TestLibChronicle implements StoreFileListener {
     }
 
 
-    public IdMessage poll(ExcerptTailer tailer) {
+    public keyValueMessage poll(ExcerptTailer tailer) {
         try {
             return poll(tailer, 1, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
@@ -85,8 +85,8 @@ public class TestLibChronicle implements StoreFileListener {
         return null;
     }
 
-    public IdMessage poll(ExcerptTailer tailer, long timeout, TimeUnit unit) throws InterruptedException {
-        IdMessage ret = get(tailer);
+    public keyValueMessage poll(ExcerptTailer tailer, long timeout, TimeUnit unit) throws InterruptedException {
+        keyValueMessage ret = get(tailer);
         if (ret != null) {
             return ret;
         }
@@ -98,15 +98,15 @@ public class TestLibChronicle implements StoreFileListener {
         return ret;
     }
 
-    private IdMessage get(ExcerptTailer tailer) {
-        final IdMessage[] ret = new IdMessage[1];
-        if (tailer.readDocument(w -> ret[0] = (IdMessage) w.read("node").object())) {
+    private keyValueMessage get(ExcerptTailer tailer) {
+        final keyValueMessage[] ret = new keyValueMessage[1];
+        if (tailer.readDocument(w -> ret[0] = (keyValueMessage) w.read("node").object())) {
             return ret[0];
         }
         return null;
     }
 
-    public void put(ExcerptAppender app, IdMessage node) {
+    public void put(ExcerptAppender app, keyValueMessage node) {
         app.writeDocument(w -> w.write("node").object(node));
     }
 
@@ -117,10 +117,10 @@ public class TestLibChronicle implements StoreFileListener {
             ExcerptTailer tailer = queue.createTailer().toEnd();
             // assertEquals(TailerState.UNINITIALISED, tailer.state());
 
-            IdMessage srcNode = IdMessage.of("test");
+            keyValueMessage srcNode = keyValueMessage.of("test");
             put(app, srcNode);
 
-            IdMessage receiveNode = poll(tailer);
+            keyValueMessage receiveNode = poll(tailer);
             assertEquals(TailerState.FOUND_CYCLE, tailer.state());
             assertEquals(srcNode, receiveNode);
         }
@@ -129,8 +129,8 @@ public class TestLibChronicle implements StoreFileListener {
     @Test
     public void testReopenQueue() throws Exception {
         File path;
-        IdMessage srcNode = IdMessage.of("node1");
-        IdMessage srcNode2 = IdMessage.of("node2");
+        keyValueMessage srcNode = keyValueMessage.of("node1");
+        keyValueMessage srcNode2 = keyValueMessage.of("node2");
         ExcerptAppender app;
         ExcerptTailer tailer;
         long index;
@@ -152,7 +152,7 @@ public class TestLibChronicle implements StoreFileListener {
         // From end
         try (ChronicleQueue queue = openQueue(path)) {
             tailer = queue.createTailer().toEnd();
-            IdMessage receiveNode = poll(tailer, 50, TimeUnit.MILLISECONDS);
+            keyValueMessage receiveNode = poll(tailer, 50, TimeUnit.MILLISECONDS);
             assertNull(receiveNode);
         }
         // From index
@@ -167,8 +167,8 @@ public class TestLibChronicle implements StoreFileListener {
     @Test
     public void testRollingQueue() throws Exception {
         File path;
-        IdMessage srcNode = IdMessage.of("node1");
-        IdMessage srcNode2 = IdMessage.of("node2");
+        keyValueMessage srcNode = keyValueMessage.of("node1");
+        keyValueMessage srcNode2 = keyValueMessage.of("node2");
         ExcerptAppender app;
         ExcerptTailer tailer;
         long index = 0;
@@ -200,8 +200,8 @@ public class TestLibChronicle implements StoreFileListener {
 
     @Test
     public void testPollOnClosedQueue() throws Exception {
-        IdMessage srcNode = IdMessage.of("node1");
-        IdMessage srcNode2 = IdMessage.of("node2");
+        keyValueMessage srcNode = keyValueMessage.of("node1");
+        keyValueMessage srcNode2 = keyValueMessage.of("node2");
         ExcerptAppender app;
         ExcerptTailer tailer;
         try (ChronicleQueue queue = createQueue()) {
@@ -212,7 +212,7 @@ public class TestLibChronicle implements StoreFileListener {
             put(app, srcNode);
             put(app, srcNode2);
 
-            IdMessage receiveNode = poll(tailer);
+            keyValueMessage receiveNode = poll(tailer);
             assertEquals(srcNode, receiveNode);
         }
         assertTrue(tailer.queue().isClosed());
@@ -220,7 +220,7 @@ public class TestLibChronicle implements StoreFileListener {
         // the state does not help
         assertEquals(TailerState.FOUND_CYCLE, tailer.state());
         try {
-            IdMessage receiveNode = poll(tailer);
+            keyValueMessage receiveNode = poll(tailer);
             fail("Expecting a NPE on closed tailer");
         } catch (NullPointerException exception) {
             // here the queue has been closed the tailer is closed

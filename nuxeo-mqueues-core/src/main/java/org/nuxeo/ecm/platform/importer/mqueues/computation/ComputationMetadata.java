@@ -25,13 +25,25 @@ import java.util.stream.Collectors;
 
 public class ComputationMetadata {
     /** Globally unique identifier of the computation */
-    public final String name;
+    protected final String name;
 
     /** List of streams to subscribe this computation to. */
-    public final Set<String> istreams;
+    protected final Set<String> istreams;
 
     /** List of streams this computation may produce on */
-    public final Set<String> ostreams;
+    protected final Set<String> ostreams;
+
+    public String name() {
+        return name;
+    }
+
+    public Set<String> inputStreams() {
+        return istreams;
+    }
+
+    public Set<String> outputStreams() {
+        return ostreams;
+    }
 
     public ComputationMetadata(String name, Set<String> inputStreams, Set<String> outputStreams) {
         this.name = Objects.requireNonNull(name);

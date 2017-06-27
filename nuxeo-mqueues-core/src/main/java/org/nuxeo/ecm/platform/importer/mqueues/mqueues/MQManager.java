@@ -30,12 +30,12 @@ import java.util.Collection;
 public interface MQManager<M extends Externalizable> extends AutoCloseable {
 
     /**
-     * Returns true if a MQueue with this {@code name} exists.
+     * Returns {@code true} if a MQueue with this {@code name} exists.
      */
     boolean exists(String name);
 
     /**
-     * Create a new MQueue with {@code size} partitions, only if it does not exists.
+     * Creates a new MQueue with {@code size} partitions if the MQueue does not exists.
      * Returns true it the MQueue has been created.
      */
     boolean createIfNotExists(String name, int size);
@@ -71,7 +71,7 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
 
     /**
      * Create a tailer for a consumer {@code group} and subscribe to multiple MQueues.
-     * The partitions assignment is done dynamically depending on the subscribers.
+     * The partitions assignment is done dynamically depending on the number of subscribers.
      * The partitions can change during tailers life, this is called a rebalancing.
      * A listener can be used to be notified on assignment changes.
      * <p/>

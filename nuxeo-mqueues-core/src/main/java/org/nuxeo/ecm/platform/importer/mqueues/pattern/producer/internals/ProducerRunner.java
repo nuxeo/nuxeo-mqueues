@@ -90,7 +90,7 @@ public class ProducerRunner<M extends Message> implements Callable<ProducerStatu
                 message = producer.next();
                 setThreadName(message);
             }
-            mq.append(producer.getShard(message, mq.size()), message);
+            mq.append(producer.getPartition(message, mq.size()), message);
         }
     }
 

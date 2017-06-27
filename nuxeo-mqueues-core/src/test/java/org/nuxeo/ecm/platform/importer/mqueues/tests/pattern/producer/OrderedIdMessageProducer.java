@@ -18,7 +18,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests.pattern.producer;
  *     bdelbosc
  */
 
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.keyValueMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.AbstractProducer;
 
 /**
@@ -26,7 +26,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.AbstractProducer
  *
  * @since 9.1
  */
-public class OrderedIdMessageProducer extends AbstractProducer<IdMessage> {
+public class OrderedIdMessageProducer extends AbstractProducer<keyValueMessage> {
     private final long nbMessage;
     private long count = 0;
 
@@ -36,11 +36,11 @@ public class OrderedIdMessageProducer extends AbstractProducer<IdMessage> {
     }
 
     @Override
-    public int getShard(IdMessage message, int shards) {
-        if (getProducerId() > shards) {
+    public int getPartition(keyValueMessage message, int partitions) {
+        if (getProducerId() > partitions) {
             throw new IllegalStateException("You should use less producers than consumers to get ordering");
         }
-        return getProducerId() % shards;
+        return getProducerId() % partitions;
     }
 
     @Override
@@ -49,8 +49,8 @@ public class OrderedIdMessageProducer extends AbstractProducer<IdMessage> {
     }
 
     @Override
-    public IdMessage next() {
-        IdMessage ret = IdMessage.of(String.valueOf(count));
+    public keyValueMessage next() {
+        keyValueMessage ret = keyValueMessage.of(String.valueOf(count));
         count += 1;
         return ret;
     }

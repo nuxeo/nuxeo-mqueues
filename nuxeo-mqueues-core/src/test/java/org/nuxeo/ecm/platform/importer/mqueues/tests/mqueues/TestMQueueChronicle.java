@@ -25,7 +25,7 @@ import org.junit.rules.TemporaryFolder;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.keyValueMessage;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +51,7 @@ public class TestMQueueChronicle extends TestMQueue {
     }
 
     @Override
-    public MQManager<IdMessage> createManager() throws Exception {
+    public MQManager<keyValueMessage> createManager() throws Exception {
         if (basePath == null) {
             basePath = folder.newFolder().toPath();
         }
@@ -62,7 +62,7 @@ public class TestMQueueChronicle extends TestMQueue {
     public void deleteInvalidPath() throws Exception {
         final int NB_QUEUES = 5;
 
-        ChronicleMQManager<IdMessage> manager = (ChronicleMQManager<IdMessage>) createManager();
+        ChronicleMQManager<keyValueMessage> manager = (ChronicleMQManager<keyValueMessage>) createManager();
         assertTrue(manager.createIfNotExists("foo", NB_QUEUES));
         String basePath = manager.getBasePath();
         assertTrue(manager.delete("foo"));
@@ -83,14 +83,14 @@ public class TestMQueueChronicle extends TestMQueue {
     @Test
     public void testFileRetention() throws Exception {
 
-        IdMessage msg1 = IdMessage.of("id1");
-        IdMessage msg2 = IdMessage.of("id2");
-        IdMessage msg3 = IdMessage.of("id3");
-        IdMessage msg4 = IdMessage.of("id4");
+        keyValueMessage msg1 = keyValueMessage.of("id1");
+        keyValueMessage msg2 = keyValueMessage.of("id2");
+        keyValueMessage msg3 = keyValueMessage.of("id3");
+        keyValueMessage msg4 = keyValueMessage.of("id4");
 
-        ChronicleMQManager<IdMessage> manager = (ChronicleMQManager<IdMessage>) createManager();
+        ChronicleMQManager<keyValueMessage> manager = (ChronicleMQManager<keyValueMessage>) createManager();
         manager.createIfNotExists("foo", 1);
-        MQAppender<IdMessage> appender = manager.getAppender("foo");
+        MQAppender<keyValueMessage> appender = manager.getAppender("foo");
 
         File queueFile = new File(manager.getBasePath(), "foo/Q-00");
         assertEquals(0, queueFile.list().length);

@@ -26,21 +26,21 @@ import java.io.Externalizable;
  * @since 9.2
  */
 public class MQRecord<M extends Externalizable> {
-    protected M value;
+    protected M message;
     protected MQPartition partition;
     protected MQOffset offset;
 
-    public MQRecord(MQPartition partition, M value, MQOffset offset) {
+    public MQRecord(MQPartition partition, M message, MQOffset offset) {
         this.partition = partition;
-        this.value = value;
+        this.message = message;
         this.offset = offset;
     }
 
     /**
      * Returns the message.
      */
-    public M value() {
-        return value;
+    public M message() {
+        return message;
     }
 
     /**

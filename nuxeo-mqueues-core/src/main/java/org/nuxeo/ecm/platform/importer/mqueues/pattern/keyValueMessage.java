@@ -25,55 +25,60 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Simple message with an Id and data payload.
+ * Simple key value message.
  *
  * @since 9.1
  */
-public class IdMessage implements Message {
+public class keyValueMessage implements Message {
     // Externalizable do rely on serialVersionUID
     static final long serialVersionUID = 20170529L;
-    public static IdMessage POISON_PILL = new IdMessage("_POISON_PILL_", null, true, false);
-    private String id;
-    private byte[] data;
+    public static keyValueMessage POISON_PILL = new keyValueMessage("_POISON_PILL_", null, true, false);
+
+    private String key;
+    private byte[] value;
     private boolean poisonPill = false;
     private boolean forceBatch = false;
 
-    public IdMessage() {
+    public keyValueMessage() {
     }
 
-    protected IdMessage(String id, byte[] data, boolean poisonPill, boolean forceBatch) {
-        this.id = Objects.requireNonNull(id);
-        this.data = data;
+    protected keyValueMessage(String key, byte[] value, boolean poisonPill, boolean forceBatch) {
+        this.key = Objects.requireNonNull(key);
+        this.value = value;
         this.poisonPill = poisonPill;
         this.forceBatch = forceBatch;
     }
 
-    static public IdMessage of(String id, byte[] data) {
-        return new IdMessage(id, data, false, false);
+    static public keyValueMessage of(String key, byte[] value) {
+        return new keyValueMessage(key, value, false, false);
     }
 
-    static public IdMessage of(String id) {
-        return new IdMessage(id, null, false, false);
+    static public keyValueMessage of(String key) {
+        return new keyValueMessage(key, null, false, false);
     }
 
     /**
      * A message that force the batch.
      */
-    static public IdMessage ofForceBatch(String id, byte[] data) {
-        return new IdMessage(id, data, false, true);
+    static public keyValueMessage ofForceBatch(String key, byte[] value) {
+        return new keyValueMessage(key, value, false, true);
     }
 
-    static public IdMessage ofForceBatch(String id) {
-        return new IdMessage(id, null, false, true);
+    static public keyValueMessage ofForceBatch(String key) {
+        return new keyValueMessage(key, null, false, true);
     }
 
-    public byte[] getData() {
-        return data;
+    public String key() {
+        return key;
+    }
+
+    public byte[] value() {
+        return value;
     }
 
     @Override
     public String getId() {
-        return id;
+        return key;
     }
 
     @Override
@@ -88,31 +93,31 @@ public class IdMessage implements Message {
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeObject(id);
+        out.writeObject(key);
         out.writeBoolean(poisonPill);
         out.writeBoolean(forceBatch);
-        if (data == null || data.length == 0) {
+        if (value == null || value.length == 0) {
             out.writeInt(0);
         } else {
-            out.writeInt(data.length);
-            out.write(data);
+            out.writeInt(value.length);
+            out.write(value);
         }
     }
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        this.id = (String) in.readObject();
+        this.key = (String) in.readObject();
         this.poisonPill = in.readBoolean();
         this.forceBatch = in.readBoolean();
         int dataLength = in.readInt();
         if (dataLength == 0) {
-            this.data = null;
+            this.value = null;
         } else {
-            this.data = new byte[dataLength];
+            this.value = new byte[dataLength];
             // not using in.readFully because it is not impl by Chronicle WireObjectInput
             int pos = 0;
             while (pos < dataLength) {
-                pos += in.read(this.data, pos, dataLength - pos);
+                pos += in.read(this.value, pos, dataLength - pos);
             }
         }
     }
@@ -122,18 +127,18 @@ public class IdMessage implements Message {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        IdMessage idMessage = (IdMessage) o;
+        keyValueMessage keyValueMessage = (keyValueMessage) o;
 
-        if (poisonPill != idMessage.poisonPill) return false;
-        if (forceBatch != idMessage.forceBatch) return false;
-        return id != null ? id.equals(idMessage.id) : idMessage.id == null;
+        if (poisonPill != keyValueMessage.poisonPill) return false;
+        if (forceBatch != keyValueMessage.forceBatch) return false;
+        return key != null ? key.equals(keyValueMessage.key) : keyValueMessage.key == null;
 
     }
 
     @Override
     public int hashCode() {
-        int result = id.hashCode();
-        result = 31 * result + Arrays.hashCode(data);
+        int result = key.hashCode();
+        result = 31 * result + Arrays.hashCode(value);
         result = 31 * result + (poisonPill ? 1 : 0);
         result = 31 * result + (forceBatch ? 1 : 0);
         return result;
@@ -141,7 +146,7 @@ public class IdMessage implements Message {
 
     @Override
     public String toString() {
-        return String.format("IdMessage(\"%s\", len:%d%s%s)", id, (data != null) ? data.length : 0,
+        return String.format("keyValueMessage(\"%s\", len:%d%s%s)", key, (value != null) ? value.length : 0,
                 poisonPill ? ", poison" : "", forceBatch ? ", batch" : "");
     }
 }

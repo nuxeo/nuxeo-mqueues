@@ -23,7 +23,7 @@ import java.util.Iterator;
 /**
  * A ProducerIterator returns {@link Message}.
  *
- * It also has the logic to return a shard index, that will be used to run concurrent consumers.
+ * It also has the logic to return a partition index, that will be used to run concurrent consumers.
  *
  * @since 9.1
  */
@@ -38,14 +38,14 @@ public interface ProducerIterator<M extends Message> extends Iterator<M>, AutoCl
     }
 
     /**
-     * Returns a shard index associated with the {@link Message}.
+     * Returns a partition associated with the {@link Message}.
      *
-     * The value returned must be between 0 and lower than shards.
+     * The value returned must be between 0 and lower than partitions.
      *
      * @param message the message to shard
-     * @param shards the number of shards
+     * @param partitions the number of partitions
      */
-    int getShard(M message, int shards);
+    int getPartition(M message, int partitions);
 
 
 }

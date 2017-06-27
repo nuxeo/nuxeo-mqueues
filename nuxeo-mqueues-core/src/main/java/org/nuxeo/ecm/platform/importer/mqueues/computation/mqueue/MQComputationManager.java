@@ -136,15 +136,15 @@ public class MQComputationManager implements ComputationManager {
     private List<MQComputationPool> initPools() {
         log.debug("Initializing pools");
         return topology.metadataList().stream()
-                .map(meta -> new MQComputationPool(topology.getSupplier(meta.name), meta,
+                .map(meta -> new MQComputationPool(topology.getSupplier(meta.name()), meta,
                         getDefaultAssignments(meta), manager))
                 .collect(Collectors.toList());
     }
 
     private List<List<MQPartition>> getDefaultAssignments(ComputationMetadataMapping meta) {
-        int threads = settings.getConcurrency(meta.name);
+        int threads = settings.getConcurrency(meta.name());
         Map<String, Integer> streams = new HashMap<>();
-        meta.istreams.forEach(streamName -> streams.put(streamName, settings.getPartitions(streamName)));
+        meta.inputStreams().forEach(streamName -> streams.put(streamName, settings.getPartitions(streamName)));
         return KafkaUtils.roundRobinAssignments(threads, streams);
     }
 

@@ -18,7 +18,11 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
+import java.time.Duration;
+
 /**
+ * Exception raised during {@link MQTailer#read(Duration)} if there is a rebalancing.
+ *
  * @since 9.2
  */
 public class MQRebalanceException extends RuntimeException {

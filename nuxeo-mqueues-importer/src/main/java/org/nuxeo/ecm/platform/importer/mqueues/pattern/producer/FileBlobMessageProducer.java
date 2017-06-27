@@ -53,8 +53,8 @@ public class FileBlobMessageProducer extends AbstractProducer<BlobMessage> {
     }
 
     @Override
-    public int getShard(BlobMessage message, int shards) {
-        return count % shards;
+    public int getPartition(BlobMessage message, int partitions) {
+        return count % partitions;
     }
 
     @Override

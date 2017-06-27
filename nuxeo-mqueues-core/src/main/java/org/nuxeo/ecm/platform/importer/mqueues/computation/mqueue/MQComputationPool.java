@@ -66,12 +66,12 @@ public class MQComputationPool {
     }
 
     public String getComputationName() {
-        return metadata.name;
+        return metadata.name();
     }
 
     public void start() {
-        log.info(metadata.name + ": Starting pool");
-        threadPool = newFixedThreadPool(threads, new NamedThreadFactory(metadata.name + "Pool"));
+        log.info(metadata.name() + ": Starting pool");
+        threadPool = newFixedThreadPool(threads, new NamedThreadFactory(metadata.name() + "Pool"));
         defaultAssignments.forEach(assignments -> {
             MQComputationRunner runner = new MQComputationRunner(supplier, metadata, assignments, manager);
             threadPool.submit(runner);
@@ -79,14 +79,14 @@ public class MQComputationPool {
         });
         // close the pool no new admission
         threadPool.shutdown();
-        log.debug(metadata.name + ": Pool started, threads: " + threads);
+        log.debug(metadata.name() + ": Pool started, threads: " + threads);
     }
 
     public boolean drainAndStop(Duration timeout) {
         if (threadPool == null || threadPool.isTerminated()) {
             return true;
         }
-        log.info(metadata.name + ": Draining");
+        log.info(metadata.name() + ": Draining");
         runners.forEach(MQComputationRunner::drain);
         boolean ret = awaitPoolTermination(timeout);
         stop(Duration.ofSeconds(1));
@@ -97,7 +97,7 @@ public class MQComputationPool {
         if (threadPool == null || threadPool.isTerminated()) {
             return true;
         }
-        log.info(metadata.name + ": Stopping");
+        log.info(metadata.name() + ": Stopping");
         runners.forEach(MQComputationRunner::stop);
         boolean ret = awaitPoolTermination(timeout);
         shutdown();
@@ -106,13 +106,13 @@ public class MQComputationPool {
 
     public void shutdown() {
         if (threadPool != null && !threadPool.isTerminated()) {
-            log.info(metadata.name + ": Shutting down");
+            log.info(metadata.name() + ": Shutting down");
             threadPool.shutdownNow();
             // give a chance to end threads with valid tailer when shutdown is followed by streams.close()
             try {
                 threadPool.awaitTermination(1, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                log.warn(metadata.name + ": Interrupted in shutdown");
+                log.warn(metadata.name() + ": Interrupted in shutdown");
                 Thread.currentThread().interrupt();
             }
         }
@@ -123,11 +123,11 @@ public class MQComputationPool {
     private boolean awaitPoolTermination(Duration timeout) {
         try {
             if (!threadPool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                log.warn(metadata.name + ": Timeout on wait for pool termination");
+                log.warn(metadata.name() + ": Timeout on wait for pool termination");
                 return false;
             }
         } catch (InterruptedException e) {
-            log.warn(metadata.name + ": Interrupted while waiting for pool termination");
+            log.warn(metadata.name() + ": Interrupted while waiting for pool termination");
             Thread.currentThread().interrupt();
             return false;
         }
@@ -149,7 +149,7 @@ public class MQComputationPool {
                     .max(Comparator.naturalOrder()).orElse(0L);
         }
         if (log.isTraceEnabled() && ret > 0)
-            log.trace(metadata.name + ": low: " + ret + " " + (pending ? "Pending" : "Completed"));
+            log.trace(metadata.name() + ": low: " + ret + " " + (pending ? "Pending" : "Completed"));
         return ret;
     }
 

@@ -49,9 +49,9 @@ public class TestComputation {
         Computation comp = new ComputationForward("foo", 2, 4);
 
         // check expected metadata
-        assertEquals("foo", comp.metadata().name);
-        assertEquals(new HashSet<>(Arrays.asList("i1", "i2")), comp.metadata().istreams);
-        assertEquals(new HashSet<>(Arrays.asList("o1", "o2", "o3", "o4")), comp.metadata().ostreams);
+        assertEquals("foo", comp.metadata().name());
+        assertEquals(new HashSet<>(Arrays.asList("i1", "i2")), comp.metadata().inputStreams());
+        assertEquals(new HashSet<>(Arrays.asList("o1", "o2", "o3", "o4")), comp.metadata().outputStreams());
 
         // create a context
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),
@@ -94,9 +94,9 @@ public class TestComputation {
         long t0 = System.currentTimeMillis();
 
         Computation comp = new ComputationSource("foo", outputStreams, nbRecordsToGenerate, batchSize, t0);
-        assertEquals("foo", comp.metadata().name);
-        assertEquals(Collections.emptySet(), comp.metadata().istreams);
-        assertEquals(new HashSet<>(Arrays.asList("o1", "o2")), comp.metadata().ostreams);
+        assertEquals("foo", comp.metadata().name());
+        assertEquals(Collections.emptySet(), comp.metadata().inputStreams());
+        assertEquals(new HashSet<>(Arrays.asList("o1", "o2")), comp.metadata().outputStreams());
 
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),
                 Collections.emptyMap()));
@@ -126,9 +126,9 @@ public class TestComputation {
     public void testRecordCounter() throws Exception {
         Duration interval = Duration.ofMillis(20);
         Computation comp = new ComputationRecordCounter("foo", interval);
-        assertEquals("foo", comp.metadata().name);
-        assertEquals(new HashSet<>(Collections.singletonList("i1")), comp.metadata().istreams);
-        assertEquals(new HashSet<>(Collections.singletonList("o1")), comp.metadata().ostreams);
+        assertEquals("foo", comp.metadata().name());
+        assertEquals(new HashSet<>(Collections.singletonList("i1")), comp.metadata().inputStreams());
+        assertEquals(new HashSet<>(Collections.singletonList("o1")), comp.metadata().outputStreams());
 
         ComputationContextImpl context = new ComputationContextImpl(new ComputationMetadataMapping(comp.metadata(),
                 Collections.emptyMap()));

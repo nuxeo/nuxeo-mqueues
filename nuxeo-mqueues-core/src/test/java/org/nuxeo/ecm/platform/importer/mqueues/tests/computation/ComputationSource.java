@@ -70,7 +70,7 @@ public class ComputationSource extends AbstractComputation {
             int endOfBatch = Math.min(generated + batchSize, records);
             do {
                 generated += 1;
-                metadata.ostreams.forEach(o -> context.produceRecord(o, getRandomRecord()));
+                metadata.outputStreams().forEach(o -> context.produceRecord(o, getRandomRecord()));
                 if (generated % 100 == 0) {
                     log.debug("Generate record: " + generated + " wm " + getWatermark());
                 }
@@ -98,7 +98,7 @@ public class ComputationSource extends AbstractComputation {
     }
 
     protected Record getRandomRecord() {
-        String msg = "data from " + metadata.name + " msg " + generated;
+        String msg = "data from " + metadata.name() + " msg " + generated;
         Record ret = Record.of("key" + generated, msg.getBytes());
         ret.watermark = getWatermark();
         return ret;

@@ -24,7 +24,7 @@ import org.junit.BeforeClass;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.keyValueMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
 
 /**
@@ -39,7 +39,7 @@ public class TestPatternQueuingKafka extends TestPatternQueuing {
     }
 
     @Override
-    public MQManager<IdMessage> createManager() throws Exception {
+    public MQManager<keyValueMessage> createManager() throws Exception {
         if (prefix == null) {
             prefix = TestMQueueKafka.getPrefix();
         }

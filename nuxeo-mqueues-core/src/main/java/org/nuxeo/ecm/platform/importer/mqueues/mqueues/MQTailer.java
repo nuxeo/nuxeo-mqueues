@@ -37,7 +37,7 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
     String group();
 
     /**
-     * Returns the list of partitions currently assigned to this tailer.
+     * Returns the list of MQueue name/partition tuples currently assigned to this tailer.
      * Assignments can change only if the tailer has been created using {@link MQManager#subscribe}.
      */
     Collection<MQPartition> assignments();

@@ -122,8 +122,8 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
 
 
     @Override
-    public int getShard(DocumentMessage message, int shards) {
-        return getProducerId() % shards;
+    public int getPartition(DocumentMessage message, int partitions) {
+        return getProducerId() % partitions;
     }
 
     @Override

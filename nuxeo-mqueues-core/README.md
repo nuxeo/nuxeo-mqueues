@@ -21,7 +21,7 @@ nuxeo-mqueues-core
 
  A MQueue acts as a partitioned queue, queues that are part of a MQueue are called __partitions__.
 
- To write to a MQueue a producer need to acquire an __appender__. Theproducer is responsible for choosing which message to assign to which partition:
+ To write to a MQueue a producer need to acquire an __appender__. The producer is responsible for choosing which message to assign to which partition:
 
  * Using a round robin algorithm a producer can balance messages between partitions.
  * Using a shard key it can group message by partition following its own semantic.
@@ -36,7 +36,7 @@ nuxeo-mqueues-core
  which is a name space to store its positions (__offsets__).
  By saving (__commit__) its offsets a consumer group can stop and resume processing without loosing messages.
  By default a Tailer will read from the last committed offset, but it can also read from the beginning or end of its assigned partitions.
- The maximum consumer gropu concurrency is fixed by the number of partitions of the MQueue (its size).
+ The maximum consumer group concurrency is fixed by the number of partitions of the MQueue (its size).
 
  Of course it is possible to create different group of consumers that process concurrently the same MQueue at their own speed.
 
@@ -45,11 +45,13 @@ nuxeo-mqueues-core
 
 ### MQueue Implementations
 
+MQueue is an abstraction on top of two message queue implementations.
+
 #### Chronicle Queue
 
   [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is a high performance off-Heap queue implementation.
 
-  Each partition of a MQueue is materialized as a Chronicle Queue.
+  Each partition of a MQueue is materialized with a Chronicle Queue.
   There is an additional Chronicle Queue created for each consumer group to persist consumer's offsets.
 
   This implementation is limited to a single node because the Chronicle Queue can not be distributed
@@ -57,19 +59,25 @@ nuxeo-mqueues-core
 
   The dynamic assignment is not supported, therefore there is no rebalancing to handle.
 
-  The queues are persisted on disk, at the moment there is no retention policy so everything is kept for ever until [NXP-22113](https://jira.nuxeo.com/browse/NXP-22113)
+  The queues are persisted on disk and a retention policy can be applied to keep only the last `n` cycles.
+  (the default retention is to keep the message of the last 4 days).
 
+  There is no replication therefore no fault tolerance. In other word the data directory must be
+  backup and you should make sure you never run out of disk.
 
 #### Kafka
 
   [Kafka](http://kafka.apache.org/) is a distributed streaming app framework.
 
-  A MQueue is simply a topic, partitions have the same meaning.
+  A MQueue is simply a [topic](http://kafka.apache.org/intro#intro_topics), partitions have the same meaning.
+
+  Appender and tailer use the [Producer](http://kafka.apache.org/documentation.html#producerapi) and [Consumer](http://kafka.apache.org/documentation.html#consumerapi) API of Kafka.
 
   Offsets are managed manually and persisted in the `__consumer_offsets` internal topic.
 
-  The dynamic assignment is supported and needed to support distributed consumers.
+  The dynamic assignment is supported and needed to have distributed producers and consumers.
 
+  Kafka brings also fault tolerance.
 
 ## Producer/Consumer Patterns
 
@@ -115,7 +123,7 @@ See [TestBoundedQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/mast
 #### Queuing unlimited
 
 Almost the same as pattern as above but producers and consumers are always up processing an infinite flow of messages.
-There is no Producer interface, a producer just use a [MQueue](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/mqueues/MQueue.java) to append messages.
+There is no Producer interface, a producer just use a MQueue appender to send messages.
 
 The Consumer is driven the same way but its policy is different:
 

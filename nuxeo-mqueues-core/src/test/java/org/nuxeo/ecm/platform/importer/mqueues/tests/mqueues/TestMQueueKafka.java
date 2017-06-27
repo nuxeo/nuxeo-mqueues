@@ -32,7 +32,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.IdMessage;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.keyValueMessage;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -65,7 +65,7 @@ public class TestMQueueKafka extends TestMQueue {
     }
 
     @Override
-    public MQManager<IdMessage> createManager() throws Exception {
+    public MQManager<keyValueMessage> createManager() throws Exception {
         if (prefix == null) {
             prefix = getPrefix();
         }
@@ -110,19 +110,19 @@ public class TestMQueueKafka extends TestMQueue {
         final String group = "consumer";
 
         manager.createIfNotExists(mqName, NB_QUEUE);
-        MQAppender<IdMessage> appender = manager.getAppender(mqName);
+        MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
 
-        IdMessage msg1 = IdMessage.of("id1");
-        IdMessage msg2 = IdMessage.of("id2");
+        keyValueMessage msg1 = keyValueMessage.of("id1");
+        keyValueMessage msg2 = keyValueMessage.of("id2");
         for (int i = 0; i < NB_MSG; i++) {
             appender.append(i % NB_QUEUE, msg1);
         }
 
-        MQTailer<IdMessage> tailer1 = manager.subscribe(group, Collections.singleton(mqName), null);
+        MQTailer<keyValueMessage> tailer1 = manager.subscribe(group, Collections.singleton(mqName), null);
 
         // until we call read there is no assignments
         assertTrue(tailer1.assignments().isEmpty());
-        MQRecord<IdMessage> record = null;
+        MQRecord<keyValueMessage> record = null;
         try {
             tailer1.read(Duration.ofSeconds(2));
             fail("Should have raise a rebalance exception");
@@ -136,7 +136,7 @@ public class TestMQueueKafka extends TestMQueue {
         for (int i = 0; i < NB_QUEUE; i++) {
             record = tailer1.read(Duration.ofSeconds(1));
             assertNotNull(record);
-            assertEquals(msg1, record.value());
+            assertEquals(msg1, record.message());
         }
         tailer1.commit();
         tailer1.close();
@@ -144,8 +144,8 @@ public class TestMQueueKafka extends TestMQueue {
         // And now enter the 2nd tailer
         Callable<Integer> consumer = () -> {
             int count = 0;
-            MQTailer<IdMessage> consumerTailer = manager.subscribe(group, Collections.singleton(mqName), null);
-            MQRecord<IdMessage> consumerRecord = null;
+            MQTailer<keyValueMessage> consumerTailer = manager.subscribe(group, Collections.singleton(mqName), null);
+            MQRecord<keyValueMessage> consumerRecord = null;
             while (true) {
                 try {
                     consumerRecord = consumerTailer.read(Duration.ofMillis(200));

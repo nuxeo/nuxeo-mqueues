@@ -25,4 +25,4 @@ target
 *.iws
 .DS_Store
 .idea
-*.org
+*.org*

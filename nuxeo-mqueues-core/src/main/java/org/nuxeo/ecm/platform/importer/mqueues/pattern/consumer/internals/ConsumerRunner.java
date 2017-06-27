@@ -264,7 +264,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         M message;
         while ((record = tailer.read(policy.getWaitMessageTimeout())) != null) {
             // addSalt(); // do this here so kafka subscription happens concurrently
-            message = record.value();
+            message = record.message();
             if (message.poisonPill()) {
                 log.warn("Receive a poison pill: " + message);
                 batch.last();

@@ -53,8 +53,8 @@ public class RandomStringBlobMessageProducer extends AbstractProducer<BlobMessag
     }
 
     @Override
-    public int getShard(BlobMessage message, int shards) {
-        return ((int) count) % shards;
+    public int getPartition(BlobMessage message, int partitions) {
+        return ((int) count) % partitions;
     }
 
     @Override
