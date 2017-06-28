@@ -175,6 +175,9 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         records.clear();
         try {
             for (ConsumerRecord<String, Bytes> record : consumer.poll(timeout.toMillis())) {
+                if (log.isDebugEnabled() && records.isEmpty()) {
+                    log.debug("Poll first record: " + getNameForTopic(record.topic()) + ":" + record.partition() + ":+" + record.offset());
+                }
                 records.add(record);
             }
         } catch (org.apache.kafka.common.errors.InterruptException e) {
@@ -253,7 +256,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
     public void seek(MQPartition partition, MQOffset offset) {
         log.debug("seek tailer: " + id + " +" + offset);
         TopicPartition topicPartition = new TopicPartition(prefix + partition.name(), partition.partition());
-        consumer.seek(topicPartition, ((MQOffsetImpl) offset).offset());
+        consumer.seek(topicPartition, offset.offset());
         //lastOffsets.remove(topicPartition);
         // records.stream().filter(rec -> partition.partition() != rec.partition() || partition.equals(rec.))
         records.clear();

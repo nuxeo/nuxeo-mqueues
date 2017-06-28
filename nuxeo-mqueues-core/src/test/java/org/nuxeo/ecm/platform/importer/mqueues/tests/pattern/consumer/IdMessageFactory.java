@@ -28,11 +28,11 @@ public class IdMessageFactory implements ConsumerFactory<keyValueMessage> {
     /**
      * Factory for consumer that do nothing no op
      */
-    public static IdMessageFactory NOOP = new IdMessageFactory(ConsumerType.NOOP);
+    public static final IdMessageFactory NOOP = new IdMessageFactory(ConsumerType.NOOP);
     /**
      * Factory for consumer that raise error randomly
      */
-    public static IdMessageFactory BUGGY = new IdMessageFactory(ConsumerType.BUGGY);
+    public static final IdMessageFactory BUGGY = new IdMessageFactory(ConsumerType.BUGGY);
 
     protected enum ConsumerType {NOOP, BUGGY}
 

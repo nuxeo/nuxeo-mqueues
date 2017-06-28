@@ -184,8 +184,8 @@ public class TestLibKafka {
         subscriptions.put("C1.2", new PartitionAssignor.Subscription(Arrays.asList("t0", "t1")));
         subscriptions.put("C1.3", new PartitionAssignor.Subscription(Arrays.asList("t0", "t1")));
         Cluster cluster = new Cluster("kafka-cluster", Collections.emptyList(), parts,
-                Collections.<String>emptySet(),
-                Collections.<String>emptySet());
+                Collections.emptySet(),
+                Collections.emptySet());
         PartitionAssignor assignor = new RoundRobinAssignor();
         // PartitionAssignor assignor2 = new RangeAssignor();
         Map<String, PartitionAssignor.Assignment> assignement = assignor.assign(cluster, subscriptions);

@@ -30,6 +30,13 @@ public interface ComputationManager {
     void start();
 
     /**
+     * Wait for the computations to have assigned partitions ready to process records.
+     * <p/>
+     * Returns {@code true} if all computations have assigned partitions during the timout delay.
+     */
+    boolean waitForAssignments(Duration timeout) throws InterruptedException;
+
+    /**
      * Stop computations gracefully after processing a record or a timer.
      */
     boolean stop(Duration timeout);
@@ -39,7 +46,8 @@ public interface ComputationManager {
     /**
      * Stop computations when input streams are empty.
      * The timeout is applied for each computation, the total duration can be up to nb computations * timeout
-     * Returns true if computations are stopped during the timeout delay.
+     * <p/>
+     * Returns {@code true} if computations are stopped during the timeout delay.
      */
     boolean drainAndStop(Duration timeout);
 

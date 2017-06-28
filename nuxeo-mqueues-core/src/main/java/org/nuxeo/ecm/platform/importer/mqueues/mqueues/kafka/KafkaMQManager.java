@@ -49,7 +49,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     public KafkaMQManager(String zkServers, String topicPrefix, Properties producerProperties, Properties consumerProperties) {
         this.prefix = (topicPrefix != null) ? topicPrefix : "";
         this.kUtils = new KafkaUtils(zkServers);
-        disableSubscribe = Boolean.valueOf((String) consumerProperties.getProperty(DISABLE_SUBSCRIBE_PROP, "false"));
+        disableSubscribe = Boolean.valueOf(consumerProperties.getProperty(DISABLE_SUBSCRIBE_PROP, "false"));
         this.producerProperties = normalizeProducerProperties(producerProperties);
         this.consumerProperties = normalizeConsumerProperties(consumerProperties);
     }

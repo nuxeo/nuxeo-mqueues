@@ -68,6 +68,7 @@ public abstract class TestComputationManager {
         try (MQManager<Record> streams = getStreams()) {
             ComputationManager manager = getManager(streams, topology, settings);
             manager.start();
+            assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             long start = System.currentTimeMillis();
             // this check works only if there is only one record with the target timestamp
             // so using concurrency > 1 will fail
@@ -149,7 +150,7 @@ public abstract class TestComputationManager {
             ComputationManager manager = getManager(streams, topology, settings);
             long start = System.currentTimeMillis();
             manager.start();
-
+            assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             // no record are processed so far
             long lowWatermark = manager.getLowWatermark();
 
@@ -246,7 +247,7 @@ public abstract class TestComputationManager {
             assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));
             double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;
             long total = settings1.getConcurrency("GENERATOR") * nbRecords;
-            log.info(String.format("generated :%s in %.2fs, throughput: %.2f records/s", total, elapsed, total / elapsed));
+            log.info(String.format("generated: %s in %.2fs, throughput: %.2f records/s", total, elapsed, total / elapsed));
         }
         int result = 0;
         // 2. resume and kill loop
@@ -256,6 +257,7 @@ public abstract class TestComputationManager {
                 long start = System.currentTimeMillis();
                 log.info("RESUME computations");
                 manager.start();
+                assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
                 // must be greater than kafka heart beat ?
                 Thread.sleep(400 + i * 10);
                 log.info("KILL computations pool");
@@ -271,7 +273,8 @@ public abstract class TestComputationManager {
             ComputationManager manager = getManager(streams, topology2, settings2);
             long start = System.currentTimeMillis();
             manager.start();
-            assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));
+            assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
+            assertTrue(manager.drainAndStop(Duration.ofSeconds(200)));
             double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;
             // read the results
             long processed = readCounterFrom(streams, "output");
@@ -301,6 +304,7 @@ public abstract class TestComputationManager {
             ComputationManager manager = getManager(streams, topology1, settings1);
             long start = System.currentTimeMillis();
             manager.start();
+            assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             // no record are processed so far
             assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));
             double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;

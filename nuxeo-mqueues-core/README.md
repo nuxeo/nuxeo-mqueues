@@ -79,6 +79,28 @@ MQueue is an abstraction on top of two message queue implementations.
 
   Kafka brings also fault tolerance.
 
+##### kafka configuration
+
+MQueue uses the latest Kafka 0.11.0.0, here are some sensitive Kafka configuration options.
+
+
+| Consumer options | MQueue default | Description |
+| --- | --- |  --- |
+| `enable.auto.commit`| `false` | MQueue manage the offset, this is always forced to false. |
+| `auto.offset.reset` | `earliest` | Always forced to earliest |
+| `request.timeout.ms`| 30000 | The request timeout. |
+| `max.poll.interval.ms` | 300000 | Consumers that don't call poll during this interval are removed from the group, generating partition rebalancing. |
+| `session.timeout.ms` | 10000 | Consumers that don't send heartbeat during this timeout are removed from the group. |
+| `heartbeat.interval.ms` | 3000 | Interval between heartbeats. |
+| `max.poll.records` | 500 | Adjust to make sure the poll interval is respected. |
+| `group.initial.rebalance.delay.ms` | 3000 | Delay for initial consumer rebalance. |
+| `subscribe.disable` | `false` | This is an MQueue option to disable the subscribe mode.|
+
+
+Visit the [Kafka documentation for more information.](|https://kafka.apache.org/documentation#configuration)
+
+
+
 ## Producer/Consumer Patterns
 
 MQueue can be used as is and provides benefits of a solid asynchronous message passing system.
@@ -86,7 +108,7 @@ MQueue can be used as is and provides benefits of a solid asynchronous message p
 
 That being said this module comes with battery included for 2 interesting patterns:
 - A simple producer/consumer pattern that handle retry and batching
-- A computation stream pattern, where we can compose producer/consumer into compex topology
+- A computation stream pattern, where we can compose producer/consumer into complex topology
 
 ### Simple producer/consumer pattern
 
@@ -172,7 +194,8 @@ To build and run the tests, simply start the Maven build:
 
  The easiest way to run a Kafka cluster is using [docker-compose](https://docs.docker.com/compose/install/):
 
-    cd ./kafka-docker/
+	git clone git@github.com:bdelbosc/kafka-docker.git
+	cd ./kafka-docker/
     docker-compose up -d
     # to stop
     docker-compose down
