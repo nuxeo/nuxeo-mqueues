@@ -323,6 +323,7 @@ public abstract class TestComputationManager {
     private int readCounterFromPartition(MQManager<Record> manager, String stream, int partition) throws InterruptedException {
         MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition));
         int result = 0;
+        tailer.toStart();
         for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(1000)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(500))) {
             result += Integer.valueOf(mqRecord.message().key);
         }
@@ -342,6 +343,7 @@ public abstract class TestComputationManager {
     private int countRecordInPartition(MQManager<Record> manager, String stream, int partition) throws Exception {
         try (MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition))) {
             int result = 0;
+            tailer.toStart();
             for (MQRecord<Record> mqRecord = tailer.read(Duration.ofMillis(1000)); mqRecord != null; mqRecord = tailer.read(Duration.ofMillis(500))) {
                 result += 1;
             }
