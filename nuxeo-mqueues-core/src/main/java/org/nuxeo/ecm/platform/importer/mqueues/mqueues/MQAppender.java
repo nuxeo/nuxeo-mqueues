@@ -72,7 +72,7 @@ public interface MQAppender<M extends Externalizable> extends AutoCloseable {
     boolean waitFor(MQOffset offset, String group, Duration timeout) throws InterruptedException;
 
     /**
-     * Returs {@code true} if the close has been closed.
+     * Returns {@code true} if the close has been closed.
      */
     boolean closed();
 }

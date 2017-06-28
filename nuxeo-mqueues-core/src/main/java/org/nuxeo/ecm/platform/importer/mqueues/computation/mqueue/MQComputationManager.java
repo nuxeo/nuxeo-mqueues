@@ -65,6 +65,16 @@ public class MQComputationManager implements ComputationManager {
     }
 
     @Override
+    public boolean waitForAssignments(Duration timeout) throws InterruptedException {
+        for (MQComputationPool pool : pools) {
+            if (! pool.waitForAssignments(timeout)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
     public boolean stop(Duration timeout) {
         log.debug("Starting ...");
         long failures = pools.parallelStream().filter(comp -> !comp.stop(timeout)).count();

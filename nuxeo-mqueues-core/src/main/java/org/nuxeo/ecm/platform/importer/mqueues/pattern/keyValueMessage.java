@@ -32,7 +32,7 @@ import java.util.Objects;
 public class keyValueMessage implements Message {
     // Externalizable do rely on serialVersionUID
     static final long serialVersionUID = 20170529L;
-    public static keyValueMessage POISON_PILL = new keyValueMessage("_POISON_PILL_", null, true, false);
+    public static final keyValueMessage POISON_PILL = new keyValueMessage("_POISON_PILL_", null, true, false);
 
     private String key;
     private byte[] value;

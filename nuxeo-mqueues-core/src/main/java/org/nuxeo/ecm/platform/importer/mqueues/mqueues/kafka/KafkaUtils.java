@@ -218,7 +218,7 @@ public class KafkaUtils implements AutoCloseable {
             subscriptions.put(String.valueOf(i), new PartitionAssignor.Subscription(streamNames));
         }
         Cluster cluster = new Cluster("kafka-cluster", Collections.emptyList(), parts,
-                Collections.<String>emptySet(), Collections.<String>emptySet());
+                Collections.emptySet(), Collections.emptySet());
         Map<String, PartitionAssignor.Assignment> assignments = assignor.assign(cluster, subscriptions);
         List<List<MQPartition>> ret = new ArrayList<>(threads);
         for (int i = 0; i < threads; i++) {

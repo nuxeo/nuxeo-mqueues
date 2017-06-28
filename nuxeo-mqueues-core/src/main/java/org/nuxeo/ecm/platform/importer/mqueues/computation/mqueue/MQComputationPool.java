@@ -82,6 +82,19 @@ public class MQComputationPool {
         log.debug(metadata.name() + ": Pool started, threads: " + threads);
     }
 
+    public boolean waitForAssignments(Duration timeout) throws InterruptedException {
+        log.info(metadata.name() + ": Wait for partitions assignments");
+        if (threadPool == null || threadPool.isTerminated()) {
+            return true;
+        }
+        for (MQComputationRunner runner : runners) {
+            if (! runner.waitForAssignments(timeout)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public boolean drainAndStop(Duration timeout) {
         if (threadPool == null || threadPool.isTerminated()) {
             return true;

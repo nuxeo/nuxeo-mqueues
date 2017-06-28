@@ -140,7 +140,7 @@ public abstract class TestPatternBoundedQueuing {
 
         // 2. Use the mq and run the consumers
         ConsumerPolicy consumerPolicy = ConsumerPolicy.builder().waitMessageTimeout(Duration.ofSeconds(10))
-                .maxThreads((short) NB_CONSUMERS)
+                .maxThreads(NB_CONSUMERS)
                 .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
                 .retryPolicy(new RetryPolicy().withMaxRetries(10000)).build();
         ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,

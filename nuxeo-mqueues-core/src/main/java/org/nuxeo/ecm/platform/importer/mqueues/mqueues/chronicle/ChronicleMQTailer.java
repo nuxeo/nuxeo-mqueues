@@ -149,7 +149,7 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     }
 
     public void seek(MQPartition partition, MQOffset offset) {
-        cqTailer.moveToIndex(((MQOffsetImpl) offset).offset());
+        cqTailer.moveToIndex(offset.offset());
     }
 
     @Override

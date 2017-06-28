@@ -46,7 +46,7 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
         this.tailers.addAll(tailers);
         this.group = group;
         this.size = tailers.size();
-        tailers.stream().forEach(partition -> mqPartitions.addAll(partition.assignments()));
+        tailers.forEach(partition -> mqPartitions.addAll(partition.assignments()));
     }
 
     @Override

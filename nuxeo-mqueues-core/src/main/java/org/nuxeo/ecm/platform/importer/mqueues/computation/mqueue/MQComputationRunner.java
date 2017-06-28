@@ -39,6 +39,8 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -60,6 +62,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
 
     private volatile boolean stop = false;
     private volatile boolean drain = false;
+    private CountDownLatch assignmentLatch = new CountDownLatch(1);
 
     private Computation computation;
     private long counter = 0;
@@ -81,10 +84,12 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         this.context = new ComputationContextImpl(metadata);
         if (metadata.inputStreams().isEmpty()) {
             this.tailer = null;
+            assignmentLatch.countDown();
         } else if (mqManager.supportSubscribe()) {
             this.tailer = mqManager.subscribe(metadata.name(), metadata.inputStreams(), this);
         } else {
             this.tailer = mqManager.createTailer(metadata.name(), defaultAssignment);
+            assignmentLatch.countDown();
         }
     }
 
@@ -96,6 +101,14 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
     public void drain() {
         log.debug(metadata.name() + ": Receives Drain signal");
         drain = true;
+    }
+
+    public boolean waitForAssignments(Duration timeout) throws InterruptedException {
+        if (! assignmentLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+            log.warn(metadata.name() + ": Timeout waiting for assignment");
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -152,6 +165,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         while (continueLoop()) {
             processTimer();
             processRecord();
+            counter++;
             // TODO: add pause for computation without inputs or without timer to prevent CPU hogs
         }
     }
@@ -349,6 +363,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         computation.init(context);
         lastReadTime = System.currentTimeMillis();
         lastTimerExecution = 0;
+        assignmentLatch.countDown();
         // what about watermark ?
     }
 }
