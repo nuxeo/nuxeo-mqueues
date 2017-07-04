@@ -34,6 +34,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.automation.RandomDocumentProducer
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.transaction.TransactionHelper;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -114,6 +115,10 @@ public abstract class TestAutomation {
         addExtraParams(params);
         automationService.run(ctx, DocumentConsumers.ID, params);
 
+        // start a new transaction to prevent db isolation to hide our new documents
+        TransactionHelper.commitOrRollbackTransaction();
+        TransactionHelper.startTransaction();
+
         DocumentModelList ret = session.query("SELECT * FROM Document WHERE ecm:primaryType IN ('File', 'Folder')");
         assertEquals(nbThreads * nbDocuments, ret.size());
     }
@@ -160,6 +165,10 @@ public abstract class TestAutomation {
         params.put("blockIndexing", true);
         addExtraParams(params);
         automationService.run(ctx, DocumentConsumers.ID, params);
+
+        // start a new transaction to prevent db isolation to hide our new documents
+        TransactionHelper.commitOrRollbackTransaction();
+        TransactionHelper.startTransaction();
 
         DocumentModelList ret = session.query("SELECT * FROM Document WHERE ecm:primaryType IN ('File', 'Folder')");
         assertEquals(nbThreads * nbDocuments, ret.size());

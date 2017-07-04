@@ -79,17 +79,15 @@ MQueue is an abstraction on top of two message queue implementations.
 
   Kafka brings also fault tolerance.
 
-##### kafka configuration
-
-MQueue uses the latest Kafka 0.11.0.0, here are some sensitive Kafka configuration options.
+  MQueue uses the latest Kafka version 0.11.0.0, here are some sensitive Kafka configuration options:
 
 
 | Consumer options | MQueue default | Description |
 | --- | --- |  --- |
-| `enable.auto.commit`| `false` | MQueue manage the offset, this is always forced to false. |
-| `auto.offset.reset` | `earliest` | Always forced to earliest |
-| `request.timeout.ms`| 30000 | The request timeout. |
-| `max.poll.interval.ms` | 300000 | Consumers that don't call poll during this interval are removed from the group, generating partition rebalancing. |
+| `enable.auto.commit`| `false` | MQueue manages the offset commit, this is always forced to false. |
+| `auto.offset.reset` | `earliest` | Forced to earliest |
+| `request.timeout.ms`| 30000 | Request timeout between MQueue and the broker. |
+| `max.poll.interval.ms` | 300000 | Consumers that don't call poll during this interval are removed from the group. |
 | `session.timeout.ms` | 10000 | Consumers that don't send heartbeat during this timeout are removed from the group. |
 | `heartbeat.interval.ms` | 3000 | Interval between heartbeats. |
 | `max.poll.records` | 500 | Adjust to make sure the poll interval is respected. |
@@ -97,7 +95,7 @@ MQueue uses the latest Kafka 0.11.0.0, here are some sensitive Kafka configurati
 | `subscribe.disable` | `false` | This is an MQueue option to disable the subscribe mode.|
 
 
-Visit the [Kafka documentation for more information.](|https://kafka.apache.org/documentation#configuration)
+Visit the [Kafka documentation for more information.](https://kafka.apache.org/documentation#configuration)
 
 
 
