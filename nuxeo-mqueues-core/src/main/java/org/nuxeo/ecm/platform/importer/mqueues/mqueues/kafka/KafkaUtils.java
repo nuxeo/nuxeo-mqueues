@@ -96,7 +96,7 @@ public class KafkaUtils implements AutoCloseable {
         return new ZkClient(zkServers, ZK_TIMEOUT_MS, ZK_CONNECTION_TIMEOUT_MS, ZKStringSerializer$.MODULE$);
     }
 
-    public void createTopic(String topic, int partitions) {
+    public void createTopicWithoutReplication(String topic, int partitions) {
         createTopic(topic, partitions, 1);
     }
 
@@ -135,9 +135,20 @@ public class KafkaUtils implements AutoCloseable {
     }
 
     private boolean allPartitionsAssigned(String topic) {
+        if (! AdminUtils.topicExists(zkUtils, topic)) {
+            log.debug("Topic " + topic + " does not exists yet");
+            return false;
+        }
         MetadataResponse.TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zkUtils);
+        if (meta.partitionMetadata().isEmpty()) {
+            log.debug("Topic " + topic + " has no partition yet");
+            return false;
+        }
         long errors = meta.partitionMetadata().stream().filter(p -> p.error().code() > 0).count();
         // System.out.println(topic + ": "+ errors);
+        if (errors != 0) {
+            log.debug("Topic " + topic + " have some uninitialized partitions");
+        }
         return errors == 0;
     }
 

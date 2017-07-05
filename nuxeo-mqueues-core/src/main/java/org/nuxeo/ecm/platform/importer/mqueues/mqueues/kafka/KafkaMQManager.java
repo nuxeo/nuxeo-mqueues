@@ -35,10 +35,13 @@ import java.util.Properties;
  */
 public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<M> {
     public static final String DISABLE_SUBSCRIBE_PROP = "subscribe.disable";
+    public static final String DEFAULT_REPLICATION_FACTOR_PROP = "default.replication.factor";
+
     private final KafkaUtils kUtils;
     private final Properties producerProperties;
     private final Properties consumerProperties;
     private final String prefix;
+    private final Integer defaultReplicationFactor;
     private boolean disableSubscribe = false;
 
 
@@ -50,6 +53,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         this.prefix = (topicPrefix != null) ? topicPrefix : "";
         this.kUtils = new KafkaUtils(zkServers);
         disableSubscribe = Boolean.valueOf(consumerProperties.getProperty(DISABLE_SUBSCRIBE_PROP, "false"));
+        defaultReplicationFactor = Integer.valueOf(producerProperties.getProperty(DEFAULT_REPLICATION_FACTOR_PROP, "1"));
         this.producerProperties = normalizeProducerProperties(producerProperties);
         this.consumerProperties = normalizeConsumerProperties(consumerProperties);
     }
@@ -60,7 +64,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
 
     @Override
     public void create(String name, int size) {
-        kUtils.createTopic(getTopicName(name), size);
+        kUtils.createTopic(getTopicName(name), size, defaultReplicationFactor);
     }
 
     @Override
@@ -137,6 +141,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         }
         ret.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         ret.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesSerializer");
+        ret.remove(DEFAULT_REPLICATION_FACTOR_PROP);
         return ret;
     }
 

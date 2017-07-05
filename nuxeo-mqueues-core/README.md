@@ -67,7 +67,7 @@ MQueue is an abstraction on top of two message queue implementations.
 
 #### Kafka
 
-  [Kafka](http://kafka.apache.org/) is a distributed streaming app framework.
+  [Kafka](http://kafka.apache.org/) is a distributed streaming app framework. MQueue uses the latest Kafka version 0.11.0.0.
 
   A MQueue is simply a [topic](http://kafka.apache.org/intro#intro_topics), partitions have the same meaning.
 
@@ -77,25 +77,28 @@ MQueue is an abstraction on top of two message queue implementations.
 
   The dynamic assignment is supported and needed to have distributed producers and consumers.
 
-  Kafka brings also fault tolerance.
+  Kafka brings distributed support and fault tolerance.
 
-  MQueue uses the latest Kafka version 0.11.0.0, here are some sensitive Kafka configuration options:
+  When creating a KafkaMQManager you can use the consumer and producer options as describe in the [Kafka documentation for more information](https://kafka.apache.org/documentation#configuration).
 
-
-| Consumer options | MQueue default | Description |
-| --- | --- |  --- |
-| `enable.auto.commit`| `false` | MQueue manages the offset commit, this is always forced to false. |
-| `auto.offset.reset` | `earliest` | Forced to earliest |
-| `request.timeout.ms`| 30000 | Request timeout between MQueue and the broker. |
-| `max.poll.interval.ms` | 300000 | Consumers that don't call poll during this interval are removed from the group. |
-| `session.timeout.ms` | 10000 | Consumers that don't send heartbeat during this timeout are removed from the group. |
-| `heartbeat.interval.ms` | 3000 | Interval between heartbeats. |
-| `max.poll.records` | 500 | Adjust to make sure the poll interval is respected. |
-| `group.initial.rebalance.delay.ms` | 3000 | Delay for initial consumer rebalance. |
-| `subscribe.disable` | `false` | This is an MQueue option to disable the subscribe mode.|
+  Here are some important options:
 
 
-Visit the [Kafka documentation for more information.](https://kafka.apache.org/documentation#configuration)
+  | Consumer options | default | Description |
+  | --- | ---: |  --- |
+  | `enable.auto.commit` | `false` | MQueue manages the offset commit this is always set to `false`. |
+  | `auto.offset.reset` | `earliest` | This option is always set to `earliest` |
+  | `request.timeout.ms` | `30000` | Requests timeout between MQueue and Kafka brokers. |
+  | `max.poll.interval.ms` | `300000` | Consumers that don't call poll during this delay are removed from the group. |
+  | `session.timeout.ms` | `10000` | Consumers that don't send heartbeat during this dely are removed from the group. |
+  | `heartbeat.interval.ms` | `3000` | Interval between heartbeats. |
+  | `max.poll.records` | `500` | Can be adjusted to make sure the poll interval is respected. |
+  | `group.initial.rebalance.delay.ms` | `3000` | Delay for the initial consumer rebalance. |
+  | `subscribe.disable` | `false` | This is a MQueue only option to disable the subscribe mode, When this option is `true` MQueue will only support manual partition assignment. |
+
+  | ProducerConsumer options | default | Description |
+  | --- | ---: |  --- |
+  | `default.replication.factor` | `1` | This is a MQueue only option to set the topic replication factor when creating new topic. |
 
 
 
