@@ -96,7 +96,7 @@ MQueue is an abstraction on top of two message queue implementations.
   | `group.initial.rebalance.delay.ms` | `3000` | Delay for the initial consumer rebalance. |
   | `subscribe.disable` | `false` | This is a MQueue only option to disable the subscribe mode, When this option is `true` MQueue will only support manual partition assignment. |
 
-  | ProducerConsumer options | default | Description |
+  | Producer options | default | Description |
   | --- | ---: |  --- |
   | `default.replication.factor` | `1` | This is a MQueue only option to set the topic replication factor when creating new topic. |
 
