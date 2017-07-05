@@ -241,7 +241,7 @@ public abstract class TestComputationManager {
             ComputationManager manager = getManager(streams, topology1, settings1);
             long start = System.currentTimeMillis();
             manager.start();
-            // This is needed because drainAndStop might considere the source generator as terminated
+            // This is needed because drainAndStop might consider the source generator as terminated
             // because of a random lag due to kafka init and/or GC > 500ms.
             Thread.sleep(2000);
             assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));

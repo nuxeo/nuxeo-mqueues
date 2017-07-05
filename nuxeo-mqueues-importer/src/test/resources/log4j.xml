@@ -54,7 +54,7 @@
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.workmanager">
-    <priority value="INFO" />
+    <priority value="WARN" />
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues">

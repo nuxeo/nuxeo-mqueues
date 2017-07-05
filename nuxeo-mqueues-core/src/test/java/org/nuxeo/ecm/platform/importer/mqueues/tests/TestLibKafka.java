@@ -188,12 +188,12 @@ public class TestLibKafka {
                 Collections.emptySet());
         PartitionAssignor assignor = new RoundRobinAssignor();
         // PartitionAssignor assignor2 = new RangeAssignor();
-        Map<String, PartitionAssignor.Assignment> assignement = assignor.assign(cluster, subscriptions);
-        // assertEquals(null, assignement);
-        assertEquals(3, assignement.get("C1.1").partitions().size());
-        assertEquals(3, assignement.get("C1.2").partitions().size());
-        assertEquals(3, assignement.get("C1.3").partitions().size());
-        TopicPartition c1tp0 = assignement.get("C1.1").partitions().get(0);
+        Map<String, PartitionAssignor.Assignment> assignment = assignor.assign(cluster, subscriptions);
+        // assertEquals(null, assignment);
+        assertEquals(3, assignment.get("C1.1").partitions().size());
+        assertEquals(3, assignment.get("C1.2").partitions().size());
+        assertEquals(3, assignment.get("C1.3").partitions().size());
+        TopicPartition c1tp0 = assignment.get("C1.1").partitions().get(0);
         assertEquals(new TopicPartition("t0", 0), c1tp0);
         //assertEquals(new HashMap<>(), assignor.assign(cluster,  subscriptions));
     }

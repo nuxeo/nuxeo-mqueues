@@ -32,7 +32,7 @@ public interface ComputationManager {
     /**
      * Wait for the computations to have assigned partitions ready to process records.
      * <p/>
-     * Returns {@code true} if all computations have assigned partitions during the timout delay.
+     * Returns {@code true} if all computations have assigned partitions during the timeout delay.
      */
     boolean waitForAssignments(Duration timeout) throws InterruptedException;
 

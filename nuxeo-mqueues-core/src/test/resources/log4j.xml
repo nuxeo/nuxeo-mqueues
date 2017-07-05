@@ -54,11 +54,11 @@
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.computation">
-    <priority value="INFO" />
+    <priority value="WARN" />
   </category>
 
   <category name="org.nuxeo.ecm.platform.importer.mqueues.tests.computation">
-    <priority value="INFO" />
+    <priority value="WARN" />
   </category>
 
   <!-- hide the warn and stack on retry -->

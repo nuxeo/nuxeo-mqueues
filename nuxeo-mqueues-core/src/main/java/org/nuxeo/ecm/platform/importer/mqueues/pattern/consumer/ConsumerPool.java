@@ -43,7 +43,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
     private final ConsumerFactory<M> factory;
     private final ConsumerPolicy policy;
     private final String mqName;
-    private final List<List<MQPartition>> defaultAssignements;
+    private final List<List<MQPartition>> defaultAssignments;
 
     public ConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy policy) {
         super(computeNbThreads((short) manager.getAppender(mqName).size(), policy.getMaxThreads()));
@@ -51,11 +51,11 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
         this.manager = manager;
         this.factory = factory;
         this.policy = policy;
-        this.defaultAssignements = getDefaultAssignments();
+        this.defaultAssignments = getDefaultAssignments();
         if (manager.supportSubscribe()) {
             log.info("Creating consumer pool using MQ subscribe on " + mqName);
         } else {
-            log.info("Creating consumer pool using MQ assignments on " + mqName + ": " + defaultAssignements);
+            log.info("Creating consumer pool using MQ assignments on " + mqName + ": " + defaultAssignments);
         }
     }
 
@@ -77,7 +77,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
 
     @Override
     protected Callable<ConsumerStatus> getCallable(int i) {
-        return new ConsumerRunner<>(factory, policy, manager, defaultAssignements.get(i));
+        return new ConsumerRunner<>(factory, policy, manager, defaultAssignments.get(i));
     }
 
     @Override
