@@ -45,7 +45,9 @@ nuxeo-mqueues-core
 
 ### MQueue Implementations
 
-MQueue is an abstraction on top of two message queue implementations.
+MQueue is an abstraction layer that enable to use 2 different message queue implementations: Chronicle Queue and Kafka.
+
+The first implementation is handy for standalone server and is highly efficient, the second is dedicated for cluster deployment.
 
 #### Chronicle Queue
 
@@ -54,20 +56,38 @@ MQueue is an abstraction on top of two message queue implementations.
   Each partition of a MQueue is materialized with a Chronicle Queue.
   There is an additional Chronicle Queue created for each consumer group to persist consumer's offsets.
 
+  For instance a MQueue directory layout for a MQueue with 5 partitions looks like:
+   ```
+   basePath                    # basePath of the MQManager
+    └── queueName              # the name of the MQueue
+        ├── offset-default     # directory to hold consumer offsets of default consumer group
+        │   └── 20170705.cq4   # chronicle files
+        ├── Q-00               # directory for the partition 0
+        │   └── 20170616.cq4   # chronicle files
+        ├── Q-01
+        │   └── 20170616.cq4
+        ├── Q-02
+        │   └── 20170616.cq4
+        ├── Q-03
+        │   └── 20170616.cq4
+        └── Q-04
+            └── 20170616.cq4
+  ```
+
   This implementation is limited to a single node because the Chronicle Queue can not be distributed
   with the open source version.
 
   The dynamic assignment is not supported, therefore there is no rebalancing to handle.
 
   The queues are persisted on disk and a retention policy can be applied to keep only the last `n` cycles.
-  (the default retention is to keep the message of the last 4 days).
+  The default retention is to keep the message of the last 4 days.
 
   There is no replication therefore no fault tolerance. In other word the data directory must be
   backup and you should make sure you never run out of disk.
 
 #### Kafka
 
-  [Kafka](http://kafka.apache.org/) is a distributed streaming app framework. MQueue uses the latest Kafka version 0.11.0.0.
+  [Kafka](http://kafka.apache.org/) is a distributed streaming platform. MQueue uses the latest Kafka version 0.11.0.0.
 
   A MQueue is simply a [topic](http://kafka.apache.org/intro#intro_topics), partitions have the same meaning.
 
@@ -138,7 +158,7 @@ The proposed solution takes care of:
 * Starting consumers from the last successfully processed message
 * Exposing metrics for producers and consumers
 
-To use this pattern one must implement a [ProducerIterator](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/producer/ProducerIterator.java) and a [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/pattern/consumer/Consumer.java) with factories.
+To use this pattern one must implement a [ProducerIterator](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/pattern/producer/ProducerIterator.java) and a [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/pattern/consumer/Consumer.java) with factories.
 Both the producer and consumer implementation are driven (pulled) by the module.
 
 See [TestBoundedQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/pattern/TestPatternBoundedQueuing.java) for basic examples.
@@ -161,27 +181,27 @@ See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxe
 
 ### Stream and Computations
 
-This pattern is taken from [Google MillWheel](https://research.google.com/pubs/pub41378.html) and is implemented in [Concord.io](http://concord.io/docs/guides/architecture.html
-) and not far from  [Kafka Stream Processor](https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/Processor.java).
+This pattern is taken from [Google MillWheel](https://research.google.com/pubs/pub41378.html). A known implementation is [Concord.io](http://concord.io/docs/guides/architecture.html
+). The [Kafka Stream Processor](https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/Processor.java) API is also similar.
 
-Instead of message we have record that hold some specific fields like the key and a watermark in addition to the payload.
+Instead of message we have record that hold some specific fields like the key and a timestamp (watermark) in addition to the payload.
 
 The key is used to route the record. Records with the same key are always routed to the same computation instance.
 
-The computation is defined almost like in [concord](http://concord.io/docs/guides/concepts.html).
+The computation is defined like in [concord](http://concord.io/docs/guides/concepts.html).
 
-The Topology represent a DAG of computations, that can be executed using a ComputationManager.
-Computation read from 0 to n streams and write from 0 to n streams.
+Computation read from 0 to n streams and write from 0 to n streams. A stream is simply a MQueue of record.
 
-Here is an example of the DAG used in UT:
+Computations can be composed into topology. A topology is a directed acyclic graph (DAG) of computations, that can be executed using a ComputationManager.
+
+Following is an example of a topology used in unit test, where boxes are computations and cylinders are streams).
 
 ![dag](dag1.png)
 
-
-
-#### Computation implementation
-
 A default implementation of Computation is provided based on MQueue, a stream is simply a MQueue of Record.
+
+See [TestComputationManager](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/computation/TestComputationManager.java) for examples.
+
 
 ## Building
 
@@ -191,16 +211,18 @@ To build and run the tests, simply start the Maven build:
 
 ### Run Unit Tests with Kafka
 
- Test with kafka implementation rely on an assumption, if the Kafka cluster is not accessible tests are not launched.
+ Test with kafka implementation rely on an assumption, if there is no Kafka server running on `localhost` Kafka tests are not launched.
 
- The easiest way to run a Kafka cluster is using [docker-compose](https://docs.docker.com/compose/install/):
-
+ To setup a Kafka 0.11.0.0 server for testing:
+ 1. Install [docker-compose](https://docs.docker.com/compose/install/).
+ 2. Clone the following [docker compose repository](https://github.com/bdelbosc/kafka-docker) and launch docker compose:
+ ```
 	git clone git@github.com:bdelbosc/kafka-docker.git
 	cd ./kafka-docker/
     docker-compose up -d
     # to stop
     docker-compose down
-
+  ```
 ### Following Project QA Status
 [![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=master/addon_nuxeo-mqueues-master)](https://qa.nuxeo.org/jenkins/job/master/job/addon_nuxeo-mqueues-master/)
 

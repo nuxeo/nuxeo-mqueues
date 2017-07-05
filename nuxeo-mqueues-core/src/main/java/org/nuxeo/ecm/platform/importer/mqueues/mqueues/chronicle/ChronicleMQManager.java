@@ -46,7 +46,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     /**
      * Default retention duration for queue files
      */
-    public static final String DEFAULT_RETENTION_DURATION = "3h";
+    public static final String DEFAULT_RETENTION_DURATION = "4d";
 
     private final Path basePath;
 

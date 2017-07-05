@@ -5,8 +5,8 @@ nuxeo-mqueues-importer
 
 This module provides integration of MQueue with Nuxeo:
 
-- Define Kafka access via Nuxeo contribution.
-- The producer/consumer pattern is adapted to do mass import document via automation.
+- You can defines Kafka access via Nuxeo contribution.
+- The producer/consumer pattern is adapted to do document mass import, it is exposed as automation operations.
 - Computations are used to provide an alternative WorkManager implementation.
 
 ## Warning
@@ -17,48 +17,30 @@ This module is under development and still experimental, interfaces and implemen
 
 You can use Chronicle or Kafka MQueue implementation.
 
-Chronicle implementation is limited for single node (all producers and consumers are on the same server), 
+Chronicle implementation is limited for single node (all producers and consumers are on the same server),
 while distributed nodes requires the Kafka implementation.
 
 The default MQueue implementation is using Chronicle Queue.
 
 ### The Chronicle implementation
 
-A partition is materialized by a Chronicle Queue which is a `.cq4` file. 
-A MQueue is a directory layout that contains multiple `.cq4` files. 
-
-By default they are stored in Nuxeo: `${nuxeo.data.dir}/data/mqueue`.
-
+By default MQueues are stored in the Nuxeo data directory: `${nuxeo.data.dir}/data/mqueue`.
 This path can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.dir`.
 
-For instance by default the automation import will use a MQueue named `mq-doc` with 5 partitions, the file layout is:
+The default retention is four days. This can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.retention.duration`,
+the value is expressed as a string like: `12h` or `7d`, respectively for 12 hours and 7 days.
 
-    nxserver/data/mqueue/
-    └── import
-        └── mq-doc
-            ├── Q-00
-            │   └── 20170616.cq4
-            ├── Q-01
-            │   └── 20170616.cq4
-            ├── Q-02
-            │   └── 20170616.cq4
-            ├── Q-03
-            │   └── 20170616.cq4
-            └── Q-04
-                └── 20170616.cq4
-
- 
 
 ### Kafka implementation
- 
- To use the Kafka implementation you need to register Kafka configuration.
+
+ To use the Kafka implementation you need to register a Kafka configuration.
 
 ```
 <?xml version="1.0"?>
 <component name="my.project.kafka.contrib">
 
   <extension target="org.nuxeo.ecm.mqueues.importer.kafka.service" point="kafkaConfig">
-    
+
     <kafkaConfig name="default" zkServers="localhost:2181" topicPrefix="nuxeo-">
       <producerProperties>
         <property name="bootstrap.servers">localhost:9092</property>
@@ -75,21 +57,21 @@ For instance by default the automation import will use a MQueue named `mq-doc` w
 
   </extension>
 </component>
-``` 
+```
 
-Then you can refer to this configuration `default` to force MQueue to use the Kafka implementation.
+Then you can refer to this configuration named `default` to use the Kafka implementation of MQueue.
 
 
-## Producer/Consumer pattern with automation operations 
+## Producer/Consumer pattern with automation operations
 
 The MQueue here are used to perform mass import.
 
 It decouples the Extraction/Transformation from the Load (using the [ETL](https://en.wikipedia.org/wiki/Extract-transform-load) terminology).
 
-The extraction and transformation is done by a document message producer with custom logic, 
+The extraction and transformation is done by a document message producer with custom logic,
 this module comes with a random document and a random blob generator.
 
-The load into Nuxeo is done with a generic consumer.  
+The load into Nuxeo is done with a generic consumer.
 
 Automation operations are exposed to run producers and consumers.
 
@@ -121,7 +103,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runDocument
 | Params| Description |
 | --- | --- |
 | `rootFolder` | The path of the Nuxeo container to import documents, this document must exists |
-| `repositoryName` | The repository name used to import documents | 
+| `repositoryName` | The repository name used to import documents |
 | `nbThreads` | The number of concurrent consumer, should not be greater than the mqSize |
 | `batchSize` | The consumer commit documents every batch size |
 | `batchThresholdS` | The consumer commit documents if the transaction is longer that this threshold |
@@ -190,12 +172,12 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomDo
 curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runDocumentConsumers' -u Administrator:Administrator -H 'content-type: application/json+nxrequest' \
   -d '{"params":{"rootFolder": "/default-domain/workspaces"}}'
 ```
-  
+
 Same params listed in the previous previous runDocumentConsumers call.
 
 ## WorkManagerComputation implementation
 
-Instead of queueing work into memory or into Redis (which is also in memory), 
+Instead of queueing work into memory or into Redis (which is also in memory),
 you can queue job in a MQueue without worries about the memory limits.
 
 To do so, add the following contribution to override the default WorkManagerImpl:
@@ -211,7 +193,7 @@ To do so, add the following contribution to override the default WorkManagerImpl
   </service>
 
   <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationChronicle" />
- 
+
   <!-- <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationKafka" /> -->
 
   <extension-point name="queues">
@@ -227,19 +209,19 @@ The Kafka default configuration used is named "default", you can choose another 
 using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.config`.
 
 The goal when using Kafka is to scale horizontally, so that adding a Nuxeo node supports more load.
-To do so the number of partitions that fix the maximum concurrency must be greater than 
-the thread pool size of a single node. This strategy is called partition over provisioning. 
+To do so the number of partitions that fix the maximum concurrency must be greater than
+the thread pool size of a single node. This strategy is called partition over provisioning.
 
-By default there is an over provisioning factor of 3. For instance for a work pool of size 4,
-we have 12 partitions in the MQueue: 
-- With one node we have 4 threads, each reading from 3 partitions.
+By default there is an over provisioning factor of `3`. For instance for a work pool of size 4,
+we have 12 partitions in the MQueue:
+- With a single node we have 4 threads, each reading from 3 partitions.
 - With 2 nodes we have 8 threads some reading from 2 or 1 partitions.
 - With 3 nodes we reach the maximum concurrency of 12 threads, each thread reading from one partition.
-- With more than 3 nodes some threads in the work pool will be unused, reducing the node load. 
+- With more than 3 nodes some threads in the work pool will be unused, reducing the overall node load.
 
 You can change the over provisioning factor using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.overprovisioning`.
 
-Note that work pool of size 1 are not over provisioned because we want any concurrency.
+Note that work pool of size `1` are not over provisioned because we don't want any concurrency.
 
 ## Building
 
