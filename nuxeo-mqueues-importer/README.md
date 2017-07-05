@@ -110,7 +110,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomDo
 | `lang` | The locale used for the generated content, can be `fr_FR` or `en_US` |
 | `mqName` |  The name of the MQueue|
 | `mqSize` | The size of the MQueue which will fix the maximum number of consumer threads |
-| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `kafkaConfig` | Choose the Kafka implementation, use the name of a registered Kafka configuration |
 
 2. Run consumers of document messages creating Nuxeo documents, the concurrency will match the previous nbThreads producers parameters
   ```
@@ -128,10 +128,10 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runDocument
 | `retryMax` | Number of time a consumer retry to import in case of failure |
 | `retryDelayS` | Delay between retries |
 | `mqName` | The name of the MQueue to tail |
-| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `kafkaConfig` | Choose the Kafka implementation, use the name of a registered Kafka configuration |
 | `useBulkMode` | Process asynchronous listeners in bulk mode |
-| `blockIndexing` | Do not index created document with Elasticsearch|
-| `blockAsyncListeners` | Do not process any asynchronous listeners|
+| `blockIndexing` | Do not index created document with Elasticsearch |
+| `blockAsyncListeners` | Do not process any asynchronous listeners |
 | `blockPostCommitListeners` | Do not process any post commit listeners |
 | `blockDefaultSyncListeners` | Disable some default synchronous listeners: dublincore, mimetype, notification, template, binarymetadata and uid |
 
@@ -151,7 +151,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomBl
 | `lang` | The locale used for the generated content, can be "fr_FR" or "en_US" |
 | `mqName` |  The name of the MQueue|
 | `mqSize` | The size of the MQueue which will fix the maximum number of consumer threads |
-| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `kafkaConfig` | Choose the Kafka implementation, use the name of a registered Kafka configuration |
 
 2. Run consumers of blob messages importing into the Nuxeo binary store.
   ```
@@ -168,7 +168,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runBlobCons
 | `retryMax` | Number of time a consumer retry to import in case of failure |
 | `retryDelayS` | Delay between retries |
 | `mqName` | The name of the MQueue to tail |
-| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `kafkaConfig` | Choose the Kafka implementation, use the name of a registered Kafka configuration |
 
 3. Run producers of document messages which refer to produced blobs created in step 2
   ```
@@ -183,7 +183,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomDo
 | `lang` | The locale used for the generated content, can be "fr_FR" or "en_US" |
 | `mqName` |  The name of the MQueue|
 | `mqSize` | The size of the MQueue which will fix the maximum number of consumer threads |
-| `kafkaConfig` | Choose the Kakfka implementation, use the name of a registered Kafka configuration |
+| `kafkaConfig` | Choose the Kafka implementation, use the name of a registered Kafka configuration |
 
 4. Run consumers of document messages
   ```

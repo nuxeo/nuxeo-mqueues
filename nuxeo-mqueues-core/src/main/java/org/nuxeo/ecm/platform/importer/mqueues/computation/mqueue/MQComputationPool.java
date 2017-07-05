@@ -88,7 +88,7 @@ public class MQComputationPool {
             return true;
         }
         for (MQComputationRunner runner : runners) {
-            if (! runner.waitForAssignments(timeout)) {
+            if (!runner.waitForAssignments(timeout)) {
                 return false;
             }
         }

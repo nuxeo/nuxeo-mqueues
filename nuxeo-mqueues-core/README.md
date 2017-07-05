@@ -90,7 +90,7 @@ MQueue is an abstraction on top of two message queue implementations.
   | `auto.offset.reset` | `earliest` | This option is always set to `earliest` |
   | `request.timeout.ms` | `30000` | Requests timeout between MQueue and Kafka brokers. |
   | `max.poll.interval.ms` | `300000` | Consumers that don't call poll during this delay are removed from the group. |
-  | `session.timeout.ms` | `10000` | Consumers that don't send heartbeat during this dely are removed from the group. |
+  | `session.timeout.ms` | `10000` | Consumers that don't send heartbeat during this delay are removed from the group. |
   | `heartbeat.interval.ms` | `3000` | Interval between heartbeats. |
   | `max.poll.records` | `500` | Can be adjusted to make sure the poll interval is respected. |
   | `group.initial.rebalance.delay.ms` | `3000` | Delay for the initial consumer rebalance. |

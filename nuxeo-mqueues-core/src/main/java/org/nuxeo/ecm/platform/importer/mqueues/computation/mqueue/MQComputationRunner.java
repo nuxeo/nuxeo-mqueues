@@ -104,7 +104,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
     }
 
     public boolean waitForAssignments(Duration timeout) throws InterruptedException {
-        if (! assignmentLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+        if (!assignmentLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
             log.warn(metadata.name() + ": Timeout waiting for assignment");
             return false;
         }

@@ -135,7 +135,7 @@ public class KafkaUtils implements AutoCloseable {
     }
 
     private boolean allPartitionsAssigned(String topic) {
-        if (! AdminUtils.topicExists(zkUtils, topic)) {
+        if (!AdminUtils.topicExists(zkUtils, topic)) {
             log.debug("Topic " + topic + " does not exists yet");
             return false;
         }

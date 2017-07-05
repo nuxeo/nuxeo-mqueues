@@ -20,12 +20,9 @@
 package org.nuxeo.ecm.platform.importer.mqueues.kafka;
 
 import org.nuxeo.common.xmap.annotation.XNode;
-import org.nuxeo.common.xmap.annotation.XNodeList;
 import org.nuxeo.common.xmap.annotation.XNodeMap;
 import org.nuxeo.common.xmap.annotation.XObject;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 @XObject("kafkaConfig")

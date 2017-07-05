@@ -67,7 +67,7 @@ public class MQComputationManager implements ComputationManager {
     @Override
     public boolean waitForAssignments(Duration timeout) throws InterruptedException {
         for (MQComputationPool pool : pools) {
-            if (! pool.waitForAssignments(timeout)) {
+            if (!pool.waitForAssignments(timeout)) {
                 return false;
             }
         }

@@ -30,8 +30,8 @@ public class BlobMessageConsumerFactory implements ConsumerFactory<BlobMessage> 
     private final Path outputBlobInfoDirectory;
 
     /**
-     * Blob Consumer factory requires a blob provderName that is present in Nuxeo instance running the consumer.
-     * The outputBlobInofDirectory is used as a base path to store the blob informations in csv files.
+     * Blob Consumer factory requires a blob providerName that is present in Nuxeo instance running the consumer.
+     * The outputBlobInfoDirectory is used as a base path to store the blob information in csv files.
      *
      */
     public BlobMessageConsumerFactory(String blobProviderName, Path outputBlobInfoDirectory) {

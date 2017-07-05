@@ -60,7 +60,7 @@ public class TestKafkaUtils {
     }
 
     @Test
-    public void testResetConusmerStates() throws Exception {
+    public void testResetConsumerStates() throws Exception {
         try (KafkaUtils kutils = new KafkaUtils()) {
             createDefaultTopicIfNeeded(kutils);
             kutils.resetConsumerStates(DEFAULT_TOPIC);
@@ -84,7 +84,7 @@ public class TestKafkaUtils {
     }
 
     @Test
-    public void testAssigments() throws Exception {
+    public void testAssignments() throws Exception {
         Map<String, Integer> streams = new HashMap<>();
         streams.put("s1", 16);
         streams.put("s2", 8);

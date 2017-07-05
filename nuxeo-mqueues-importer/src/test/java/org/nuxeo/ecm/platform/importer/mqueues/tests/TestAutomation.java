@@ -138,7 +138,7 @@ public abstract class TestAutomation {
         automationService.run(ctx, RandomBlobProducers.ID, params);
 
         File blobInfo = folder.newFolder("blob-info");
-        // 2. import blobs into the binarystore, saving blob infos into csv
+        // 2. import blobs into the binarystore, saving blob info into csv
         params.clear();
         params.put("blobProviderName", "test");
         params.put("nbThreads", nbThreads);
