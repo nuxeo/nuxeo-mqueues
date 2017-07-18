@@ -108,7 +108,7 @@ public class KafkaUtils implements AutoCloseable {
             throw new IllegalArgumentException(msg);
         }
         AdminUtils.createTopic(zkUtils, topic, partitions, replicationFactor,
-                new Properties(), RackAwareMode.Disabled$.MODULE$);
+                new Properties(), RackAwareMode.Safe$.MODULE$);
         try {
             waitForTopicCreation(topic, Duration.ofSeconds(5));
         } catch (InterruptedException e) {
