@@ -40,28 +40,38 @@ nuxeo-mqueues-core
 
  Of course it is possible to create different group of consumers that process concurrently the same MQueue at their own speed.
 
- The assignment of partitions to a tailer can be static (manual assignment) or dynamic using the __subscribe__ API.
- A new tailer that subscribes or terminates will trigger a partition rebalancing between the tailers of the consumer group.
+ A tailer can read from multiple patitions (even from different MQueue), the partitions assignment for a tailer can be manual or dynamic.
+ - With **manual** assignement the tailer explicitly choose its partitions.
+ - With **dynamic** assignement tailer subscribes to MQueues, this trigger a partition rebalancing between the tailers of the consumer group,
+ this happens also when a tailer terminates.
+
+ MQueue provides at least once delivery, this means that in case of problem duplicates messages are possible.
+ Exactly once delivery is not that far if your consumers are idempotent.
 
 ### MQueue Implementations
 
 MQueue is an abstraction layer that enable to use 2 different message queue implementations: Chronicle Queue and Kafka.
 
-The first implementation is handy for standalone server and is highly efficient, the second is dedicated for cluster deployment.
+The first implementation is handy for standalone application and is highly efficient,
+the second is dedicated for cluster deployment.
 
 #### Chronicle Queue
 
-  [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is a high performance off-Heap queue implementation.
+  [Chronicle Queues](https://github.com/OpenHFT/Chronicle-Queue) is a high performance off-Heap queue library,
+  there is nothing to install.
 
   Each partition of a MQueue is materialized with a Chronicle Queue.
   There is an additional Chronicle Queue created for each consumer group to persist consumer's offsets.
+
+  The queues are persisted on disk and a retention policy can be applied to keep only the last `n` cycles.
+  The default retention is to keep the messages of the last 4 days.
 
   For instance a MQueue directory layout for a MQueue with 5 partitions looks like:
    ```
    basePath                    # basePath of the MQManager
     └── queueName              # the name of the MQueue
         ├── offset-default     # directory to hold consumer offsets of default consumer group
-        │   └── 20170705.cq4   # chronicle files
+        │   └── 20170616.cq4   # chronicle files, one per cycle
         ├── Q-00               # directory for the partition 0
         │   └── 20170616.cq4   # chronicle files
         ├── Q-01
@@ -74,38 +84,29 @@ The first implementation is handy for standalone server and is highly efficient,
             └── 20170616.cq4
   ```
 
-  This implementation is limited to a single node because the Chronicle Queue can not be distributed
-  with the open source version.
+  Note that this implementation has some important limitations:
 
-  The dynamic assignment is not supported, therefore there is no rebalancing to handle.
-
-  The queues are persisted on disk and a retention policy can be applied to keep only the last `n` cycles.
-  The default retention is to keep the message of the last 4 days.
-
-  There is no replication therefore no fault tolerance. In other word the data directory must be
-  backup and you should make sure you never run out of disk.
+  - It is limited to a single node because Chronicle Queue can not be distributed using the open source version.
+  - The dynamic assignment is not supported, hopefully as we are limited to a single node manual assignment is easy.
+  - There is no replication, therefore no fault tolerance. In other word the data directory must be backup and you should make sure you never run out of disk.
 
 #### Kafka
 
-  [Kafka](http://kafka.apache.org/) is a distributed streaming platform. MQueue uses the latest Kafka version 0.11.0.0.
-
-  A MQueue is simply a [topic](http://kafka.apache.org/intro#intro_topics), partitions have the same meaning.
-
-  Appender and tailer use the [Producer](http://kafka.apache.org/documentation.html#producerapi) and [Consumer](http://kafka.apache.org/documentation.html#consumerapi) API of Kafka.
-
-  Offsets are managed manually and persisted in the `__consumer_offsets` internal topic.
-
-  The dynamic assignment is supported and needed to have distributed producers and consumers.
+  Apache [Kafka](http://kafka.apache.org/) is a distributed streaming platform. You need to install and configure a Kafka cluster, the recommended version is 0.11.0.0.
 
   Kafka brings distributed support and fault tolerance.
 
-  When creating a KafkaMQManager you can use the consumer and producer options as describe in the [Kafka documentation for more information](https://kafka.apache.org/documentation#configuration).
+  The implementation is straightforward:
+  - A MQueue is a [topic](http://kafka.apache.org/intro#intro_topics), partitions have the same meaning.
+  - Appender uses the Kafka [Producer API](http://kafka.apache.org/documentation.html#producerapi) and tailer the Kafka [Consumer API](http://kafka.apache.org/documentation.html#consumerapi).
+  - Offsets are managed manually (auto commit is disable) and persisted in Kafka internal topic.
 
-  Here are some important options:
-
+  To create topic you need to provide a Zookeeper access, other [consumer and producer options](https://kafka.apache.org/documentation#configuration)
+  can be tuned, here are some important options:
 
   | Consumer options | default | Description |
   | --- | ---: |  --- |
+  | `bootstrap.servers` | `localhost:9092` | A list of host/port pairs to use for establishing the initial connection to the Kafka cluster. |
   | `enable.auto.commit` | `false` | MQueue manages the offset commit this is always set to `false`. |
   | `auto.offset.reset` | `earliest` | This option is always set to `earliest` |
   | `request.timeout.ms` | `30000` | Requests timeout between MQueue and Kafka brokers. |
@@ -114,10 +115,12 @@ The first implementation is handy for standalone server and is highly efficient,
   | `heartbeat.interval.ms` | `3000` | Interval between heartbeats. |
   | `max.poll.records` | `500` | Can be adjusted to make sure the poll interval is respected. |
   | `group.initial.rebalance.delay.ms` | `3000` | Delay for the initial consumer rebalance. |
-  | `subscribe.disable` | `false` | This is a MQueue only option to disable the subscribe mode, When this option is `true` MQueue will only support manual partition assignment. |
+  | `subscribe.disable` | `false` | This is a MQueue only option to disable the dynamic assignment, when this option is `true` MQueue will only support manual partition assignment. |
 
   | Producer options | default | Description |
   | --- | ---: |  --- |
+  | `acks` | `1` | The number of acknowledgments the producer requires the leader to have received before considering a request complete. |
+  | `compression.type` | `none` | Valid values are none, gzip, snappy, or lz4. Compression is of full batches of data, so the efficacy of batching will also impact the compression ratio (more batching means better compression). |
   | `default.replication.factor` | `1` | This is a MQueue only option to set the topic replication factor when creating new topic. |
 
 
