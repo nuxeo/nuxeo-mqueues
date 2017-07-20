@@ -21,6 +21,10 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
 
 import java.io.Externalizable;
 import java.util.Collection;
+import java.util.List;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 /**
  * Manage MQueue and give access to appender and tailers.
@@ -80,5 +84,31 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
      * You should not mix {@link #createTailer} and {@code subscribe} usage using the same {@code group}.
      */
     MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener);
+
+    /**
+     * Returns the lag between consumer {@code group} and the producers for each partition.
+     *
+     * @since 9.3
+     */
+    List<MQLag> getLagPerPartition(String name, String group);
+
+    /**
+     * Returns the lag between consumer {@code group} and producers for a MQueue.
+     */
+    default MQLag getLag(String name, String group) {
+        final long[] end = {0};
+        final long[] pos = {Long.MAX_VALUE};
+        final long[] lag = {0};
+        final long[] endMessages = {0};
+        getLagPerPartition(name, group).forEach(item -> {
+            if (item.lowerOffset() > 0) {
+                pos[0] = min(pos[0], item.lowerOffset());
+            }
+            end[0] = max(end[0], item.upperOffset());
+            endMessages[0] += item.upper();
+            lag[0] += item.lag();
+        });
+        return new MQLag(pos[0], end[0], lag[0], endMessages[0]);
+    }
 
 }

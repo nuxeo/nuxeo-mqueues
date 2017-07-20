@@ -27,6 +27,7 @@ import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.work.SleepWork;
 import org.nuxeo.ecm.core.work.api.Work;
 import org.nuxeo.ecm.core.work.api.WorkManager;
+import org.nuxeo.ecm.core.work.api.WorkQueueMetrics;
 import org.nuxeo.ecm.platform.importer.mqueues.workmanager.ComputationWork;
 import org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputation;
 import org.nuxeo.runtime.api.Framework;
@@ -108,11 +109,15 @@ public abstract class TestWorkManager {
     public void testSchedule() throws InterruptedException {
         WorkManagerComputation service = (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
         assertNotNull(service);
-        SleepWork work = new SleepWork(1);
+        SleepWork work = new SleepWork(10);
         service.schedule(work);
         FulltextUpdaterWork work2 = getFulltextUpdaterWork();
         service.schedule(work2);
-        assertTrue(service.awaitCompletion(10, TimeUnit.SECONDS));
+        assertTrue(service.awaitCompletion( 10, TimeUnit.SECONDS));
+        assertEquals(new WorkQueueMetrics("fulltextUpdater", 0, 0, 1, 0),
+                service.getMetrics("fulltextUpdater"));
+        assertEquals(new WorkQueueMetrics("default", 0, 0, 1, 0),
+                service.getMetrics("default"));
     }
 
 }

@@ -24,6 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQLag;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQOffset;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
@@ -225,6 +226,7 @@ public abstract class TestMQueue {
     @Test
     public void basicAppendAndTail() throws Exception {
         final int NB_QUEUE = 10;
+        final String GROUP = "default";
 
         manager.createIfNotExists(mqName, NB_QUEUE);
         MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
@@ -233,7 +235,7 @@ public abstract class TestMQueue {
         keyValueMessage msg2 = keyValueMessage.of("id2");
         appender.append(1, msg1);
 
-        try (MQTailer<keyValueMessage> tailer1 = manager.createTailer("default", MQPartition.of(mqName, 1))) {
+        try (MQTailer<keyValueMessage> tailer1 = manager.createTailer(GROUP, MQPartition.of(mqName, 1))) {
             assertEquals(msg1, tailer1.read(DEF_TIMEOUT).message());
             assertEquals(null, tailer1.read(SMALL_TIMEOUT));
 
@@ -245,14 +247,14 @@ public abstract class TestMQueue {
             assertEquals(msg2, tailer1.read(DEF_TIMEOUT).message());
         }
 
-        try (MQTailer<keyValueMessage> tailer2 = manager.createTailer("default", MQPartition.of(mqName, 2))) {
+        try (MQTailer<keyValueMessage> tailer2 = manager.createTailer(GROUP, MQPartition.of(mqName, 2))) {
             // with tailer2 we can read msg2
             assertEquals(msg2, tailer2.read(DEF_TIMEOUT).message());
         }
 
         // open again the tailers, they should starts at the beginning because tailers has not committed their positions
-        try (MQTailer<keyValueMessage> tailer1 = manager.createTailer("default", MQPartition.of(mqName, 1));
-             MQTailer<keyValueMessage> tailer2 = manager.createTailer("default", MQPartition.of(mqName, 2))) {
+        try (MQTailer<keyValueMessage> tailer1 = manager.createTailer(GROUP, MQPartition.of(mqName, 1));
+             MQTailer<keyValueMessage> tailer2 = manager.createTailer(GROUP, MQPartition.of(mqName, 2))) {
             assertEquals(msg1, tailer1.read(DEF_TIMEOUT).message());
             assertEquals(msg2, tailer1.read(DEF_TIMEOUT).message());
             assertEquals(null, tailer1.read(SMALL_TIMEOUT));
@@ -260,12 +262,17 @@ public abstract class TestMQueue {
             assertEquals(msg2, tailer2.read(DEF_TIMEOUT).message());
             assertEquals(null, tailer2.read(SMALL_TIMEOUT));
         }
+
+        // consumers didn't commit, there are 3 messages
+        assertEquals(MQLag.of(3), manager.getLag(mqName, GROUP));
     }
 
 
     @Test
     public void testCommitAndSeek() throws Exception {
         final int NB_QUEUE = 10;
+        final String GROUP = "default";
+
         manager.createIfNotExists(mqName, NB_QUEUE);
         MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
 
@@ -278,7 +285,7 @@ public abstract class TestMQueue {
         appender.append(2, keyValueMessage.of("id5"));
 
         // process 2 messages and commit
-        try (MQTailer<keyValueMessage> tailer = manager.createTailer("default", MQPartition.of(mqName, 1))) {
+        try (MQTailer<keyValueMessage> tailer = manager.createTailer(GROUP, MQPartition.of(mqName, 1))) {
             assertEquals("id1", tailer.read(DEF_TIMEOUT).message().key());
             tailer.commit();
             //Thread.sleep(10000);
@@ -286,7 +293,7 @@ public abstract class TestMQueue {
             tailer.commit();
         }
 
-        try (MQTailer<keyValueMessage> tailer = manager.createTailer("default", MQPartition.of(mqName, 2))) {
+        try (MQTailer<keyValueMessage> tailer = manager.createTailer(GROUP, MQPartition.of(mqName, 2))) {
             assertEquals("id4", tailer.read(DEF_TIMEOUT).message().key());
             tailer.commit();
             tailer.commit();
@@ -294,7 +301,7 @@ public abstract class TestMQueue {
 
         resetManager();
 
-        try (MQTailer<keyValueMessage> tailer = manager.createTailer("default", MQPartition.of(mqName, 1))) {
+        try (MQTailer<keyValueMessage> tailer = manager.createTailer(GROUP, MQPartition.of(mqName, 1))) {
             tailer.toStart();
             assertEquals("id1", tailer.read(DEF_TIMEOUT).message().key());
 
@@ -305,18 +312,21 @@ public abstract class TestMQueue {
             assertEquals("id3", tailer.read(DEF_TIMEOUT).message().key());
         }
         // by default the tailer is open on the last committed message
-        try (MQTailer<keyValueMessage> tailer = manager.createTailer("default", MQPartition.of(mqName, 2))) {
+        try (MQTailer<keyValueMessage> tailer = manager.createTailer(GROUP, MQPartition.of(mqName, 2))) {
             assertEquals("id5", tailer.read(DEF_TIMEOUT).message().key());
 
             tailer.toStart();
             assertEquals("id4", tailer.read(DEF_TIMEOUT).message().key());
         }
+
+        assertEquals(MQLag.of(3, 5), manager.getLag(mqName, GROUP));
     }
 
 
     @Test
     public void testMoreCommit() throws Exception {
         final int NB_QUEUE = 10;
+        final String GROUP = "default";
         manager.createIfNotExists(mqName, NB_QUEUE);
         MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
 
@@ -326,7 +336,7 @@ public abstract class TestMQueue {
         appender.append(1, keyValueMessage.of("id3"));
         appender.append(1, keyValueMessage.of("id4"));
 
-        try (MQTailer<keyValueMessage> tailer = manager.createTailer("default", MQPartition.of(mqName, 1))) {
+        try (MQTailer<keyValueMessage> tailer = manager.createTailer(GROUP, MQPartition.of(mqName, 1))) {
             assertEquals("id1", tailer.read(DEF_TIMEOUT).message().key());
             tailer.commit();
             assertEquals("id2", tailer.read(DEF_TIMEOUT).message().key());
@@ -339,12 +349,12 @@ public abstract class TestMQueue {
         }
 
         // reopen
-        try (MQTailer<keyValueMessage> tailer = manager.createTailer("default", MQPartition.of(mqName, 1))) {
+        try (MQTailer<keyValueMessage> tailer = manager.createTailer(GROUP, MQPartition.of(mqName, 1))) {
             tailer.toLastCommitted();
             // the last committed message was id1
             assertEquals("id2", tailer.read(DEF_TIMEOUT).message().key());
         }
-
+        assertEquals(MQLag.of(1, 4), manager.getLag(mqName, GROUP));
     }
 
     @Test
@@ -396,6 +406,8 @@ public abstract class TestMQueue {
             assertEquals("id2", tailerA.read(DEF_TIMEOUT).message().key());
             assertEquals("id1", tailerB.read(DEF_TIMEOUT).message().key());
         }
+        assertEquals( MQLag.of(2,10), manager.getLag(mqName, "group-a"));
+        assertEquals( MQLag.of(1,10), manager.getLag(mqName, "group-b"));
     }
 
     @Test
@@ -435,6 +447,8 @@ public abstract class TestMQueue {
         tailerA.close();
         tailerB.close();
 
+        assertEquals( MQLag.of(2,10), manager.getLag(mqName, "group-a"));
+        assertEquals( MQLag.of(5,10), manager.getLag(mqName, "group-b"));
     }
 
 
@@ -592,5 +606,29 @@ public abstract class TestMQueue {
         assertEquals(NB_MSG, i);
 
     }
+
+    @Test
+    public void testLag() throws Exception {
+        final int NB_QUEUE = 5;
+        final String GROUP = "default";
+        keyValueMessage msg1 = keyValueMessage.of("id1");
+        keyValueMessage msg2 = keyValueMessage.of("id2");
+        manager.createIfNotExists(mqName, NB_QUEUE);
+        MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
+
+        assertEquals(MQLag.of(0), manager.getLag(mqName, "unknown-group"));
+        appender.append(1, msg1);
+
+        assertEquals(MQLag.of(1), manager.getLag(mqName, "unknown-group"));
+
+        try (MQTailer<keyValueMessage> tailer = manager.createTailer(GROUP, MQPartition.of(mqName, 1))) {
+            assertEquals(msg1, tailer.read(DEF_TIMEOUT).message());
+            assertEquals(MQLag.of(1), manager.getLag(mqName, GROUP));
+            tailer.commit();
+        }
+        assertEquals(MQLag.of(1), manager.getLag(mqName, "unknown-group"));
+        assertEquals(MQLag.of(0), manager.getLag(mqName, GROUP));
+    }
+
 
 }

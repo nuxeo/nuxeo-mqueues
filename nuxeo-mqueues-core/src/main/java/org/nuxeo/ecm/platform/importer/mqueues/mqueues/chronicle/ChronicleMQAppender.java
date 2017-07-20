@@ -147,6 +147,31 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
                 queues.get(partition.partition()).createTailer(), partition, group));
     }
 
+    public long endOffset(int partition) {
+        return queues.get(partition).createTailer().toEnd().index();
+    }
+
+    public long firstOffset(int partition) {
+        long ret = queues.get(partition).firstIndex();
+        if (ret == Long.MAX_VALUE) {
+            return 0;
+        }
+        return ret;
+    }
+
+    public long countMessages(int partition, long lowerOffset, long upperOffset) {
+        long ret = 0;
+        SingleChronicleQueue queue = (SingleChronicleQueue) queues.get(partition);
+        try {
+            ret = queue.countExcerpts(lowerOffset, upperOffset);
+        } catch (IllegalStateException e) {
+            // 'file not found' for the lowerCycle
+            return 0;
+        }
+        // System.out.println("partition: " + partition + ", count from " + lowerOffset + " to " + upperOffset + " = " + ret);
+        return ret;
+    }
+
     private MQTailer<M> addTailer(ChronicleMQTailer<M> tailer) {
         tailers.add(tailer);
         return tailer;

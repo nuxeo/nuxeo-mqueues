@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle;
 
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -41,6 +42,7 @@ public class ChronicleMQOffsetTracker implements AutoCloseable {
         queueIndex = queue;
         File offsetFile = new File(basePath, OFFSET_QUEUE_PREFIX + group);
         offsetQueue = binary(offsetFile).build();
+        offsetQueue.acquireAppender().pretouch();
     }
 
     /**
@@ -59,6 +61,7 @@ public class ChronicleMQOffsetTracker implements AutoCloseable {
      */
     public long readLastCommittedOffset() {
         ExcerptTailer offsetTailer = offsetQueue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
+        // System.out.println("End offset tailer : " + offsetTailer.index());
         final long[] offset = {0};
         boolean hasNext;
         do {
@@ -71,11 +74,15 @@ public class ChronicleMQOffsetTracker implements AutoCloseable {
                 }
             });
         } while (offset[0] == 0 && hasNext);
+        // System.out.println("last committed returned from: " + offsetQueue.file() + " " + offset[0] + " after reading " + count[0]);
         return offset[0];
     }
 
     public void commit(long offset) {
-        offsetQueue.acquireAppender().writeBytes(b -> b.writeInt(queueIndex).writeLong(offset).writeLong(System.currentTimeMillis()));
+        ExcerptAppender appender = offsetQueue.acquireAppender();
+        appender.writeBytes(b -> b.writeInt(queueIndex).writeLong(offset).writeLong(System.currentTimeMillis()));
+        // long tmp = appender.lastIndexAppended();
+        // System.out.println("COMMIT " + offset + " to " + tmp);
         lastCommittedOffset = offset;
     }
 

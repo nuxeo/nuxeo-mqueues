@@ -21,6 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQLag;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
@@ -33,6 +34,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.apache.commons.io.FileUtils.deleteDirectory;
@@ -101,6 +104,32 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
         return false;
     }
 
+    protected MQLag getLagForPartition(String name, int partition, String group) {
+        long pos = 0;
+        File path = new File(basePath.toFile(), name);
+        try (ChronicleMQOffsetTracker offsetTracker  = new ChronicleMQOffsetTracker(path.toString(), partition, group)) {
+            pos = offsetTracker.readLastCommittedOffset();
+        }
+        ChronicleMQAppender<M> appender = (ChronicleMQAppender<M>) getAppender(name);
+        if (pos == 0) {
+            pos = appender.firstOffset(partition);
+        }
+        long end = appender.endOffset(partition);
+        long lag = appender.countMessages(partition, pos, end);
+        long firstOffset = appender.firstOffset(partition);
+        long endMessages = appender.countMessages(partition, firstOffset, end);
+        return new MQLag(pos, end, lag, endMessages);
+    }
+
+    @Override
+    public List<MQLag> getLagPerPartition(String name, String group) {
+        int size = getAppender(name).size();
+        List<MQLag> ret = new ArrayList<>(size);
+        for (int i=0; i< size; i++) {
+            ret.add(getLagForPartition(name, i, group));
+        }
+        return ret;
+    }
 
     @Override
     public MQAppender<M> createAppender(String name) {

@@ -100,7 +100,6 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         final List<M> value = new ArrayList<>(1);
         if (!cqTailer.readDocument(w -> value.add((M) w.read("msg").object()))) {
             return null;
-
         }
         return new MQRecord<>(partition, value.get(0), new MQOffsetImpl(partition, cqTailer.index()));
     }

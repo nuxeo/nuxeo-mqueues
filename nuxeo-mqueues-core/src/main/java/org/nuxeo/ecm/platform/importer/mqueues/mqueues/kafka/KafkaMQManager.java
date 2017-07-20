@@ -19,7 +19,12 @@
 package org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.utils.Bytes;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQLag;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceListener;
@@ -27,7 +32,10 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.internals.AbstractMQManager;
 
 import java.io.Externalizable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -142,6 +150,37 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         ret.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         ret.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesSerializer");
         ret.remove(DEFAULT_REPLICATION_FACTOR_PROP);
+        return ret;
+    }
+
+    @Override
+    public List<MQLag> getLagPerPartition(String name, String group) {
+        List<MQLag> ret = new ArrayList<>();
+        Properties props = (Properties) consumerProperties.clone();
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
+        KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props);
+        try {
+            List<TopicPartition> topicPartitions = new ArrayList<>();
+            consumer.partitionsFor(getTopicName(name)).forEach(
+                    meta -> topicPartitions.add(new TopicPartition(meta.topic(), meta.partition())));
+            Map<TopicPartition, Long> endOffsets = consumer.endOffsets(topicPartitions);
+            for (TopicPartition topicPartition : topicPartitions) {
+                long committedOffset = 0L;
+                OffsetAndMetadata committed = consumer.committed(topicPartition);
+                if (committed != null) {
+                    committedOffset = committed.offset();
+                }
+                Long endOffset = endOffsets.get(topicPartition);
+                if (endOffset == null) {
+                    endOffset = 0L;
+                }
+                ret.add(new MQLag(committedOffset, endOffset));
+            }
+        } finally {
+            if (consumer != null) {
+                consumer.close();
+            }
+        }
         return ret;
     }
 

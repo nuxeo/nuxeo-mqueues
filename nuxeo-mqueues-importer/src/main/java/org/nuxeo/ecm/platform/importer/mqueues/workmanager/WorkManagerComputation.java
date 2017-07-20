@@ -32,6 +32,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Settings;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.Topology;
 import org.nuxeo.ecm.platform.importer.mqueues.computation.mqueue.MQComputationManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQLag;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
@@ -53,6 +54,8 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
+
+import static java.lang.Math.min;
 
 
 /**
@@ -258,22 +261,72 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
     @Override
     public int getQueueSize(String queueId, Work.State state) {
+        switch(state) {
+            case SCHEDULED:
+                return getMetrics(queueId).getScheduled().intValue();
+            case RUNNING:
+                return getMetrics(queueId).getRunning().intValue();
+        }
         return 0;
     }
 
     @Override
     public WorkQueueMetrics getMetrics(String queueId) {
-        // TODO: find a way to expose some known metrics
-        return new WorkQueueMetrics(queueId, 0, 0, 0, 0);
+        MQLag lag = mqManager.getLag(queueId, queueId);
+        long running = 0;
+        if (lag.lag() > 0) {
+            // we don't have the exact running metric
+            // give an approximation that can be higher that actual one because of the over provisioning
+            running = min(lag.lag(), settings.getPartitions(queueId));
+        }
+        return new WorkQueueMetrics(queueId, lag.lag(), running, lag.lower(), 0);
     }
+
 
     @Override
     public boolean awaitCompletion(String queueId, long duration, TimeUnit unit) throws InterruptedException {
+        if (queueId != null) {
+            return awaitCompletionOnQueue(queueId, duration, unit);
+        }
+        for (String item : workQueueConfig.getQueueIds()) {
+            if (!awaitCompletionOnQueue(item, duration, unit)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    protected boolean awaitCompletionOnQueue(String queueId, long duration, TimeUnit unit) throws InterruptedException {
+        if (!isStarted()) {
+            return true;
+        }
+        log.debug("awaitCompletion " + queueId + " starting");
+        // wait for the lag to be null
+        long durationMs = min(unit.toMillis(duration), TimeUnit.DAYS.toMillis(1)); // prevent overflow
+        long deadline = System.currentTimeMillis() + durationMs;
+        while (System.currentTimeMillis() < deadline) {
+            Thread.sleep(100);
+            int lag = getMetrics(queueId).getScheduled().intValue();
+            if (lag == 0) {
+                if (log.isDebugEnabled()) {
+                    log.warn("awaitCompletion for " + queueId + " completed " + getMetrics(queueId));
+                }
+                return true;
+            }
+            if (! log.isDebugEnabled()) {
+                log.debug("awaitCompletion for " + queueId  + " not completed " + getMetrics(queueId));
+            }
+        }
+        log.warn(String.format("%s timeout after: %.2fs, %s", queueId, durationMs / 1000.0, getMetrics(queueId)));
+        return false;
+    }
+
+    public boolean awaitCompletionWithWaterMark(String queueId, long duration, TimeUnit unit) throws InterruptedException {
         if (!isStarted()) {
             return true;
         }
         // wait that the low watermark get stable
-        long durationMs = Math.min(unit.toMillis(duration), TimeUnit.DAYS.toMillis(1)); // prevent overflow
+        long durationMs = min(unit.toMillis(duration), TimeUnit.DAYS.toMillis(1)); // prevent overflow
         long deadline = System.currentTimeMillis() + durationMs;
         long lowWatermark = getLowWaterMark(queueId);
         while (System.currentTimeMillis() < deadline) {
