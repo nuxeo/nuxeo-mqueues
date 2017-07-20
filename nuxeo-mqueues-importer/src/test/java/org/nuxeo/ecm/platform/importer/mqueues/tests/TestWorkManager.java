@@ -106,8 +106,6 @@ public abstract class TestWorkManager {
 
     @Test
     public void testSchedule() throws InterruptedException {
-        // TODO: related with computationwork that wait on startup NXP-21969
-        Thread.sleep(10000);
         WorkManagerComputation service = (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
         assertNotNull(service);
         SleepWork work = new SleepWork(1);

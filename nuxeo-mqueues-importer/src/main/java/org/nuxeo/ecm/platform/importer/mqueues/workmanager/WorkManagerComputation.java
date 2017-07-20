@@ -20,6 +20,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.workmanager;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.event.EventServiceComponent;
 import org.nuxeo.ecm.core.work.WorkManagerImpl;
 import org.nuxeo.ecm.core.work.WorkQueueRegistry;
@@ -34,6 +35,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
+import org.nuxeo.runtime.model.ComponentManager;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
 import java.lang.reflect.Field;
@@ -152,8 +154,32 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
             supplantWorkManagerImpl();
             initTopology();
             this.mqManager = initStream();
-            startComputation();
+            this.manager = new MQComputationManager(mqManager, topology, settings);
             started = true;
+
+            Framework.getRuntime().getComponentManager().addListener(new ComponentManager.LifeCycleHandler() {
+                @Override
+                public void beforeStop(ComponentManager mgr, boolean isStandby) {
+                    try {
+                        if (!shutdown(10, TimeUnit.SECONDS)) {
+                            log.error("Some processors are still active");
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new NuxeoException("Interrupted while stopping work manager thread pools", e);
+                    }
+                }
+
+                @Override
+                public void afterStart(ComponentManager mgr, boolean isResume) {
+                    manager.start();
+                }
+
+                @Override
+                public void afterStop(ComponentManager mgr, boolean isStandby) {
+                    Framework.getRuntime().getComponentManager().removeListener(this);
+                }
+            });
             log.info("Initialized");
         }
     }
@@ -186,12 +212,6 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
         workQueueConfig.getQueueIds().forEach(id -> log.info("Registering : " + id));
     }
 
-
-    protected void startComputation() {
-        this.manager = new MQComputationManager(mqManager, topology, settings);
-        manager.start();
-    }
-
     protected void initTopology() {
         Topology.Builder builder = Topology.builder();
         workQueueConfig.getQueueIds().forEach(item -> builder.addComputation(() -> new ComputationWork(item), Collections.singletonList("i1:" + item)));
@@ -219,13 +239,21 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
     @Override
     public boolean shutdown(long timeout, TimeUnit timeUnit) throws InterruptedException {
         log.info("Shutdown WorkManager in " + timeUnit.toMillis(timeout) + " ms");
-        boolean ret = manager.stop(Duration.ofMillis(timeUnit.toMillis(timeout)));
+        shutdownInProgress = true;
         try {
-            mqManager.close();
-        } catch (Exception e) {
-            log.error("Error while closing WorkManager mqManager", e);
+            boolean ret = manager.stop(Duration.ofMillis(timeUnit.toMillis(timeout)));
+            try {
+                mqManager.close();
+            } catch (Exception e) {
+                log.error("Error while closing WorkManager mqManager", e);
+            }
+            if (!ret) {
+                log.error("Not able to stop worker pool within the timeout.");
+            }
+            return ret;
+        } finally {
+            shutdownInProgress = false;
         }
-        return ret;
     }
 
     @Override

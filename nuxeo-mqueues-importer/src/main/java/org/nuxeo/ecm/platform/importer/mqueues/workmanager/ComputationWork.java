@@ -52,19 +52,6 @@ public class ComputationWork extends AbstractComputation {
         context.askForCheckpoint();
     }
 
-    @Override
-    public void init(ComputationContext context) {
-        super.init(context);
-        try {
-            // TODO: check if NXP-21969 provide a way to start computation only once framework is started
-            // until then wait to prevent conflict during startup
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            Thread.interrupted();
-            throw new RuntimeException(e);
-        }
-    }
-
     public static Work deserialize(byte[] data) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
         ObjectInput in = null;
