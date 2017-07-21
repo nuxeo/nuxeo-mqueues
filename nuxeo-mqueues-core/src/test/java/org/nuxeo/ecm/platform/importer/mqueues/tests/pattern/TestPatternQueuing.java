@@ -20,6 +20,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -129,6 +130,7 @@ public abstract class TestPatternQueuing {
     }
 
     @Test
+    @Ignore("NXP-22796")
     public void killConsumers() throws Exception {
         final int NB_QUEUE = 2;
         manager.createIfNotExists(mqName, NB_QUEUE);
