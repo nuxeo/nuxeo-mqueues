@@ -49,7 +49,7 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     private final ChronicleMQOffsetTracker offsetTracker;
     private final MQPartitionGroup id;
     private final MQPartition partition;
-    private boolean closed = false;
+    private volatile boolean closed = false;
 
     // keep track of all tailers on the same namespace index even from different mq
     private static final Set<MQPartitionGroup> tailersId = Collections.newSetFromMap(new ConcurrentHashMap<MQPartitionGroup, Boolean>());

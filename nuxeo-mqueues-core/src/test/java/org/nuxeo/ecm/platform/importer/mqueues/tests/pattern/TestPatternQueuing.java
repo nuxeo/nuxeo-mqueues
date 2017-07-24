@@ -20,7 +20,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -36,6 +35,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.tests.pattern.consumer.IdMessageF
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -130,7 +130,6 @@ public abstract class TestPatternQueuing {
     }
 
     @Test
-    @Ignore("NXP-22796")
     public void killConsumers() throws Exception {
         final int NB_QUEUE = 2;
         manager.createIfNotExists(mqName, NB_QUEUE);
@@ -156,10 +155,18 @@ public abstract class TestPatternQueuing {
 
         // terminate consumers abruptly without committing the last message
         consumers.close();
-
-        List<ConsumerStatus> ret = future.get();
-        assertEquals(NB_QUEUE, (long) ret.size());
-        assertEquals(2, ret.stream().filter(s -> s.fail).count());
+        List<ConsumerStatus> ret;
+        try {
+            ret = future.get();
+            assertEquals(NB_QUEUE, (long) ret.size());
+            assertEquals(2, ret.stream().filter(s -> s.fail).count());
+        } catch (ExecutionException e) {
+            // When executor is shutdownNow async task can be reported as being rejected
+            // see java.util.concurrent.ThreadPoolExecutor#execute last reject case.
+            if (! e.getCause().getMessage().contains("rejected")) {
+                throw e;
+            }
+        }
 
         // reset manager
         resetManager();

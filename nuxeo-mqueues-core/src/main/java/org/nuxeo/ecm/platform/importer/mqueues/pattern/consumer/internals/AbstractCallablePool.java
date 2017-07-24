@@ -42,6 +42,7 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
     private static final Log log = LogFactory.getLog(AbstractCallablePool.class);
     private final short nbThreads;
     private ExecutorService threadPool;
+    private ExecutorService supplyThreadPool;
 
     public AbstractCallablePool(short nbThreads) {
         this.nbThreads = nbThreads;
@@ -63,12 +64,13 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
     }
 
     public CompletableFuture<List<T>> start() {
-        ExecutorService supplyThreadPool = Executors.newSingleThreadExecutor(new NamedThreadFactory(getThreadPrefix() + "Pool"));
+        supplyThreadPool = Executors.newSingleThreadExecutor(new NamedThreadFactory(getThreadPrefix() + "Pool"));
         CompletableFuture<List<T>> ret = new CompletableFuture<>();
         CompletableFuture.supplyAsync(() -> {
             try {
                 ret.complete(runPool());
             } catch (Throwable t) {
+                log.error("Exception catch in pool: " + t.getMessage(), t);
                 ret.completeExceptionally(t);
             }
             return ret;
@@ -78,7 +80,7 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
         return ret;
     }
 
-    protected List<T> runPool() throws InterruptedException {
+    protected List<T> runPool() {
         threadPool = newFixedThreadPool(nbThreads, new NamedThreadFactory(getThreadPrefix()));
         log.warn("Start " + getThreadPrefix() + " Pool on " + nbThreads + " thread(s).");
         List<CompletableFuture<T>> futures = new ArrayList<>(nbThreads);
@@ -108,6 +110,10 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
             } catch (ExecutionException e) {
                 log.error("End of consumer in error: " + e.getMessage() + future.toString());
                 status = getErrorStatus();
+            } catch (InterruptedException e) {
+                log.error("End of consumer interrupted.");
+                Thread.currentThread().interrupt();
+                status = getErrorStatus();
             }
             ret.add(status);
         }
@@ -117,6 +123,7 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        supplyThreadPool.shutdownNow();
         threadPool.shutdownNow();
     }
 
