@@ -22,6 +22,8 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 
@@ -33,6 +35,7 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
  * @since 9.1
  */
 public class ChronicleMQOffsetTracker implements AutoCloseable {
+    private static final Log log = LogFactory.getLog(ChronicleMQOffsetTracker.class);
     private final SingleChronicleQueue offsetQueue;
     private final int queueIndex;
     private static final String OFFSET_QUEUE_PREFIX = "offset-";
@@ -60,8 +63,15 @@ public class ChronicleMQOffsetTracker implements AutoCloseable {
      * Read the last committed offset from the file.
      */
     public long readLastCommittedOffset() {
-        ExcerptTailer offsetTailer = offsetQueue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
-        // System.out.println("End offset tailer : " + offsetTailer.index());
+        ExcerptTailer offsetTailer;
+        try {
+            offsetTailer = offsetQueue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
+        } catch (IllegalStateException e) {
+            // sometime the end is NOT_REACHED, may be because the queue is not yet fully initialized
+            log.warn(String.format("Fail to reach the end of offset queue: %s because of: %s, retrying.",
+                    offsetQueue.file().getAbsolutePath(), e.getMessage()));
+            offsetTailer = offsetQueue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
+        }
         final long[] offset = {0};
         boolean hasNext;
         do {

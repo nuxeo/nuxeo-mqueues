@@ -271,11 +271,6 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
             // touch the queue so we can count them even if they stay empty.
             queue.file().mkdirs();
         }
-
-        // When manipulating millions of messages java assert must be disable or GC on Chronicle Queues will knock at the door
-        // also this does not work when running test suite, it requires to change the maven-surefire-plugin conf to add a -da option
-        ClassLoader loader = ClassLoader.getSystemClassLoader();
-        loader.setDefaultAssertionStatus(false);
     }
 
     private int findNbQueues(File basePath) {
