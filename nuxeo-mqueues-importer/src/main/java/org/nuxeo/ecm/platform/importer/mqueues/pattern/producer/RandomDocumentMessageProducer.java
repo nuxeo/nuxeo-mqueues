@@ -145,7 +145,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
                 foldersInCurrentFolderLimit = rand.nextInt(maxFoldersPerFolder) + 1;
                 break;
             case Folder:
-                ret = createFolder(parents.get(parentIndex));
+                ret = createFolder(parents.get(parentIndex), children);
                 children.add(ret.getId());
                 if (children.size() >= foldersInCurrentFolderLimit) {
                     currentType = DocType.Document;
@@ -180,21 +180,26 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
     }
 
 
-    private DocumentMessage createFolder(String parentPath) {
-        DocumentMessage node = getRandomNode("Folder", parentPath, false);
+    private DocumentMessage createFolder(String parentPath, List<String> exclude) {
+        DocumentMessage node = getRandomNode("Folder", parentPath, false, exclude);
         folderCount++;
         return node;
     }
 
     private DocumentMessage createDocument(String parentPath, List<String> exclude) {
-        DocumentMessage node = getRandomNode("File", parentPath, true);
-        String ret = node.getId();
-        while (exclude.contains(ret)) {
-            log.debug("duplicate found");
-            node = getRandomNode("File", parentPath, true);
-            ret = node.getId();
-        }
+        DocumentMessage node = getRandomNode("File", parentPath, true, exclude);
         documentCount++;
+        return node;
+    }
+
+    private DocumentMessage getRandomNode(String type, String parentPath, boolean withBlob, List<String> exclude) {
+        DocumentMessage node = getRandomNode(type, parentPath, withBlob);
+        String nodeId = node.getId();
+        while (exclude.contains(nodeId)) {
+            log.debug("duplicate found");
+            node = getRandomNode(type, parentPath, withBlob);
+            nodeId = node.getId();
+        }
         return node;
     }
 
