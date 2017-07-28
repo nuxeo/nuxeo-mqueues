@@ -109,14 +109,17 @@ public abstract class TestWorkManager {
     public void testSchedule() throws InterruptedException {
         WorkManagerComputation service = (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
         assertNotNull(service);
-        SleepWork work = new SleepWork(10);
+        SleepWork work = new SleepWork(1);
+        // it is possible that some async work in default pool exists
+        WorkQueueMetrics currentLag = service.getMetrics("default");
         service.schedule(work);
         FulltextUpdaterWork work2 = getFulltextUpdaterWork();
         service.schedule(work2);
         assertTrue(service.awaitCompletion( 10, TimeUnit.SECONDS));
         assertEquals(new WorkQueueMetrics("fulltextUpdater", 0, 0, 1, 0),
                 service.getMetrics("fulltextUpdater"));
-        assertEquals(new WorkQueueMetrics("default", 0, 0, 1, 0),
+        assertEquals(new WorkQueueMetrics("default", 0, 0,
+                        1 + currentLag.completed.intValue(), 0),
                 service.getMetrics("default"));
     }
 
