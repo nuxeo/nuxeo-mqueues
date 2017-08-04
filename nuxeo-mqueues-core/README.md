@@ -40,9 +40,9 @@ nuxeo-mqueues-core
 
  Of course it is possible to create different group of consumers that process concurrently the same MQueue at their own speed.
 
- A tailer can read from multiple patitions (even from different MQueue), the partitions assignment for a tailer can be manual or dynamic.
- - With **manual** assignement the tailer explicitly choose its partitions.
- - With **dynamic** assignement tailer subscribes to MQueues, this trigger a partition rebalancing between the tailers of the consumer group,
+ A tailer can read from multiple partitions (even from different MQueue), the partitions assignment for a tailer can be manual or dynamic.
+ - With **manual** assignment the tailer explicitly choose its partitions.
+ - With **dynamic** assignment tailer subscribes to MQueues, this trigger a partition rebalancing between the tailers of the consumer group,
  this happens also when a tailer terminates.
 
  MQueue provides at least once delivery, this means that in case of problem duplicates messages are possible.

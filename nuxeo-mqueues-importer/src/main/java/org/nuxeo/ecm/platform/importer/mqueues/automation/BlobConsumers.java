@@ -32,16 +32,22 @@ import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoWriter;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.internals.MQBlobInfoWriter;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPool;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
 import org.nuxeo.runtime.api.Framework;
 
-import java.nio.file.Paths;
+import java.io.Externalizable;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+
+import static org.nuxeo.ecm.platform.importer.mqueues.automation.RandomBlobProducers.DEFAULT_MQ_NAME;
+
 
 /**
  * @since 9.1
@@ -51,15 +57,13 @@ import java.util.concurrent.TimeUnit;
 public class BlobConsumers {
     private static final Log log = LogFactory.getLog(BlobConsumers.class);
     public static final String ID = "MQImporter.runBlobConsumers";
+    public static final String DEFAULT_MQ_BLOB_INFO_NAME = "mq-blob-info";
 
     @Context
     protected OperationContext ctx;
 
     @Param(name = "nbThreads", required = false)
     protected Integer nbThreads;
-
-    @Param(name = "blobInfoPath")
-    protected String blobInfoPath;
 
     @Param(name = "blobProviderName", required = false)
     protected String blobProviderName = "default";
@@ -79,6 +83,9 @@ public class BlobConsumers {
     @Param(name = "mqName", required = false)
     protected String mqName;
 
+    @Param(name = "mqBlobInfo", required = false)
+    protected String mqBlobInfoName;
+
     @Param(name = "kafkaConfig", required = false)
     protected String kafkaConfig;
 
@@ -87,19 +94,29 @@ public class BlobConsumers {
         RandomBlobProducers.checkAccess(ctx);
         ConsumerPolicy consumerPolicy = ConsumerPolicy.builder()
                 .name(ID)
+                // we set the batch policy but batch is not used by the blob consumer
                 .batchPolicy(BatchPolicy.builder().capacity(batchSize)
                         .timeThreshold(Duration.ofSeconds(batchThresholdS)).build())
                 .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
                 .maxThreads(getNbThreads())
                 .build();
+
         try (MQManager<BlobMessage> manager = getManager();
-             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
-                     new BlobMessageConsumerFactory(blobProviderName, Paths.get(blobInfoPath)),
-                     consumerPolicy)) {
+             MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
+            initBlobInfoMQ(managerBlobInfo);
+            BlobInfoWriter blobInfoWriter = new MQBlobInfoWriter(managerBlobInfo.getAppender(getMQBlobInfoName()));
+            ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
+                    new BlobMessageConsumerFactory(blobProviderName, blobInfoWriter),
+                    consumerPolicy);
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    protected void initBlobInfoMQ(MQManager<BlobInfoMessage> manager) {
+        int size = manager.getAppender(getMQName()).size();
+        manager.createIfNotExists(getMQBlobInfoName(), size);
     }
 
     protected short getNbThreads() {
@@ -113,10 +130,17 @@ public class BlobConsumers {
         if (mqName != null) {
             return mqName;
         }
-        return RandomBlobProducers.DEFAULT_MQ_NAME;
+        return DEFAULT_MQ_NAME;
     }
 
-    protected MQManager<BlobMessage> getManager() {
+    protected String getMQBlobInfoName() {
+        if (mqBlobInfoName != null) {
+            return mqBlobInfoName;
+        }
+        return DEFAULT_MQ_BLOB_INFO_NAME;
+    }
+
+    protected <T extends Externalizable> MQManager<T> getManager() {
         if (kafkaConfig == null || kafkaConfig.isEmpty()) {
             return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"),
                     ChronicleConfig.getRetentionDuration());

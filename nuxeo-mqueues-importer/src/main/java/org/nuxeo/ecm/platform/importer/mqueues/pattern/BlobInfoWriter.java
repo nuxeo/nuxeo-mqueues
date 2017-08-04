@@ -16,18 +16,19 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
+package org.nuxeo.ecm.platform.importer.mqueues.pattern;
 
-import java.time.Duration;
+
+import org.nuxeo.ecm.core.blob.BlobInfo;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 
 /**
- * Exception raised during {@link MQTailer#read(Duration)} if there is a rebalancing.
+ * Save blob information for a document.
  *
- * @since 9.2
+ * @since 9.3
  */
-public class MQRebalanceException extends RuntimeException {
+public interface BlobInfoWriter extends AutoCloseable {
 
-    public MQRebalanceException(String message) {
-        super(message);
-    }
+    void save(DocumentMessage.Builder builder, BlobInfo info);
+
 }

@@ -71,6 +71,9 @@ public class RandomBlobProducers {
     @Param(name = "kafkaConfig", required = false)
     protected String kafkaConfig;
 
+    @Param(name = "blobMarker", required = false)
+    protected String blobMarker;
+
 
     @OperationMethod
     public void run() {
@@ -78,7 +81,8 @@ public class RandomBlobProducers {
         try (MQManager<BlobMessage> manager = getManager()) {
             manager.createIfNotExists(getMQName(), getMQSize());
             try (ProducerPool<BlobMessage> producers = new ProducerPool<>(getMQName(), manager,
-                    new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB), nbThreads.shortValue())) {
+                    new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB, blobMarker),
+                    nbThreads.shortValue())) {
                 producers.start().get();
             }
         } catch (Exception e) {

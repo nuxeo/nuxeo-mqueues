@@ -24,55 +24,37 @@ import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.core.blob.BlobManager;
 import org.nuxeo.ecm.core.blob.BlobProvider;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoWriter;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
 import org.nuxeo.runtime.api.Framework;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Import BlobMessage into a Nuxeo BlobProvider, persist BlobInformation.
  * @since 9.1
  */
 public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
     private static final AtomicInteger consumerCounter = new AtomicInteger(0);
-    private final Integer id = consumerCounter.getAndIncrement();
-    private static final java.lang.String DEFAULT_ENCODING = "UTF-8";
-    private static final String HEADER = "key, digest, length, filename, mimetype, encoding\n";
     private final BlobProvider blobProvider;
-    private final PrintWriter outputWriter;
-    private final FileWriter outputFileWriter;
     private final String blobProviderName;
+    private final BlobInfoWriter blobInfoWriter;
 
-    public BlobMessageConsumer(String consumerId, String blobProviderName, Path outputBlobInfoDirectory) {
+    public BlobMessageConsumer(String consumerId, String blobProviderName, BlobInfoWriter blobInfoWriter) {
         super(consumerId);
         this.blobProviderName = blobProviderName;
         this.blobProvider = Framework.getService(BlobManager.class).getBlobProvider(blobProviderName);
         if (blobProvider == null) {
             throw new IllegalArgumentException("Invalid blob provider: " + blobProviderName);
         }
-        Path outputFile = Paths.get(outputBlobInfoDirectory.toString(),
-                String.format("bi-%02d.csv", id));
-        try {
-            outputBlobInfoDirectory.toFile().mkdirs();
-            outputFileWriter = new FileWriter(outputFile.toFile(), true);
-            BufferedWriter bw = new BufferedWriter(outputFileWriter);
-            outputWriter = new PrintWriter(bw);
-            outputWriter.write(HEADER);
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Invalid output path: " + outputFile, e);
-        }
+        this.blobInfoWriter = blobInfoWriter;
     }
 
     @Override
     public void close() throws Exception {
-        outputWriter.close();
-        outputFileWriter.close();
+        blobInfoWriter.close();
     }
 
     @Override
@@ -90,34 +72,28 @@ public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
                 // we don't submit filename or encoding this is not saved in the binary store but in the document
                 blob = new StringBlob(message.getContent(), null, null, null);
             }
-            BlobInfo bi = new BlobInfo();
-            bi.digest = blobProvider.writeBlob(blob);
-            bi.key = blobProviderName + ":" + bi.digest;
-            bi.length = blob.getLength();
-            bi.filename = message.getFilename();
-            bi.mimeType = message.getMimetype();
-            bi.encoding = message.getEncoding();
-            saveBlobInfo(bi);
+            String digest = blobProvider.writeBlob(blob);
+            long length = blob.getLength();
+            saveBlobInfo(message, digest, length);
         } catch (IOException e) {
             throw new IllegalArgumentException("Invalid blob: " + message, e);
         }
     }
 
-    private void saveBlobInfo(BlobInfo bi) {
-        outputWriter.write(String.format("%s, %s, %d, \"%s\", %s, %s\n",
-                bi.key, bi.digest, bi.length, sanitize(bi.filename), sanitize(bi.mimeType), sanitize(bi.encoding)));
-    }
-
-    private String sanitize(String str) {
-        if (str == null || str.trim().isEmpty()) {
-            return "";
-        }
-        return str;
+    protected void saveBlobInfo(BlobMessage message, String digest, long length) throws IOException {
+        BlobInfo bi = new BlobInfo();
+        bi.digest = digest;
+        bi.key = blobProviderName + ":" + bi.digest;
+        bi.length = length;
+        bi.filename = message.getFilename();
+        bi.mimeType = message.getMimetype();
+        bi.encoding = message.getEncoding();
+        blobInfoWriter.save(null, bi);
     }
 
     @Override
     public void commit() {
-        outputWriter.flush();
+
     }
 
     @Override

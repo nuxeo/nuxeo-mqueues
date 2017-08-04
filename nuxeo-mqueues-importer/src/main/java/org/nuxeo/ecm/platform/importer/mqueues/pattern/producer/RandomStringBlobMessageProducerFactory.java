@@ -27,19 +27,21 @@ public class RandomStringBlobMessageProducerFactory implements ProducerFactory<B
     private final long nbBlobs;
     private final String lang;
     private final int averageSizeKB;
+    private final String marker;
 
     /**
      * Produce messages with a random blob content
      *
      */
-    public RandomStringBlobMessageProducerFactory(long nbBlobs, String lang, int averageSizeKB) {
+    public RandomStringBlobMessageProducerFactory(long nbBlobs, String lang, int averageSizeKB, String marker) {
         this.lang = lang;
         this.nbBlobs = nbBlobs;
         this.averageSizeKB = averageSizeKB;
+        this.marker = marker;
     }
 
     @Override
     public ProducerIterator<BlobMessage> createProducer(int producerId) {
-        return new RandomStringBlobMessageProducer(producerId, nbBlobs, lang, averageSizeKB);
+        return new RandomStringBlobMessageProducer(producerId, nbBlobs, lang, averageSizeKB, marker);
     }
 }

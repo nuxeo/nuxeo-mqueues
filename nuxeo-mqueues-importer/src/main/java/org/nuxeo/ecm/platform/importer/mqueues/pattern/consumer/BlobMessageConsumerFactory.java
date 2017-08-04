@@ -18,29 +18,27 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
 
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoWriter;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
-
-import java.nio.file.Path;
 
 /**
  * @since 9.1
  */
 public class BlobMessageConsumerFactory implements ConsumerFactory<BlobMessage> {
     private final String blobProviderName;
-    private final Path outputBlobInfoDirectory;
+    private final BlobInfoWriter blobInfoWriter;
 
     /**
      * Blob Consumer factory requires a blob providerName that is present in Nuxeo instance running the consumer.
-     * The outputBlobInfoDirectory is used as a base path to store the blob information in csv files.
-     *
+     * The writer is used to store the blob information.
      */
-    public BlobMessageConsumerFactory(String blobProviderName, Path outputBlobInfoDirectory) {
+    public BlobMessageConsumerFactory(String blobProviderName, BlobInfoWriter blobInfoWriter) {
         this.blobProviderName = blobProviderName;
-        this.outputBlobInfoDirectory = outputBlobInfoDirectory;
+        this.blobInfoWriter = blobInfoWriter;
     }
 
     @Override
     public Consumer<BlobMessage> createConsumer(String consumerId) {
-        return new BlobMessageConsumer(consumerId, blobProviderName, outputBlobInfoDirectory);
+        return new BlobMessageConsumer(consumerId, blobProviderName, blobInfoWriter);
     }
 }

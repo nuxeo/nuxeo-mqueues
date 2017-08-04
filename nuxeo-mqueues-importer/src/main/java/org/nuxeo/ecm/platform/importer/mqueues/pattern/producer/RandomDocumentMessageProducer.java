@@ -20,12 +20,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoFetcher;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 import org.nuxeo.ecm.platform.importer.random.HunspellDictionaryHolder;
 import org.nuxeo.ecm.platform.importer.random.RandomTextGenerator;
 
 import java.io.Serializable;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,7 +39,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMessage> {
     private static final Log log = LogFactory.getLog(RandomDocumentMessageProducer.class);
     private final long nbDocuments;
-    private final RandomBlobInfoProvider blobInfoProvider;
+    private final BlobInfoFetcher blobInfoFetcher;
     private boolean countFolderAsDocument = true;
     private int maxFoldersPerFolder = 50;
     private int maxDocumentsPerFolder = 500;
@@ -80,7 +80,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
     private List<String> children = new ArrayList<>();
     private int documentInCurrentFolderCount = 0;
 
-    public RandomDocumentMessageProducer(int producerId, long nbDocuments, String lang, Path blobInfoDirectory) {
+    public RandomDocumentMessageProducer(int producerId, long nbDocuments, String lang, BlobInfoFetcher blobInfoFetcher) {
         super(producerId);
         this.nbDocuments = nbDocuments;
         rand = ThreadLocalRandom.current();
@@ -91,11 +91,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
                 gen.prefilCache();
             }
         }
-        if (blobInfoDirectory != null) {
-            this.blobInfoProvider = new RandomBlobInfoProvider(blobInfoDirectory, producerId);
-        } else {
-            this.blobInfoProvider = null;
-        }
+        this.blobInfoFetcher = blobInfoFetcher;
         log.info("RandomDocumentMessageProducer created, nbDocuments: " + nbDocuments);
     }
 
@@ -209,8 +205,8 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         HashMap<String, Serializable> props = getRandomProperties(title);
         DocumentMessage.Builder builder = DocumentMessage.builder(type, parentPath, name).setProperties(props);
         if (withBlob) {
-            if (blobInfoProvider != null) {
-                builder.setBlobInfo(blobInfoProvider.getBlobInfo(builder));
+            if (blobInfoFetcher != null) {
+                builder.setBlobInfo(blobInfoFetcher.get(builder));
             } else {
                 builder.setBlob(getRandomBlob());
             }
@@ -223,8 +219,8 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         String name = prefix + getName(title);
         HashMap<String, Serializable> props = getRandomProperties(title);
         DocumentMessage.Builder builder = DocumentMessage.builder(type, parentPath, name).setProperties(props);
-        if (blobInfoProvider != null) {
-            builder.setBlobInfo(blobInfoProvider.getBlobInfo(builder));
+        if (blobInfoFetcher != null) {
+            builder.setBlobInfo(blobInfoFetcher.get(builder));
         } else {
             builder.setBlob(getRandomBlob());
         }

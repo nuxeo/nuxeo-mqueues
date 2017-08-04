@@ -34,15 +34,21 @@ public class RandomStringBlobMessageProducer extends AbstractProducer<BlobMessag
     private final long nbBlobs;
     private final int averageSizeKB;
     private final ThreadLocalRandom rand;
+    private final String marker;
     private long count = 0;
     private static RandomTextGenerator gen;
     private final String mimetype;
 
-    public RandomStringBlobMessageProducer(int producerId, long nbBlobs, String lang, int averageSizeKB) {
+    public RandomStringBlobMessageProducer(int producerId, long nbBlobs, String lang, int averageSizeKB, String marker) {
         super(producerId);
         this.nbBlobs = nbBlobs;
         this.averageSizeKB = averageSizeKB;
         this.mimetype = DEFAULT_MIME_TYPE;
+        if (marker != null) {
+            this.marker = marker.trim() + " ";
+        } else {
+            this.marker = "";
+        }
         synchronized (RandomDocumentMessageProducer.class) {
             if (gen == null) {
                 gen = new RandomTextGenerator(new HunspellDictionaryHolder(lang));
@@ -77,7 +83,7 @@ public class RandomStringBlobMessageProducer extends AbstractProducer<BlobMessag
     }
 
     private String generateContent() {
-        return gen.getRandomText(averageSizeKB);
+        return marker + gen.getRandomText(averageSizeKB);
     }
 
 

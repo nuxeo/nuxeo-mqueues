@@ -22,13 +22,19 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
 
+import java.nio.file.Path;
+
 /**
  * @since 9.2
  */
 public class TestBlobImportChronicle extends TestBlobImport {
+    private Path basePath;
 
     @Override
     public MQManager getManager() throws Exception {
-        return new ChronicleMQManager<>(folder.newFolder("mqueue").toPath());
+        if (basePath == null) {
+            basePath = folder.newFolder("mqueue").toPath();
+        }
+        return new ChronicleMQManager<>(basePath);
     }
 }

@@ -27,26 +27,20 @@ import org.nuxeo.ecm.automation.OperationContext;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.test.CoreFeature;
+import org.nuxeo.ecm.core.work.api.WorkManager;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.BlobConsumers;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.DocumentConsumers;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.RandomBlobProducers;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.RandomDocumentProducers;
+import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
@@ -82,19 +76,11 @@ public abstract class TestAutomation {
         addExtraParams(params);
         automationService.run(ctx, RandomBlobProducers.ID, params);
 
-        File blobInfo = folder.newFolder("blob-info");
         params.clear();
         params.put("blobProviderName", "test");
-        params.put("blobInfoPath", blobInfo.toString());
         params.put("nbThreads", nbThreads);
         addExtraParams(params);
         automationService.run(ctx, BlobConsumers.ID, params);
-
-        try (Stream<Path> paths = Files.walk(blobInfo.toPath())) {
-            List<Path> ret = paths.filter(path -> (Files.isRegularFile(path) && path.toString().endsWith("csv"))).collect(Collectors.toList());
-            // we have the same number of CSV files as the producer threads
-            assertEquals(nbThreads, ret.size());
-        }
     }
 
     @Test
@@ -125,24 +111,25 @@ public abstract class TestAutomation {
 
     @Test
     public void testBlobAndDocumentImport() throws Exception {
-        final int nbBlobs = 50;
+        final int nbBlobs = 10;
         final int nbDocuments = 100;
         final int nbThreads = 4;
+        final String marker = "youknowforsearch";
 
         OperationContext ctx = new OperationContext(session);
         // 1. generates random blob messages
         Map<String, Object> params = new HashMap<>();
         params.put("nbBlobs", nbBlobs);
         params.put("nbThreads", nbThreads);
+        params.put("marker", marker);
         addExtraParams(params);
         automationService.run(ctx, RandomBlobProducers.ID, params);
 
-        File blobInfo = folder.newFolder("blob-info");
         // 2. import blobs into the binarystore, saving blob info into csv
         params.clear();
         params.put("blobProviderName", "test");
         params.put("nbThreads", nbThreads);
-        params.put("blobInfoPath", blobInfo.toString());
+        params.put("blobInfoPath", "mq-blob-info");
         addExtraParams(params);
         automationService.run(ctx, BlobConsumers.ID, params);
 
@@ -150,7 +137,7 @@ public abstract class TestAutomation {
         params.clear();
         params.put("nbDocuments", nbDocuments);
         params.put("nbThreads", nbThreads);
-        params.put("blobInfoPath", blobInfo.toString());
+        params.put("blobInfoPath", "mq-blob-info");
         addExtraParams(params);
         automationService.run(ctx, RandomDocumentProducers.ID, params);
 
@@ -166,6 +153,9 @@ public abstract class TestAutomation {
         addExtraParams(params);
         automationService.run(ctx, DocumentConsumers.ID, params);
 
+//        WorkManager service = Framework.getService(WorkManager.class);
+//        assertTrue(service.awaitCompletion(10, TimeUnit.SECONDS));
+
         // start a new transaction to prevent db isolation to hide our new documents
         TransactionHelper.commitOrRollbackTransaction();
         TransactionHelper.startTransaction();
@@ -173,28 +163,12 @@ public abstract class TestAutomation {
         DocumentModelList ret = session.query("SELECT * FROM Document WHERE ecm:primaryType IN ('File', 'Folder')");
         assertEquals(nbThreads * nbDocuments, ret.size());
 
-        // Check that there is a document with a blob
-        String digest = getADigestFromBlobInfoDirectory(blobInfo);
-        String query = String.format("SELECT * FROM Document WHERE content/digest = '%s'", digest);
+        int createdFiles = session.query("SELECT * FROM Document WHERE ecm:primaryType IN ('File')").size();
+        assertTrue("No file created" , createdFiles > 0);
 
-        ret = session.query(query);
-        assertTrue(query, ret.size() > 0);
-
+        // Check that all files has a non null blob
+        int createdBlobs = session.query("SELECT * FROM Document WHERE  content/length > 0").size();
+        assertEquals(createdFiles, createdBlobs);
     }
-
-    private String getADigestFromBlobInfoDirectory(File blobInfo) throws Exception {
-        List<Path> files;
-        try (Stream<Path> paths = Files.walk(blobInfo.toPath())) {
-            files = paths.filter(path -> (Files.isRegularFile(path) && path.toString().endsWith("csv"))).collect(Collectors.toList());
-            files.sort(Comparator.comparing(Path::getFileName));
-        }
-        BufferedReader reader = new BufferedReader(new FileReader(files.get(0).toFile()));
-        reader.readLine(); // skip the csv header
-        String[] token = reader.readLine().split(",");
-        reader.close();
-        // format is key, digest, ....
-        return token[1].trim();
-    }
-
 
 }

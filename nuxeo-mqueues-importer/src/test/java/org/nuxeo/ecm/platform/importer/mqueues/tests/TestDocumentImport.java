@@ -28,12 +28,15 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoWriter;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.internals.MQBlobInfoWriter;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.ConsumerStatus;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.DocumentMessageConsumerFactory;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerFactory;
@@ -103,10 +106,12 @@ public abstract class TestDocumentImport {
         final long NB_DOCUMENTS = 2 * 100;
         final Path blobInfoPath = folder.newFolder("blob-info").toPath();
 
-        try (MQManager<BlobMessage> manager = getManager()) {
+        try (MQManager<BlobMessage> manager = getManager();
+             MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
             manager.createIfNotExists("blob", NB_QUEUE);
+
             ProducerPool<BlobMessage> producers = new ProducerPool<>("blob", manager,
-                    new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 2), NB_PRODUCERS);
+                    new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 2, "1234"), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, (long) ret.size());
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
@@ -114,7 +119,9 @@ public abstract class TestDocumentImport {
 
             // import blobs
             String blobProviderName = "test";
-            ConsumerFactory<BlobMessage> factory = new BlobMessageConsumerFactory(blobProviderName, blobInfoPath);
+            manager.createIfNotExists("blob-info", NB_QUEUE);
+            BlobInfoWriter blobInfoWriter = new MQBlobInfoWriter(managerBlobInfo.getAppender("blob-info"));
+            ConsumerFactory<BlobMessage> factory = new BlobMessageConsumerFactory(blobProviderName, blobInfoWriter);
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>("blob", manager, factory, ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret2 = consumers.start().get();
             assertEquals(NB_QUEUE, (long) ret2.size());
@@ -123,9 +130,11 @@ public abstract class TestDocumentImport {
         }
 
         // generate documents with blob reference
-        try (MQManager<DocumentMessage> manager = getManager()) {
+        try (MQManager<DocumentMessage> manager = getManager();
+             MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
             manager.createIfNotExists("document", NB_QUEUE);
-            ProducerFactory<DocumentMessage> factory = new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US", blobInfoPath);
+            ProducerFactory<DocumentMessage> factory = new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US",
+                    managerBlobInfo, "blob-info", NB_PRODUCERS);
             ProducerPool<DocumentMessage> producers = new ProducerPool<>("document", manager, factory, NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, (long) ret.size());

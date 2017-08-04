@@ -77,21 +77,21 @@ public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
             log.debug("Enable bulk mode");
         }
         if (policy.blockIndexing()) {
-            listenerIndexingEnabled = disableSyncListner(eventAdmin, INDEXING_LISTENER);
+            listenerIndexingEnabled = disableSyncListener(eventAdmin, INDEXING_LISTENER);
             log.debug("Block ES indexing");
         }
         if (policy.blockDefaultSyncListeners()) {
-            listenerNotifEnabled = disableSyncListner(eventAdmin, NOTIF_LISTENER);
-            listenerMimeEnabled = disableSyncListner(eventAdmin, MIME_LISTENER);
-            listenerDublincoreEnabled = disableSyncListner(eventAdmin, DUBLICORE_LISTENER);
-            listenerTplEnabled = disableSyncListner(eventAdmin, TPL_LISTENER);
-            listenerBinaryEnabled = disableSyncListner(eventAdmin, BINARY_LISTENER);
-            listenerUidEnabled = disableSyncListner(eventAdmin, UID_LISTENER);
+            listenerNotifEnabled = disableSyncListener(eventAdmin, NOTIF_LISTENER);
+            listenerMimeEnabled = disableSyncListener(eventAdmin, MIME_LISTENER);
+            listenerDublincoreEnabled = disableSyncListener(eventAdmin, DUBLICORE_LISTENER);
+            listenerTplEnabled = disableSyncListener(eventAdmin, TPL_LISTENER);
+            listenerBinaryEnabled = disableSyncListener(eventAdmin, BINARY_LISTENER);
+            listenerUidEnabled = disableSyncListener(eventAdmin, UID_LISTENER);
             log.debug("Block some default synchronous listener");
         }
     }
 
-    protected boolean disableSyncListner(EventServiceAdmin eventAdmin, String name) {
+    protected boolean disableSyncListener(EventServiceAdmin eventAdmin, String name) {
         EventListenerDescriptor desc = eventAdmin.getListenerList().getDescriptor(name);
         if (desc != null && desc.isEnabled()) {
             eventAdmin.setListenerEnabledFlag(name, false);

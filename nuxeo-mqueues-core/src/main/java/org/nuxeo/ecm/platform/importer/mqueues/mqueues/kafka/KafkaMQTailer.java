@@ -127,7 +127,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
             if (isRebalanced) {
                 isRebalanced = false;
                 log.debug("Rebalance happens during poll, raising exception");
-                throw new MQRebalanceException();
+                throw new MQRebalanceException("Partitions has been rebalanced");
             }
             if (items == 0) {
                 if (log.isTraceEnabled()) {
@@ -208,7 +208,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         log.debug("toEnd: " + id);
         lastOffsets.clear();
         records.clear();
-        consumer.seekToEnd(topicPartitions);
+        consumer.seekToEnd(Collections.emptyList());
     }
 
     @Override
@@ -216,7 +216,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         log.debug("toStart: " + id);
         lastOffsets.clear();
         records.clear();
-        consumer.seekToBeginning(topicPartitions);
+        consumer.seekToBeginning(Collections.emptyList());
     }
 
     @Override

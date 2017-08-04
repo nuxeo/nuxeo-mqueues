@@ -18,9 +18,18 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.producer;
 
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
+import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoFetcher;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.internals.RandomMQBlobInfoFetcher;
+import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 
-import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @since 9.1
@@ -28,8 +37,10 @@ import java.nio.file.Path;
 public class RandomDocumentMessageProducerFactory implements ProducerFactory<DocumentMessage> {
     private final long nbDocuments;
     private final String lang;
-    private final Path blobInfoDirectory;
     private final int blobSizeKb;
+    private final MQManager<BlobInfoMessage> manager;
+    private final String mqName;
+    private List<List<MQPartition>> defaultAssignments;
 
     /**
      * Generates random document messages that contains random blob.
@@ -37,22 +48,42 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
     public RandomDocumentMessageProducerFactory(long nbDocuments, String lang, int blobSizeKb) {
         this.nbDocuments = nbDocuments;
         this.lang = lang;
-        this.blobInfoDirectory = null;
+        this.manager = null;
         this.blobSizeKb = blobSizeKb;
+        this.mqName = null;
     }
 
     /**
      * Generates random documents messages that point to existing blobs.
      */
-    public RandomDocumentMessageProducerFactory(long nbDocuments, String lang, Path blobInfoDirectory) {
+    public RandomDocumentMessageProducerFactory(long nbDocuments, String lang,
+                                                MQManager<BlobInfoMessage> manager, String mqBlobInfoName, int nbThreads) {
         this.nbDocuments = nbDocuments;
         this.lang = lang;
-        this.blobInfoDirectory = blobInfoDirectory;
+        this.manager = manager;
+        this.mqName = mqBlobInfoName;
         this.blobSizeKb = 0;
+        this.defaultAssignments = getDefaultAssignments(nbThreads);
+    }
+
+    private List<List<MQPartition>> getDefaultAssignments(int nbThreads) {
+        Map<String, Integer> streams = Collections.singletonMap(mqName, manager.getAppender(mqName).size());
+        return KafkaUtils.roundRobinAssignments(nbThreads, streams);
     }
 
     @Override
     public ProducerIterator<DocumentMessage> createProducer(int producerId) {
-        return new RandomDocumentMessageProducer(producerId, nbDocuments, lang, blobInfoDirectory).withBlob(blobSizeKb, false);
+        BlobInfoFetcher fetcher = null;
+        if (manager != null) {
+            MQTailer<BlobInfoMessage> tailer;
+            if (manager.supportSubscribe()){
+                tailer = manager.subscribe("DocumentMessageProducer", Collections.singletonList(mqName), null);
+            } else{
+                tailer = manager.createTailer("DocumentMessageProducer", defaultAssignments.get(producerId));
+            }
+            fetcher = new RandomMQBlobInfoFetcher(tailer);
+        }
+        return new RandomDocumentMessageProducer(producerId, nbDocuments, lang, fetcher)
+                .withBlob(blobSizeKb, false);
     }
 }
