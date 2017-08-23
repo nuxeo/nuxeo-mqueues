@@ -20,7 +20,6 @@
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.internals;
 
 import org.nuxeo.ecm.core.blob.BlobInfo;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRebalanceException;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoFetcher;
@@ -36,6 +35,7 @@ import java.time.Duration;
  * @since 9.3
  */
 public class RandomMQBlobInfoFetcher implements BlobInfoFetcher {
+    private static final int READ_DELAY_MS = 10;
     private final MQTailer<BlobInfoMessage> tailer;
 
     public RandomMQBlobInfoFetcher(MQTailer<BlobInfoMessage> blobInfoTailer) {
@@ -46,10 +46,7 @@ public class RandomMQBlobInfoFetcher implements BlobInfoFetcher {
     public BlobInfo get(DocumentMessage.Builder builder) {
         MQRecord<BlobInfoMessage> record;
         try {
-            record = tailer.read(Duration.ofMillis(10));
-        } catch (MQRebalanceException e) {
-            // retry
-            return get(builder);
+            record = tailer.read(Duration.ofMillis(READ_DELAY_MS));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);

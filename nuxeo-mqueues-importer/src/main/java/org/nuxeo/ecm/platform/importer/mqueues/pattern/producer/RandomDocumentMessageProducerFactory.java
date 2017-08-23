@@ -40,7 +40,6 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
     private final int blobSizeKb;
     private final MQManager<BlobInfoMessage> manager;
     private final String mqName;
-    private List<List<MQPartition>> defaultAssignments;
 
     /**
      * Generates random document messages that contains random blob.
@@ -57,33 +56,28 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
      * Generates random documents messages that point to existing blobs.
      */
     public RandomDocumentMessageProducerFactory(long nbDocuments, String lang,
-                                                MQManager<BlobInfoMessage> manager, String mqBlobInfoName, int nbThreads) {
+                                                MQManager<BlobInfoMessage> manager, String mqBlobInfoName) {
         this.nbDocuments = nbDocuments;
         this.lang = lang;
         this.manager = manager;
         this.mqName = mqBlobInfoName;
         this.blobSizeKb = 0;
-        this.defaultAssignments = getDefaultAssignments(nbThreads);
-    }
-
-    private List<List<MQPartition>> getDefaultAssignments(int nbThreads) {
-        Map<String, Integer> streams = Collections.singletonMap(mqName, manager.getAppender(mqName).size());
-        return KafkaUtils.roundRobinAssignments(nbThreads, streams);
     }
 
     @Override
     public ProducerIterator<DocumentMessage> createProducer(int producerId) {
         BlobInfoFetcher fetcher = null;
         if (manager != null) {
-            MQTailer<BlobInfoMessage> tailer;
-            if (manager.supportSubscribe()){
-                tailer = manager.subscribe("DocumentMessageProducer", Collections.singletonList(mqName), null);
-            } else{
-                tailer = manager.createTailer("DocumentMessageProducer", defaultAssignments.get(producerId));
-            }
+            MQTailer<BlobInfoMessage> tailer = manager.createTailer(getGroupName(producerId),
+                Collections.singleton(MQPartition.of(mqName, 0)));
             fetcher = new RandomMQBlobInfoFetcher(tailer);
         }
         return new RandomDocumentMessageProducer(producerId, nbDocuments, lang, fetcher)
                 .withBlob(blobSizeKb, false);
     }
+
+    private String getGroupName(int producerId) {
+        return "RandomDocumentMessageProducer." + producerId;
+    }
+
 }

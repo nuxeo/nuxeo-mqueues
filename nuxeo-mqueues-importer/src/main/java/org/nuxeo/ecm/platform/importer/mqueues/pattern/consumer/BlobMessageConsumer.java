@@ -53,11 +53,6 @@ public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
     }
 
     @Override
-    public void close() throws Exception {
-        blobInfoWriter.close();
-    }
-
-    @Override
     public void begin() {
 
     }

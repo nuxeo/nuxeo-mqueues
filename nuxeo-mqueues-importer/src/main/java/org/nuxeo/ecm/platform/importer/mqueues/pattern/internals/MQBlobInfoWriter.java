@@ -45,8 +45,7 @@ public class MQBlobInfoWriter implements BlobInfoWriter {
 
     @Override
     public void close() throws Exception {
-
+        appender.close();
     }
-
 
 }

@@ -89,7 +89,7 @@ public class RandomDocumentProducers implements MQRebalanceListener {
             ProducerPool<DocumentMessage> producers;
             if (mqBlobInfoName != null) {
                 producers = new ProducerPool<>(getMQName(), manager,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, managerBlobInfo, mqBlobInfoName, nbThreads),
+                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, managerBlobInfo, mqBlobInfoName),
                         nbThreads.shortValue());
             } else {
                 producers = new ProducerPool<>(getMQName(), manager,

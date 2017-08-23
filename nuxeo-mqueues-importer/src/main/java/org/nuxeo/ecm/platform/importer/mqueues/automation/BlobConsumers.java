@@ -102,9 +102,8 @@ public class BlobConsumers {
                 .build();
 
         try (MQManager<BlobMessage> manager = getManager();
-             MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
-            initBlobInfoMQ(managerBlobInfo);
-            BlobInfoWriter blobInfoWriter = new MQBlobInfoWriter(managerBlobInfo.getAppender(getMQBlobInfoName()));
+             MQManager<BlobInfoMessage> managerBlobInfo = getManager();
+             BlobInfoWriter blobInfoWriter = getBlobInfoWriter(managerBlobInfo)) {
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
                     new BlobMessageConsumerFactory(blobProviderName, blobInfoWriter),
                     consumerPolicy);
@@ -114,9 +113,13 @@ public class BlobConsumers {
         }
     }
 
+    protected BlobInfoWriter getBlobInfoWriter(MQManager<BlobInfoMessage> managerBlobInfo) {
+        initBlobInfoMQ(managerBlobInfo);
+        return new MQBlobInfoWriter(managerBlobInfo.getAppender(getMQBlobInfoName()));
+    }
+
     protected void initBlobInfoMQ(MQManager<BlobInfoMessage> manager) {
-        int size = manager.getAppender(getMQName()).size();
-        manager.createIfNotExists(getMQBlobInfoName(), size);
+        manager.createIfNotExists(getMQBlobInfoName(), 1);
     }
 
     protected short getNbThreads() {

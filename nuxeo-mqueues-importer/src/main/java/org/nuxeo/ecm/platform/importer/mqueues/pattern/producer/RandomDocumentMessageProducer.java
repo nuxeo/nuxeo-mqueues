@@ -279,4 +279,12 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         return words[i];
     }
 
+    @Override
+    public void close() throws Exception {
+        super.close();
+        if (blobInfoFetcher != null) {
+            blobInfoFetcher.close();
+        }
+    }
+
 }

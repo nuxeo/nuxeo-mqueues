@@ -134,7 +134,7 @@ public abstract class TestDocumentImport {
              MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
             manager.createIfNotExists("document", NB_QUEUE);
             ProducerFactory<DocumentMessage> factory = new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US",
-                    managerBlobInfo, "blob-info", NB_PRODUCERS);
+                    managerBlobInfo, "blob-info");
             ProducerPool<DocumentMessage> producers = new ProducerPool<>("document", manager, factory, NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, (long) ret.size());
