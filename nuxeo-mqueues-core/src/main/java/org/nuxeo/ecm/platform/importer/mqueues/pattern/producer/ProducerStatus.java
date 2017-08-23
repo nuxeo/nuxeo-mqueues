@@ -55,7 +55,7 @@ public class ProducerStatus {
 
     static String toString(List<ProducerStatus> stats) {
         long startTime = stats.stream().mapToLong(r -> r.startTime).min().orElse(0);
-        long stopTime = stats.stream().mapToLong(r -> r.stopTime).min().orElse(0);
+        long stopTime = stats.stream().mapToLong(r -> r.stopTime).max().orElse(0);
         double elapsed = (stopTime - startTime) / 1000.;
         long messages = stats.stream().mapToLong(r -> r.nbProcessed).sum();
         double mps = (elapsed != 0) ? messages / elapsed : 0.0;

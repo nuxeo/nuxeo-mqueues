@@ -227,7 +227,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
             }
         } catch (Exception e) {
             try {
-                rollbackBatch();
+                rollbackBatch(e);
             } catch (Exception rollbackException) {
                 log.error("Exception on rollback invocation", rollbackException);
                 // we propagate the initial error.
@@ -252,8 +252,12 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         }
     }
 
-    private void rollbackBatch() {
-        log.warn("Rollback batch");
+    private void rollbackBatch(Exception e) {
+        if (e instanceof MQRebalanceException) {
+            log.warn("Rollback current batch because of consumer rebalancing");
+        } else {
+            log.warn("Rollback batch", e);
+        }
         consumer.rollback();
     }
 
