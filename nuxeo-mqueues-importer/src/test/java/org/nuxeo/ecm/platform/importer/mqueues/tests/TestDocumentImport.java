@@ -73,11 +73,12 @@ public abstract class TestDocumentImport {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void synchronous() throws Exception {
+    public void twoStepsImport() throws Exception {
         final int NB_QUEUE = 5;
         final short NB_PRODUCERS = 5;
         final int NB_DOCUMENTS = 2 * 100;
         try (MQManager<DocumentMessage> manager = getManager()) {
+            // 1. generate documents with blobs
             manager.createIfNotExists("document-import", NB_QUEUE);
             ProducerPool<DocumentMessage> producers = new ProducerPool<>("document-import", manager,
                     new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US", 2), NB_PRODUCERS);
@@ -85,7 +86,7 @@ public abstract class TestDocumentImport {
             assertEquals(NB_PRODUCERS, (long) ret.size());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
 
-
+            // 2. import documents
             DocumentModel root = session.getRootDocument();
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>("document-import", manager,
                     new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString()),
@@ -99,7 +100,7 @@ public abstract class TestDocumentImport {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void importBlobFirst() throws Exception {
+    public void fourStepsImport() throws Exception {
         final int NB_QUEUE = 5;
         final short NB_PRODUCERS = 5;
         final long NB_BLOBS = 100;
@@ -109,7 +110,7 @@ public abstract class TestDocumentImport {
         try (MQManager<BlobMessage> manager = getManager();
              MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
             manager.createIfNotExists("blob", NB_QUEUE);
-
+            // 1. generates blobs
             ProducerPool<BlobMessage> producers = new ProducerPool<>("blob", manager,
                     new RandomStringBlobMessageProducerFactory(NB_BLOBS, "en_US", 2, "1234"), NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
@@ -117,7 +118,7 @@ public abstract class TestDocumentImport {
             assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
 
 
-            // import blobs
+            // 2. import blobs
             String blobProviderName = "test";
             manager.createIfNotExists("blob-info", NB_QUEUE);
             BlobInfoWriter blobInfoWriter = new MQBlobInfoWriter(managerBlobInfo.getAppender("blob-info"));
@@ -129,10 +130,11 @@ public abstract class TestDocumentImport {
 
         }
 
-        // generate documents with blob reference
+
         try (MQManager<DocumentMessage> manager = getManager();
              MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
             manager.createIfNotExists("document", NB_QUEUE);
+            // 3. generate documents using blob reference
             ProducerFactory<DocumentMessage> factory = new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US",
                     managerBlobInfo, "blob-info");
             ProducerPool<DocumentMessage> producers = new ProducerPool<>("document", manager, factory, NB_PRODUCERS);
@@ -140,7 +142,7 @@ public abstract class TestDocumentImport {
             assertEquals(NB_PRODUCERS, (long) ret.size());
             assertEquals(NB_PRODUCERS * NB_DOCUMENTS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
 
-            // import documents without creating blobs
+            // 4. import documents without creating blobs
             DocumentModel root = session.getRootDocument();
             ConsumerFactory<DocumentMessage> factory2 = new DocumentMessageConsumerFactory(root.getRepositoryName(), root.getPathAsString());
             ConsumerPool<DocumentMessage> consumers = new ConsumerPool<>("document", manager, factory2, ConsumerPolicy.BOUNDED);

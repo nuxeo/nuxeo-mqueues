@@ -77,6 +77,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
     private DocType currentType = DocType.Root;
     private int parentIndex = 0;
     private List<String> parents = new ArrayList<>();
+    private List<String> folderishChildren = new ArrayList<>();
     private List<String> children = new ArrayList<>();
     private int documentInCurrentFolderCount = 0;
 
@@ -142,8 +143,9 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
                 break;
             case Folder:
                 ret = createFolder(parents.get(parentIndex), children);
+                folderishChildren.add(ret.getId());
                 children.add(ret.getId());
-                if (children.size() >= foldersInCurrentFolderLimit) {
+                if (folderishChildren.size() >= foldersInCurrentFolderLimit) {
                     currentType = DocType.Document;
                     documentInCurrentFolderCount = 0;
                     documentInCurrentFolderLimit = rand.nextInt(maxDocumentsPerFolder);
@@ -152,12 +154,14 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
             default:
             case Document:
                 ret = createDocument(parents.get(parentIndex), children);
+                children.add(ret.getId());
                 documentInCurrentFolderCount += 1;
                 if (documentInCurrentFolderCount > documentInCurrentFolderLimit) {
                     parentIndex += 1;
                     if (parentIndex >= parents.size()) {
                         parents.clear();
-                        parents = children;
+                        parents = folderishChildren;
+                        folderishChildren = new ArrayList<>();
                         children = new ArrayList<>();
                         parentIndex = 0;
                     }
