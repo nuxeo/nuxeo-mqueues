@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 public class TestPatternQueuingChronicle extends TestPatternQueuing {
-    private Path basePath;
+    protected Path basePath;
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();

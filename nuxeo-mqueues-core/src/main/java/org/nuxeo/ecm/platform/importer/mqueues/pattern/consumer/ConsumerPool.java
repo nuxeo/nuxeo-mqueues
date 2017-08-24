@@ -39,11 +39,11 @@ import java.util.concurrent.Callable;
  */
 public class ConsumerPool<M extends Message> extends AbstractCallablePool<ConsumerStatus> {
     private static final Log log = LogFactory.getLog(ConsumerPool.class);
-    private final MQManager<M> manager;
-    private final ConsumerFactory<M> factory;
-    private final ConsumerPolicy policy;
-    private final String mqName;
-    private final List<List<MQPartition>> defaultAssignments;
+    protected final MQManager<M> manager;
+    protected final ConsumerFactory<M> factory;
+    protected final ConsumerPolicy policy;
+    protected final String mqName;
+    protected final List<List<MQPartition>> defaultAssignments;
 
     public ConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy policy) {
         super(computeNbThreads((short) manager.getAppender(mqName).size(), policy.getMaxThreads()));
@@ -91,7 +91,7 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
         log.warn(ConsumerStatus.toString(ret));
     }
 
-    private List<List<MQPartition>> getDefaultAssignments() {
+    protected List<List<MQPartition>> getDefaultAssignments() {
         Map<String, Integer> streams = Collections.singletonMap(mqName, manager.getAppender(mqName).size());
         return KafkaUtils.roundRobinAssignments(getNbThreads(), streams);
     }

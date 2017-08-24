@@ -50,9 +50,9 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
      */
     public static final String DEFAULT_RETENTION_DURATION = "4d";
 
-    private final Path basePath;
+    protected final Path basePath;
 
-    private final String retentionDuration;
+    protected final String retentionDuration;
 
     public ChronicleMQManager(Path basePath) {
         this.basePath = basePath;
@@ -152,7 +152,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
 
     }
 
-    private static void deleteQueueBasePath(File basePath) {
+    protected static void deleteQueueBasePath(File basePath) {
         try {
             log.info("Removing Chronicle Queues directory: " + basePath);
             // Performs a recursive delete if the directory contains only chronicles files

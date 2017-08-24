@@ -31,7 +31,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.tests.mqueues.TestMQueueKafka;
  * @since 9.2
  */
 public class TestPatternQueuingKafka extends TestPatternQueuing {
-    private String prefix;
+    protected String prefix;
 
     @BeforeClass
     public static void assumeKafkaEnabled() {

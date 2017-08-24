@@ -40,7 +40,7 @@ import static org.junit.Assert.fail;
  * @since 9.2
  */
 public class TestMQueueChronicle extends TestMQueue {
-    private Path basePath;
+    protected Path basePath;
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();

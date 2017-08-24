@@ -35,10 +35,10 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
  */
 public class ComputationSource extends AbstractComputation {
     private static final Log log = LogFactory.getLog(ComputationSource.class);
-    private final int records;
-    private final int batchSize;
-    private int generated = 0;
-    private long targetTimestamp;
+    protected final int records;
+    protected final int batchSize;
+    protected int generated = 0;
+    protected long targetTimestamp;
 
     public ComputationSource(String name) {
         this(name, 1, 10, 3, 0);

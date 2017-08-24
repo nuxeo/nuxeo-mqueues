@@ -44,15 +44,15 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     private static final Log log = LogFactory.getLog(ChronicleMQTailer.class);
     protected static final long POLL_INTERVAL_MS = 100L;
 
-    private final String basePath;
-    private final ExcerptTailer cqTailer;
-    private final ChronicleMQOffsetTracker offsetTracker;
-    private final MQPartitionGroup id;
-    private final MQPartition partition;
-    private volatile boolean closed = false;
+    protected final String basePath;
+    protected final ExcerptTailer cqTailer;
+    protected final ChronicleMQOffsetTracker offsetTracker;
+    protected final MQPartitionGroup id;
+    protected final MQPartition partition;
+    protected volatile boolean closed = false;
 
     // keep track of all tailers on the same namespace index even from different mq
-    private static final Set<MQPartitionGroup> tailersId = Collections.newSetFromMap(new ConcurrentHashMap<MQPartitionGroup, Boolean>());
+    protected static final Set<MQPartitionGroup> tailersId = Collections.newSetFromMap(new ConcurrentHashMap<MQPartitionGroup, Boolean>());
 
     public ChronicleMQTailer(String basePath, ExcerptTailer cqTailer, MQPartition partition, String group) {
         Objects.requireNonNull(group);
@@ -65,13 +65,13 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         toLastCommitted();
     }
 
-    private void registerTailer() {
+    protected void registerTailer() {
         if (!tailersId.add(id)) {
             throw new IllegalArgumentException("A tailer for this queue and namespace already exists: " + id);
         }
     }
 
-    private void unregisterTailer() {
+    protected void unregisterTailer() {
         tailersId.remove(id);
     }
 

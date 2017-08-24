@@ -33,11 +33,11 @@ import java.util.Objects;
  * @since 9.2
  */
 public class ComputationContextImpl implements ComputationContext {
-    private final ComputationMetadataMapping metadata;
-    private final Map<String, List<Record>> streamRecords;
-    private final Map<String, Long> timers;
-    private boolean checkpointFlag = false;
-    private long lowWatermark;
+    protected final ComputationMetadataMapping metadata;
+    protected final Map<String, List<Record>> streamRecords;
+    protected final Map<String, Long> timers;
+    protected boolean checkpointFlag = false;
+    protected long lowWatermark;
 
     public ComputationContextImpl(ComputationMetadataMapping metadata) {
         this.metadata = metadata;

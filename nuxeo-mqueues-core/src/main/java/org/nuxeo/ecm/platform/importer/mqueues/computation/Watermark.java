@@ -30,10 +30,10 @@ import java.util.Objects;
  * @since 9.2
  */
 final public class Watermark implements Comparable<Watermark> {
-    final private long timestamp;
-    final private short sequence;
-    final private boolean completed;
-    final private long value;
+    final protected long timestamp;
+    final protected short sequence;
+    final protected boolean completed;
+    final protected long value;
     final public static Watermark LOWEST = new Watermark(0, (short) 0, false);
 
     private Watermark(long timestamp, short sequence, boolean completed) {

@@ -27,7 +27,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
  * @since 9.1
  */
 public class ComputationForwardSlow extends ComputationForward {
-    private final int averageDelayMs;
+    protected final int averageDelayMs;
 
     public ComputationForwardSlow(String name, int inputs, int outputs) {
         this(name, inputs, outputs, 10);

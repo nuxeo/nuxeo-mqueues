@@ -37,17 +37,17 @@ import java.util.Map;
  */
 public class DocumentMessage implements Message {
     static final long serialVersionUID = 20170529L;
-    private String type;
-    private String parentPath;
-    private String name;
-    private Map<String, Serializable> properties;
-    private Blob blob;
-    private BlobInfo blobInfo;
+    protected String type;
+    protected String parentPath;
+    protected String name;
+    protected Map<String, Serializable> properties;
+    protected Blob blob;
+    protected BlobInfo blobInfo;
 
     public DocumentMessage() {
     }
 
-    private DocumentMessage(Builder builder) {
+    protected DocumentMessage(Builder builder) {
         type = builder.type;
         parentPath = builder.parentPath;
         name = builder.name;
@@ -101,12 +101,12 @@ public class DocumentMessage implements Message {
     }
 
     public static class Builder {
-        private final String name;
-        private final String parentPath;
-        private final String type;
-        private Map<String, Serializable> properties;
-        private Blob blob;
-        private BlobInfo blobInfo;
+        protected final String name;
+        protected final String parentPath;
+        protected final String type;
+        protected Map<String, Serializable> properties;
+        protected Blob blob;
+        protected BlobInfo blobInfo;
 
         protected Builder(String type, String parentPath, String name) {
             this.type = type;

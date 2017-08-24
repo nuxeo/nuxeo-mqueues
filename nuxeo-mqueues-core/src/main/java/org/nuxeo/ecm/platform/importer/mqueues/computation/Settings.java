@@ -27,10 +27,10 @@ import java.util.Map;
  * @since 9.2
  */
 public class Settings {
-    private final int defaultConcurrency;
-    private final int defaultPartitions;
-    private final Map<String, Integer> concurrences = new HashMap<>();
-    private final Map<String, Integer> partitions = new HashMap<>();
+    protected final int defaultConcurrency;
+    protected final int defaultPartitions;
+    protected final Map<String, Integer> concurrences = new HashMap<>();
+    protected final Map<String, Integer> partitions = new HashMap<>();
 
     public Settings(int defaultConcurrency, int defaultPartitions) {
         this.defaultConcurrency = defaultConcurrency;

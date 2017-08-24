@@ -32,11 +32,11 @@ import java.util.Collections;
  * @since 9.1
  */
 public class RandomDocumentMessageProducerFactory implements ProducerFactory<DocumentMessage> {
-    private final long nbDocuments;
-    private final String lang;
-    private final int blobSizeKb;
-    private final MQManager<BlobInfoMessage> manager;
-    private final String mqName;
+    protected final long nbDocuments;
+    protected final String lang;
+    protected final int blobSizeKb;
+    protected final MQManager<BlobInfoMessage> manager;
+    protected final String mqName;
 
     /**
      * Generates random document messages that contains random blob.
@@ -73,7 +73,7 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
                 .withBlob(blobSizeKb, false);
     }
 
-    private String getGroupName(int producerId) {
+    protected String getGroupName(int producerId) {
         return "RandomDocumentMessageProducer." + producerId;
     }
 

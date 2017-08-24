@@ -40,9 +40,9 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
  */
 public abstract class AbstractCallablePool<T> implements AutoCloseable {
     private static final Log log = LogFactory.getLog(AbstractCallablePool.class);
-    private final short nbThreads;
-    private ExecutorService threadPool;
-    private ExecutorService supplyThreadPool;
+    protected final short nbThreads;
+    protected ExecutorService threadPool;
+    protected ExecutorService supplyThreadPool;
 
     public AbstractCallablePool(short nbThreads) {
         this.nbThreads = nbThreads;
@@ -134,8 +134,8 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
     }
 
     protected static class NamedThreadFactory implements ThreadFactory {
-        private final AtomicInteger count = new AtomicInteger(0);
-        private final String prefix;
+        protected final AtomicInteger count = new AtomicInteger(0);
+        protected final String prefix;
 
         public NamedThreadFactory(String prefix) {
             this.prefix = prefix;

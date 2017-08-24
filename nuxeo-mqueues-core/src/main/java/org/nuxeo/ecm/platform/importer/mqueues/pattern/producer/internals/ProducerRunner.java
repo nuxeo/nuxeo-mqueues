@@ -42,10 +42,10 @@ import static org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.internals
  */
 public class ProducerRunner<M extends Message> implements Callable<ProducerStatus> {
     private static final Log log = LogFactory.getLog(ProducerRunner.class);
-    private final int producerId;
-    private final MQAppender<M> mq;
-    private final ProducerFactory<M> factory;
-    private String threadName;
+    protected final int producerId;
+    protected final MQAppender<M> mq;
+    protected final ProducerFactory<M> factory;
+    protected String threadName;
 
     protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(NUXEO_METRICS_REGISTRY_NAME);
     protected final Timer producerTimer;
@@ -60,12 +60,12 @@ public class ProducerRunner<M extends Message> implements Callable<ProducerStatu
         log.debug("ProducerIterator thread created: " + producerId);
     }
 
-    private Counter newCounter(String name) {
+    protected Counter newCounter(String name) {
         registry.remove(name);
         return registry.counter(name);
     }
 
-    private Timer newTimer(String name) {
+    protected Timer newTimer(String name) {
         registry.remove(name);
         return registry.timer(name);
     }
@@ -83,7 +83,7 @@ public class ProducerRunner<M extends Message> implements Callable<ProducerStatu
         return new ProducerStatus(producerId, producerTimer.getCount(), start, System.currentTimeMillis(), false);
     }
 
-    private void producerLoop(ProducerIterator<M> producer) {
+    protected void producerLoop(ProducerIterator<M> producer) {
         M message;
         while (producer.hasNext()) {
             try (Timer.Context ignored = producerTimer.time()) {
@@ -94,7 +94,7 @@ public class ProducerRunner<M extends Message> implements Callable<ProducerStatu
         }
     }
 
-    private void setThreadName(M message) {
+    protected void setThreadName(M message) {
         String name = threadName + "-" + producerTimer.getCount();
         if (message != null) {
             name += "-" + message.getId();

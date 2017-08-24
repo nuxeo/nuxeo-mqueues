@@ -30,9 +30,9 @@ import java.time.Duration;
  * @since 9.1
  */
 public class ComputationRecordCounter extends AbstractComputation {
-    private final long intervalMs;
-    private int count;
-    private long lastWatermark;
+    protected final long intervalMs;
+    protected int count;
+    protected long lastWatermark;
 
     /**
      * Output record counter every interval.

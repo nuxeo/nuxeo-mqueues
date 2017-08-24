@@ -29,8 +29,8 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class BuggyIdMessageConsumer extends AbstractConsumer<keyValueMessage> {
     private static final Log log = LogFactory.getLog(BuggyIdMessageConsumer.class);
-    private long lastAccepted = -1;
-    private long lastCommitted = -1;
+    protected long lastAccepted = -1;
+    protected long lastCommitted = -1;
 
     public BuggyIdMessageConsumer(String consumerId) {
         super(consumerId);
@@ -96,7 +96,7 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<keyValueMessage> {
         }
     }
 
-    private int getRandom100() {
+    protected int getRandom100() {
         return ThreadLocalRandom.current().nextInt(100);
     }
 

@@ -36,10 +36,10 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
  */
 public class ChronicleMQOffsetTracker implements AutoCloseable {
     private static final Log log = LogFactory.getLog(ChronicleMQOffsetTracker.class);
-    private final SingleChronicleQueue offsetQueue;
-    private final int queueIndex;
-    private static final String OFFSET_QUEUE_PREFIX = "offset-";
-    private long lastCommittedOffset;
+    protected final SingleChronicleQueue offsetQueue;
+    protected final int queueIndex;
+    protected static final String OFFSET_QUEUE_PREFIX = "offset-";
+    protected long lastCommittedOffset;
 
     public ChronicleMQOffsetTracker(String basePath, int queue, String group) {
         queueIndex = queue;

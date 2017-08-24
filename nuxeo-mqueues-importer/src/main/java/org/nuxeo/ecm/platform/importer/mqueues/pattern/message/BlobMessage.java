@@ -31,16 +31,16 @@ import java.io.ObjectOutput;
  */
 public class BlobMessage implements Message {
     static final long serialVersionUID = 20170529L;
-    private String mimetype;
-    private String encoding;
-    private String filename;
-    private String path;
-    private String content;
+    protected String mimetype;
+    protected String encoding;
+    protected String filename;
+    protected String path;
+    protected String content;
 
     public BlobMessage() {
     }
 
-    private BlobMessage(StringMessageBuilder builder) {
+    protected BlobMessage(StringMessageBuilder builder) {
         mimetype = builder.mimetype;
         encoding = builder.encoding;
         filename = builder.filename;
@@ -78,11 +78,11 @@ public class BlobMessage implements Message {
     }
 
     public static class StringMessageBuilder {
-        private String mimetype;
-        private String encoding;
-        private String filename;
-        private String path;
-        private String content;
+        protected String mimetype;
+        protected String encoding;
+        protected String filename;
+        protected String path;
+        protected String content;
 
         /**
          * Create a string blob with a content

@@ -24,8 +24,8 @@ package org.nuxeo.ecm.platform.importer.mqueues.mqueues;
  * @since 9.2
  */
 public class MQPartition {
-    private final String name;
-    private final int partition;
+    protected final String name;
+    protected final int partition;
 
     public MQPartition(String name, int partition) {
         this.name = name;

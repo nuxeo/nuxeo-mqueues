@@ -34,9 +34,9 @@ import java.util.Iterator;
  */
 public class FileBlobMessageProducer extends AbstractProducer<BlobMessage> {
     private static final Log log = LogFactory.getLog(FileBlobMessageProducer.class);
-    private final File listFile;
-    private int count = 0;
-    private Iterator<String> fileIterator;
+    protected final File listFile;
+    protected int count = 0;
+    protected Iterator<String> fileIterator;
 
     public FileBlobMessageProducer(int producerId, File listFile) {
         super(producerId);

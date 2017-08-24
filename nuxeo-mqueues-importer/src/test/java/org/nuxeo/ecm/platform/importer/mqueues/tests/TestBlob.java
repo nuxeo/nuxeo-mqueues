@@ -114,17 +114,17 @@ public class TestBlob {
         assertEquals(17, blob.getLength());
     }
 
-    private DocumentModel createDocumentModel() {
+    protected DocumentModel createDocumentModel() {
         String rootPath = session.getRootDocument().getPathAsString();
         return session.createDocumentModel(rootPath, "docname", "File");
     }
 
-    private String saveBlobOnBlobProvider(String providerName, Blob blob) throws IOException {
+    protected String saveBlobOnBlobProvider(String providerName, Blob blob) throws IOException {
         BlobProvider blobProvider = Framework.getService(BlobManager.class).getBlobProvider(providerName);
         return blobProvider.writeBlob(blob);
     }
 
-    private Blob createBlob(String content, String filename) {
+    protected Blob createBlob(String content, String filename) {
         return new StringBlob(content, "plain/text", "UTF-8", filename);
     }
 

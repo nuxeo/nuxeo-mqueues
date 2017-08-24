@@ -170,7 +170,7 @@ public class TestMQueueKafka extends TestMQueue {
         };
 
         ExecutorService service = Executors.newFixedThreadPool(NB_CONSUMER, new ThreadFactory() {
-            private final AtomicInteger count = new AtomicInteger(0);
+            protected final AtomicInteger count = new AtomicInteger(0);
 
             @Override
             public Thread newThread(Runnable r) {

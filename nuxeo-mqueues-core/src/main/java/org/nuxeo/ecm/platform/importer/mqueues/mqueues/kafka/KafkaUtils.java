@@ -58,8 +58,8 @@ import java.util.stream.Collectors;
  */
 public class KafkaUtils implements AutoCloseable {
     private static final Log log = LogFactory.getLog(KafkaUtils.class);
-    private final ZkClient zkClient;
-    private final ZkUtils zkUtils;
+    protected final ZkClient zkClient;
+    protected final ZkUtils zkUtils;
     public static final String DEFAULT_ZK_SERVER = "localhost:2181";
     public static final int ZK_TIMEOUT_MS = 6000;
     public static final int ZK_CONNECTION_TIMEOUT_MS = 10000;
@@ -88,11 +88,11 @@ public class KafkaUtils implements AutoCloseable {
         return true;
     }
 
-    private static ZkUtils createZkUtils(String zkServers, ZkClient zkClient) {
+    protected static ZkUtils createZkUtils(String zkServers, ZkClient zkClient) {
         return new ZkUtils(zkClient, new ZkConnection(zkServers), false);
     }
 
-    private static ZkClient createZkClient(String zkServers) {
+    protected static ZkClient createZkClient(String zkServers) {
         return new ZkClient(zkServers, ZK_TIMEOUT_MS, ZK_CONNECTION_TIMEOUT_MS, ZKStringSerializer$.MODULE$);
     }
 
@@ -118,7 +118,7 @@ public class KafkaUtils implements AutoCloseable {
         AdminUtils.deleteAllConsumerGroupInfoForTopicInZK(zkUtils, topic);
     }
 
-    private boolean waitForTopicCreation(String topic, Duration timeout) throws InterruptedException {
+    protected boolean waitForTopicCreation(String topic, Duration timeout) throws InterruptedException {
         // if you don't wait for a topic to be ready, this raise LEADER_NOT_AVAILABLE warning
         // and you can expects lots of rebalancing
         final long timeoutMs = timeout.toMillis();
@@ -134,7 +134,7 @@ public class KafkaUtils implements AutoCloseable {
         return ret;
     }
 
-    private boolean allPartitionsAssigned(String topic) {
+    protected boolean allPartitionsAssigned(String topic) {
         if (!AdminUtils.topicExists(zkUtils, topic)) {
             log.debug("Topic " + topic + " does not exists yet");
             return false;

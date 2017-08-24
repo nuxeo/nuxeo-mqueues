@@ -49,7 +49,7 @@ public abstract class TestPatternQueuing {
     public
     TestName name = new TestName();
 
-    private MQManager<keyValueMessage> manager;
+    protected MQManager<keyValueMessage> manager;
 
     public abstract MQManager<keyValueMessage> createManager() throws Exception;
 

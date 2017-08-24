@@ -51,15 +51,15 @@ import java.util.concurrent.Future;
  */
 public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> {
     private static final Log log = LogFactory.getLog(KafkaMQAppender.class);
-    private final String topic;
-    private final Properties consumerProps;
-    private final Properties producerProps;
-    private final int size;
-    private KafkaProducer<String, Bytes> producer;
+    protected final String topic;
+    protected final Properties consumerProps;
+    protected final Properties producerProps;
+    protected final int size;
+    protected KafkaProducer<String, Bytes> producer;
     // keep track of created tailers to make sure they are closed
-    private final ConcurrentLinkedQueue<KafkaMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
-    private final String name;
-    private boolean closed;
+    protected final ConcurrentLinkedQueue<KafkaMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
+    protected final String name;
+    protected boolean closed;
 
     static public <M extends Externalizable> KafkaMQAppender<M> open(String topic, String name, Properties producerProperties, Properties consumerProperties) {
         return new KafkaMQAppender<>(topic, name, producerProperties, consumerProperties);
@@ -113,7 +113,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         return ret;
     }
 
-    private byte[] messageAsByteArray(Externalizable message) {
+    protected byte[] messageAsByteArray(Externalizable message) {
         ObjectOutput out;
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             out = new ObjectOutputStream(bos);
@@ -157,7 +157,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         return closed;
     }
 
-    private boolean isProcessed(String group, TopicPartition topicPartition, long offset) {
+    protected boolean isProcessed(String group, TopicPartition topicPartition, long offset) {
         // TODO: find a better way, this is expensive to create a consumer each time
         // but this is needed, an open consumer is not properly updated
         Properties props = (Properties) consumerProps.clone();

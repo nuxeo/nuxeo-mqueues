@@ -24,10 +24,10 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
  * @since 9.1
  */
 public class RandomStringBlobMessageProducerFactory implements ProducerFactory<BlobMessage> {
-    private final long nbBlobs;
-    private final String lang;
-    private final int averageSizeKB;
-    private final String marker;
+    protected final long nbBlobs;
+    protected final String lang;
+    protected final int averageSizeKB;
+    protected final String marker;
 
     /**
      * Produce messages with a random blob content

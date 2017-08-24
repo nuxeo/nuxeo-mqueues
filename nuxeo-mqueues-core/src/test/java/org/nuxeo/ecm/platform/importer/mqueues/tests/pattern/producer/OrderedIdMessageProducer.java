@@ -27,8 +27,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.AbstractProducer
  * @since 9.1
  */
 public class OrderedIdMessageProducer extends AbstractProducer<keyValueMessage> {
-    private final long nbMessage;
-    private long count = 0;
+    protected final long nbMessage;
+    protected long count = 0;
 
     public OrderedIdMessageProducer(int producerId, long nbMessage) {
         super(producerId);

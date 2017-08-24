@@ -24,8 +24,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
  * @since 9.1
  */
 public class DocumentMessageConsumerFactory implements ConsumerFactory<DocumentMessage> {
-    private final String repositoryName;
-    private final String rootPath;
+    protected final String repositoryName;
+    protected final String rootPath;
 
     public DocumentMessageConsumerFactory(String repositoryName, String rootPath) {
         this.repositoryName = repositoryName;

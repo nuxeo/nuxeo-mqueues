@@ -35,9 +35,9 @@ import java.util.concurrent.Callable;
  */
 public class ProducerPool<M extends Message> extends AbstractCallablePool<ProducerStatus> {
     private static final Log log = LogFactory.getLog(ProducerPool.class);
-    private final MQManager<M> manager;
-    private final ProducerFactory<M> factory;
-    private final String mqName;
+    protected final MQManager<M> manager;
+    protected final ProducerFactory<M> factory;
+    protected final String mqName;
 
     public ProducerPool(String mqName, MQManager<M> manager, ProducerFactory<M> factory, short nbThreads) {
         super(nbThreads);

@@ -315,7 +315,7 @@ public abstract class TestComputationManager {
 
     }
 
-    private int readCounterFrom(MQManager<Record> manager, String stream) throws InterruptedException {
+    protected int readCounterFrom(MQManager<Record> manager, String stream) throws InterruptedException {
         int partitions = manager.getAppender(stream).size();
         int ret = 0;
         for (int i = 0; i < partitions; i++) {
@@ -324,7 +324,7 @@ public abstract class TestComputationManager {
         return ret;
     }
 
-    private int readCounterFromPartition(MQManager<Record> manager, String stream, int partition) throws InterruptedException {
+    protected int readCounterFromPartition(MQManager<Record> manager, String stream, int partition) throws InterruptedException {
         MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition));
         int result = 0;
         tailer.toStart();
@@ -336,7 +336,7 @@ public abstract class TestComputationManager {
     }
 
 
-    private int countRecordIn(MQManager<Record> manager, String stream) throws Exception {
+    protected int countRecordIn(MQManager<Record> manager, String stream) throws Exception {
         int ret = 0;
         for (int i = 0; i < manager.getAppender(stream).size(); i++) {
             ret += countRecordInPartition(manager, stream, i);
@@ -344,7 +344,7 @@ public abstract class TestComputationManager {
         return ret;
     }
 
-    private int countRecordInPartition(MQManager<Record> manager, String stream, int partition) throws Exception {
+    protected int countRecordInPartition(MQManager<Record> manager, String stream, int partition) throws Exception {
         try (MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition))) {
             int result = 0;
             tailer.toStart();
