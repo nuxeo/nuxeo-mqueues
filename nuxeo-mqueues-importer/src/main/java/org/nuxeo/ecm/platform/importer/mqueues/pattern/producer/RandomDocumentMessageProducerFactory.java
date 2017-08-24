@@ -18,13 +18,15 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.producer;
 
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
+import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoFetcher;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.internals.RandomMQBlobInfoFetcher;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
+import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerFactory;
+import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerIterator;
 
 import java.util.Collections;
 

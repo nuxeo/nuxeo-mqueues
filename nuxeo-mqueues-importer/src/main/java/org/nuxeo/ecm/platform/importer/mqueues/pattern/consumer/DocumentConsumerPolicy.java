@@ -18,6 +18,8 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
 
+import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
+
 /**
  * @since 9.2
  */

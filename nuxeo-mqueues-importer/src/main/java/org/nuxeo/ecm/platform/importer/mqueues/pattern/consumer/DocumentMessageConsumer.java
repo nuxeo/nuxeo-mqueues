@@ -28,6 +28,7 @@ import org.nuxeo.ecm.core.api.model.PropertyNotFoundException;
 import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.core.blob.SimpleManagedBlob;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.AbstractConsumer;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
 import java.io.Serializable;

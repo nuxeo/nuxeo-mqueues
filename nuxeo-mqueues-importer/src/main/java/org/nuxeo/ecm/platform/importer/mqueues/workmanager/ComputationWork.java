@@ -19,9 +19,9 @@
 package org.nuxeo.ecm.platform.importer.mqueues.workmanager;
 
 import org.nuxeo.ecm.core.work.api.Work;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.AbstractComputation;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.ComputationContext;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
+import org.nuxeo.lib.core.mqueues.computation.AbstractComputation;
+import org.nuxeo.lib.core.mqueues.computation.ComputationContext;
+import org.nuxeo.lib.core.mqueues.computation.Record;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

@@ -20,6 +20,8 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer;
 
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoWriter;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.Consumer;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerFactory;
 
 /**
  * @since 9.1

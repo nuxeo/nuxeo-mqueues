@@ -18,7 +18,7 @@
  */
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.message;
 
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
+import org.nuxeo.lib.core.mqueues.pattern.Message;
 
 import java.io.IOException;
 import java.io.ObjectInput;

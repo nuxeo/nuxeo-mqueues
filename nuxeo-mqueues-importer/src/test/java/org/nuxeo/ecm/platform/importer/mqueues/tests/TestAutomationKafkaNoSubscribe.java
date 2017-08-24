@@ -20,7 +20,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
 import org.junit.Assume;
 import org.junit.BeforeClass;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
+import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaUtils;
 import org.nuxeo.runtime.test.runner.LocalDeploy;
 
 import java.util.Map;

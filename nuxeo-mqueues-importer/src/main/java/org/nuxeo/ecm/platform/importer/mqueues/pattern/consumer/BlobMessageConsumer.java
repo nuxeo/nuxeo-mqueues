@@ -26,6 +26,7 @@ import org.nuxeo.ecm.core.blob.BlobManager;
 import org.nuxeo.ecm.core.blob.BlobProvider;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoWriter;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.AbstractConsumer;
 import org.nuxeo.runtime.api.Framework;
 
 import java.io.File;

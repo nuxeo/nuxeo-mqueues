@@ -8,6 +8,7 @@
   </parent>
 
   <artifactId>nuxeo-mqueues-core</artifactId>
+  <groupId>org.nuxeo.lib.core</groupId>
   <name>Nuxeo MQueues Core</name>
   <description>MQueue Core API for Consumer Producer pattern and Computation</description>
 
