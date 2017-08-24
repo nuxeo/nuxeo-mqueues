@@ -46,7 +46,7 @@ public class ComputationWork extends AbstractComputation {
         try {
             work.run();
         } finally {
-            // TODO catch error and propagate
+            // TODO: catch error and propagate
             work.cleanUp(true, null);
         }
         context.askForCheckpoint();

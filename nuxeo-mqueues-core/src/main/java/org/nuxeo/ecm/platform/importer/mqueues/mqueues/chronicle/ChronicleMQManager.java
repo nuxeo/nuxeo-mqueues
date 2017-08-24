@@ -80,6 +80,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     @Override
     public boolean exists(String name) {
         File path = new File(basePath.toFile(), name);
+        //noinspection ConstantConditions
         return path.isDirectory() && path.list().length > 0;
     }
 
@@ -106,7 +107,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     protected MQLag getLagForPartition(String name, int partition, String group) {
         long pos = 0;
         File path = new File(basePath.toFile(), name);
-        try (ChronicleMQOffsetTracker offsetTracker  = new ChronicleMQOffsetTracker(path.toString(), partition, group)) {
+        try (ChronicleMQOffsetTracker offsetTracker = new ChronicleMQOffsetTracker(path.toString(), partition, group)) {
             pos = offsetTracker.readLastCommittedOffset();
         }
         ChronicleMQAppender<M> appender = (ChronicleMQAppender<M>) getAppender(name);
@@ -124,7 +125,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     public List<MQLag> getLagPerPartition(String name, String group) {
         int size = getAppender(name).size();
         List<MQLag> ret = new ArrayList<>(size);
-        for (int i=0; i< size; i++) {
+        for (int i = 0; i < size; i++) {
             ret.add(getLagForPartition(name, i, group));
         }
         return ret;

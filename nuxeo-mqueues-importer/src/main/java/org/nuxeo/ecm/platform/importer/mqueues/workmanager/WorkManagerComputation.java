@@ -234,8 +234,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
     @Override
     public boolean shutdownQueue(String queueId, long timeout, TimeUnit unit) throws InterruptedException {
-        log.info("Shutdown WorkManager stream: " + queueId);
-        // TODO: decide what to do ?
+        log.warn("Shutdown a queue is not supported with computation implementation");
         return false;
     }
 
@@ -261,7 +260,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
     @Override
     public int getQueueSize(String queueId, Work.State state) {
-        switch(state) {
+        switch (state) {
             case SCHEDULED:
                 return getMetrics(queueId).getScheduled().intValue();
             case RUNNING:
@@ -313,8 +312,8 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
                 }
                 return true;
             }
-            if (! log.isDebugEnabled()) {
-                log.debug("awaitCompletion for " + queueId  + " not completed " + getMetrics(queueId));
+            if (!log.isDebugEnabled()) {
+                log.debug("awaitCompletion for " + queueId + " not completed " + getMetrics(queueId));
             }
         }
         log.warn(String.format("%s timeout after: %.2fs, %s", queueId, durationMs / 1000.0, getMetrics(queueId)));

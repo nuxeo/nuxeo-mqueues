@@ -115,7 +115,7 @@ public abstract class TestWorkManager {
         service.schedule(work);
         FulltextUpdaterWork work2 = getFulltextUpdaterWork();
         service.schedule(work2);
-        assertTrue(service.awaitCompletion( 10, TimeUnit.SECONDS));
+        assertTrue(service.awaitCompletion(10, TimeUnit.SECONDS));
         assertEquals(new WorkQueueMetrics("fulltextUpdater", 0, 0, 1, 0),
                 service.getMetrics("fulltextUpdater"));
         assertEquals(new WorkQueueMetrics("default", 0, 0,

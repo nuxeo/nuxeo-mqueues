@@ -72,7 +72,7 @@ public class FileBlobMessageProducer extends AbstractProducer<BlobMessage> {
     public BlobMessage next() {
         String filePath = fileIterator.next();
         count += 1;
-        // TODO guess mimetype, length ?
+        // TODO: guess mimetype, length ?
         return new BlobMessage.FileMessageBuilder(filePath).build();
     }
 }

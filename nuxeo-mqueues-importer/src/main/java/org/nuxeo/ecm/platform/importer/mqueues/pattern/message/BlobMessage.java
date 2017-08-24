@@ -141,7 +141,6 @@ public class BlobMessage implements Message {
 
     }
 
-
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeObject(mimetype);
@@ -160,6 +159,39 @@ public class BlobMessage implements Message {
         content = (String) in.readObject();
     }
 
-    //TODO: impl hashCode, equals, toString
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BlobMessage that = (BlobMessage) o;
+
+        if (mimetype != null ? !mimetype.equals(that.mimetype) : that.mimetype != null) return false;
+        if (encoding != null ? !encoding.equals(that.encoding) : that.encoding != null) return false;
+        if (filename != null ? !filename.equals(that.filename) : that.filename != null) return false;
+        if (path != null ? !path.equals(that.path) : that.path != null) return false;
+        return content != null ? content.equals(that.content) : that.content == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = mimetype != null ? mimetype.hashCode() : 0;
+        result = 31 * result + (encoding != null ? encoding.hashCode() : 0);
+        result = 31 * result + (filename != null ? filename.hashCode() : 0);
+        result = 31 * result + (path != null ? path.hashCode() : 0);
+        result = 31 * result + (content != null ? content.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "BlobMessage{" +
+                "mimetype='" + mimetype + '\'' +
+                ", encoding='" + encoding + '\'' +
+                ", filename='" + filename + '\'' +
+                ", path='" + path + '\'' +
+                ", content='" + content + '\'' +
+                '}';
+    }
 }
 

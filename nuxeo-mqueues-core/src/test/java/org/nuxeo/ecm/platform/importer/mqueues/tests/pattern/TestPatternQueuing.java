@@ -229,7 +229,7 @@ public abstract class TestPatternQueuing {
                 ConsumerPolicy.UNBOUNDED);
         future = consumers.start();
         // terminate the consumers with pills
-        // TODO: this will not work with subscribe if the partition are unbalanced
+        // WARN: this will not work with subscribe if the partition are unbalanced
         appender.append(0, keyValueMessage.POISON_PILL);
         appender.append(1, keyValueMessage.POISON_PILL);
 

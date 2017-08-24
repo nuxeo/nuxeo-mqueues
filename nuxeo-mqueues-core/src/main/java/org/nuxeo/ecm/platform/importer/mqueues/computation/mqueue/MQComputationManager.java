@@ -128,7 +128,7 @@ public class MQComputationManager implements ComputationManager {
 
     @Override
     public long getLowWatermark(String computationName) {
-        Objects.nonNull(computationName);
+        Objects.requireNonNull(computationName);
         // the low wm for a computation is the minimum watermark for all its ancestors
         Map<String, Long> watermarks = new HashMap<>(pools.size());
         pools.forEach(pool -> watermarks.put(pool.getComputationName(), pool.getLowWatermark()));

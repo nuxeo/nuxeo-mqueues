@@ -21,15 +21,12 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.producer;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQPartition;
 import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaUtils;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoFetcher;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.internals.RandomMQBlobInfoFetcher;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 /**
  * @since 9.1
@@ -69,7 +66,7 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
         BlobInfoFetcher fetcher = null;
         if (manager != null) {
             MQTailer<BlobInfoMessage> tailer = manager.createTailer(getGroupName(producerId),
-                Collections.singleton(MQPartition.of(mqName, 0)));
+                    Collections.singleton(MQPartition.of(mqName, 0)));
             fetcher = new RandomMQBlobInfoFetcher(tailer);
         }
         return new RandomDocumentMessageProducer(producerId, nbDocuments, lang, fetcher)

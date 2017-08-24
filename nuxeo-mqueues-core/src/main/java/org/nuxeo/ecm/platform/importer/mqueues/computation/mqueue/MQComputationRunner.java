@@ -304,11 +304,11 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
     }
 
     private void saveTimers() {
-        // TODO save timers in the key value store
+        // TODO: save timers in the key value store NXP-22112
     }
 
     private void saveState() {
-        // TODO save key value store
+        // TODO: save key value store NXP-22112
     }
 
     private void saveOffsets() {

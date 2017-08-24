@@ -113,7 +113,6 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
 
     @Override
     public void close() throws Exception {
-        // TODO: check if we want this behavior, closing the manager close all MQueue
         for (MQAppender<M> app : appenders.values()) {
             app.close();
         }

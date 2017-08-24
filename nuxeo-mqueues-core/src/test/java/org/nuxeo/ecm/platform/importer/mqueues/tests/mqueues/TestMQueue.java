@@ -406,8 +406,8 @@ public abstract class TestMQueue {
             assertEquals("id2", tailerA.read(DEF_TIMEOUT).message().key());
             assertEquals("id1", tailerB.read(DEF_TIMEOUT).message().key());
         }
-        assertEquals( MQLag.of(2,10), manager.getLag(mqName, "group-a"));
-        assertEquals( MQLag.of(1,10), manager.getLag(mqName, "group-b"));
+        assertEquals(MQLag.of(2, 10), manager.getLag(mqName, "group-a"));
+        assertEquals(MQLag.of(1, 10), manager.getLag(mqName, "group-b"));
     }
 
     @Test
@@ -447,8 +447,8 @@ public abstract class TestMQueue {
         tailerA.close();
         tailerB.close();
 
-        assertEquals( MQLag.of(2,10), manager.getLag(mqName, "group-a"));
-        assertEquals( MQLag.of(5,10), manager.getLag(mqName, "group-b"));
+        assertEquals(MQLag.of(2, 10), manager.getLag(mqName, "group-a"));
+        assertEquals(MQLag.of(5, 10), manager.getLag(mqName, "group-b"));
     }
 
 
