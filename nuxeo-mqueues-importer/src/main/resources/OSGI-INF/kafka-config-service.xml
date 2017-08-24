@@ -5,14 +5,14 @@
     The component allows to register Kafka configuration
   </documentation>
 
-  <implementation class="org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigServiceImpl" />
+  <implementation class="org.nuxeo.ecm.platform.mqueues.kafka.KafkaConfigServiceImpl" />
 
   <service>
-    <provide interface="org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService" />
+    <provide interface="org.nuxeo.ecm.platform.mqueues.kafka.KafkaConfigService" />
   </service>
 
   <extension-point name="kafkaConfig">
-    <object class="org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigDescriptor" />
+    <object class="org.nuxeo.ecm.platform.mqueues.kafka.KafkaConfigDescriptor" />
   </extension-point>
 
 </component>
