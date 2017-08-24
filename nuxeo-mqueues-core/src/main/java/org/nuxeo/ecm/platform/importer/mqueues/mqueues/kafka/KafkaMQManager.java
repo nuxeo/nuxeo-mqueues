@@ -158,8 +158,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         List<MQLag> ret = new ArrayList<>();
         Properties props = (Properties) consumerProperties.clone();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
-        KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props);
-        try {
+        try (KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props)) {
             List<TopicPartition> topicPartitions = new ArrayList<>();
             consumer.partitionsFor(getTopicName(name)).forEach(
                     meta -> topicPartitions.add(new TopicPartition(meta.topic(), meta.partition())));
@@ -176,8 +175,6 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
                 }
                 ret.add(new MQLag(committedOffset, endOffset));
             }
-        } finally {
-            consumer.close();
         }
         return ret;
     }

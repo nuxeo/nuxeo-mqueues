@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Basic data object that contains: key, value, flag and offset
+ *
  * @since 9.2
  */
 public class Record implements Externalizable {

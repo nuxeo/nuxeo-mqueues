@@ -162,9 +162,8 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
         // but this is needed, an open consumer is not properly updated
         Properties props = (Properties) consumerProps.clone();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
-        KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props);
-        consumer.assign(Collections.singletonList(topicPartition));
-        try {
+        try (KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props)) {
+            consumer.assign(Collections.singletonList(topicPartition));
             long last = consumer.position(topicPartition);
             boolean ret = (last > 0) && (last > offset);
             if (log.isDebugEnabled()) {
@@ -172,8 +171,6 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
                         + ":+" + offset + "? " + ret + ", current position: " + last);
             }
             return ret;
-        } finally {
-            consumer.close();
         }
     }
 

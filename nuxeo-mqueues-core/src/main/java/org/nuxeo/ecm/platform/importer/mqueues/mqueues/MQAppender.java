@@ -24,6 +24,7 @@ import java.util.Objects;
 
 /**
  * An appender is used to append message into a MQueue.
+ *
  * Implementations must be thread safe.
  *
  * @since 9.2
@@ -65,14 +66,14 @@ public interface MQAppender<M extends Externalizable> extends AutoCloseable {
     /**
      * Wait for consumer to process a message up to the offset.
      *
-     * The message is processed if a consumer commit its offset (or a bigger one) in the group name space.
+     * The message is processed if a consumer of the group commits a greater or equals offset.
      *
      * Return {@code true} if the message has been consumed, {@code false} in case of timeout.
      */
     boolean waitFor(MQOffset offset, String group, Duration timeout) throws InterruptedException;
 
     /**
-     * Returns {@code true} if the close has been closed.
+     * Returns {@code true} if the appender has been closed.
      */
     boolean closed();
 }

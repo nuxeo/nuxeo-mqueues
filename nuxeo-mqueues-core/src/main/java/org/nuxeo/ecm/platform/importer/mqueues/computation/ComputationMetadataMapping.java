@@ -22,6 +22,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Extend the metadata to add a mapping to the input and output stream.
+ *
+ * @since 9.2
+ */
 public class ComputationMetadataMapping extends ComputationMetadata {
 
     protected final Map<String, String> mapping;

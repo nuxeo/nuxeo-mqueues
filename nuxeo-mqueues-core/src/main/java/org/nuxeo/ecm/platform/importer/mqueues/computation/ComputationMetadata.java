@@ -23,27 +23,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The metadata defining a computation.
+ *
+ * @since 9.2
+ */
 public class ComputationMetadata {
-    /** Globally unique identifier of the computation */
     protected final String name;
-
-    /** List of streams to subscribe this computation to. */
     protected final Set<String> istreams;
-
-    /** List of streams this computation may produce on */
     protected final Set<String> ostreams;
-
-    public String name() {
-        return name;
-    }
-
-    public Set<String> inputStreams() {
-        return istreams;
-    }
-
-    public Set<String> outputStreams() {
-        return ostreams;
-    }
 
     public ComputationMetadata(String name, Set<String> inputStreams, Set<String> outputStreams) {
         this.name = Objects.requireNonNull(name);
@@ -62,6 +50,27 @@ public class ComputationMetadata {
         if (this.istreams.isEmpty() && this.ostreams.isEmpty()) {
             throw new RuntimeException("Both input and output streams are empty");
         }
+    }
+
+    /**
+     * Globally unique identifier of the computation.
+     */
+    public String name() {
+        return name;
+    }
+
+    /**
+     * List of streams to subscribe this computation to.
+     */
+    public Set<String> inputStreams() {
+        return istreams;
+    }
+
+    /**
+     * List of streams this computation may produce on.
+     */
+    public Set<String> outputStreams() {
+        return ostreams;
     }
 
     @Override
