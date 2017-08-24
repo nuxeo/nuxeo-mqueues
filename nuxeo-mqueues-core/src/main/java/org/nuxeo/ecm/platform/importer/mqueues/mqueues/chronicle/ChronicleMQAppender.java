@@ -84,6 +84,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
     private boolean closed = false;
 
     static public boolean exists(File basePath) {
+        //noinspection ConstantConditions
         return basePath.isDirectory() && basePath.list().length > 0;
     }
 
@@ -95,7 +96,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
      * Create a new mqueues
      */
     static public <M extends Externalizable> ChronicleMQAppender<M> create(File basePath, int size,
-            String retentionPolicy) {
+                                                                           String retentionPolicy) {
         return new ChronicleMQAppender<>(basePath, size, retentionPolicy);
     }
 
@@ -160,7 +161,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
     }
 
     public long countMessages(int partition, long lowerOffset, long upperOffset) {
-        long ret = 0;
+        long ret;
         SingleChronicleQueue queue = (SingleChronicleQueue) queues.get(partition);
         try {
             ret = queue.countExcerpts(lowerOffset, upperOffset);
@@ -264,9 +265,9 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         for (int i = 0; i < nbQueues; i++) {
             File path = new File(basePath, String.format("%s%02d", QUEUE_PREFIX, i));
             ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                                                              .rollCycle(rollCycle)
-                                                              .storeFileListener(this)
-                                                              .build();
+                    .rollCycle(rollCycle)
+                    .storeFileListener(this)
+                    .build();
             queues.add(queue);
             // touch the queue so we can count them even if they stay empty.
             queue.file().mkdirs();
@@ -290,22 +291,22 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         String rollingPeriod = retentionDuration.substring(retentionDuration.length() - 1);
         RollCycle rollCycle;
         switch (rollingPeriod) {
-        case SECOND_ROLLING_PERIOD:
-            rollCycle = RollCycles.TEST_SECONDLY;
-            break;
-        case MINUTE_ROLLING_PERIOD:
-            rollCycle = RollCycles.MINUTELY;
-            break;
-        case HOUR_ROLLING_PERIOD:
-            rollCycle = RollCycles.HOURLY;
-            break;
-        case DAY_ROLLING_PERIOD:
-            rollCycle = RollCycles.DAILY;
-            break;
-        default:
-            String msg = "Unknown rolling period: " + rollingPeriod + " for MQueue: " + name();
-            log.error(msg);
-            throw new IllegalArgumentException(msg);
+            case SECOND_ROLLING_PERIOD:
+                rollCycle = RollCycles.TEST_SECONDLY;
+                break;
+            case MINUTE_ROLLING_PERIOD:
+                rollCycle = RollCycles.MINUTELY;
+                break;
+            case HOUR_ROLLING_PERIOD:
+                rollCycle = RollCycles.HOURLY;
+                break;
+            case DAY_ROLLING_PERIOD:
+                rollCycle = RollCycles.DAILY;
+                break;
+            default:
+                String msg = "Unknown rolling period: " + rollingPeriod + " for MQueue: " + name();
+                log.error(msg);
+                throw new IllegalArgumentException(msg);
         }
         return rollCycle;
     }
@@ -336,7 +337,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
      * retention duration).
      */
     protected void purgeQueue(int lowerCycle, int upperCycle, SingleChronicleQueue queue) {
-        // TODO this method should be refactored after chronicle-queue lib upgrade
+        // TODO: refactor this using new chronicle-queue lib methods
         File[] files = queue.file().listFiles();
 
         if (files != null && lowerCycle < upperCycle) {
@@ -345,14 +346,14 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
                     f -> FilenameUtils.removeExtension(f.getName()));
 
             Arrays.stream(files)
-                  .sorted(Comparator.comparingLong(cache::toLong)) // Order files by cycles
-                  .limit(files.length - retentionNbCycles) // Keep the 'retentionNbCycles' more recent files
-                  .filter(f -> cache.parseCount(FilenameUtils.removeExtension(f.getName())) < upperCycle)
-                  .forEach(f -> {
-                      if (f.delete()) {
-                          log.info("Queue file deleted: " + f.getAbsolutePath());
-                      }
-                  });
+                    .sorted(Comparator.comparingLong(cache::toLong)) // Order files by cycles
+                    .limit(files.length - retentionNbCycles) // Keep the 'retentionNbCycles' more recent files
+                    .filter(f -> cache.parseCount(FilenameUtils.removeExtension(f.getName())) < upperCycle)
+                    .forEach(f -> {
+                        if (f.delete()) {
+                            log.info("Queue file deleted: " + f.getAbsolutePath());
+                        }
+                    });
         }
     }
 

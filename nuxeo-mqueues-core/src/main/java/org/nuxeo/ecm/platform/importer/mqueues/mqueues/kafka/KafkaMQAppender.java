@@ -173,9 +173,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
             }
             return ret;
         } finally {
-            if (consumer != null) {
-                consumer.close();
-            }
+            consumer.close();
         }
     }
 

@@ -28,6 +28,7 @@ import static java.lang.Math.min;
 
 /**
  * Manage MQueue and give access to appender and tailers.
+ * Closing the MQManager will also close the associated appenders and tailers.
  *
  * @since 9.2
  */

@@ -91,11 +91,6 @@ public class ConsumerPool<M extends Message> extends AbstractCallablePool<Consum
         log.warn(ConsumerStatus.toString(ret));
     }
 
-    @Override
-    public void close() throws Exception {
-        super.close();
-    }
-
     private List<List<MQPartition>> getDefaultAssignments() {
         Map<String, Integer> streams = Collections.singletonMap(mqName, manager.getAppender(mqName).size());
         return KafkaUtils.roundRobinAssignments(getNbThreads(), streams);

@@ -27,12 +27,10 @@ import org.nuxeo.ecm.automation.OperationContext;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.ecm.core.work.api.WorkManager;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.BlobConsumers;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.DocumentConsumers;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.RandomBlobProducers;
 import org.nuxeo.ecm.platform.importer.mqueues.automation.RandomDocumentProducers;
-import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -40,7 +38,6 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
@@ -164,7 +161,7 @@ public abstract class TestAutomation {
         assertEquals(nbThreads * nbDocuments, ret.size());
 
         int createdFiles = session.query("SELECT * FROM Document WHERE ecm:primaryType IN ('File')").size();
-        assertTrue("No file created" , createdFiles > 0);
+        assertTrue("No file created", createdFiles > 0);
 
         // Check that all files has a non null blob
         int createdBlobs = session.query("SELECT * FROM Document WHERE  content/length > 0").size();

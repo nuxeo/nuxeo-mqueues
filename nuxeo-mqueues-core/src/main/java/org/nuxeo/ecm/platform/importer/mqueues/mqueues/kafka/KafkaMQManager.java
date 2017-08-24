@@ -177,9 +177,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
                 ret.add(new MQLag(committedOffset, endOffset));
             }
         } finally {
-            if (consumer != null) {
-                consumer.close();
-            }
+            consumer.close();
         }
         return ret;
     }

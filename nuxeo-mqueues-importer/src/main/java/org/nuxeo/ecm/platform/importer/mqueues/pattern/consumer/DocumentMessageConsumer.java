@@ -100,7 +100,7 @@ public class DocumentMessageConsumer extends AbstractConsumer<DocumentMessage> {
     public void commit() {
         log.debug("commit");
         session.save();
-        // TODO here if tx is in rollback we must throw something
+        // TODO: here if tx is in rollback we must throw something
         commitOrRollbackTransaction();
     }
 

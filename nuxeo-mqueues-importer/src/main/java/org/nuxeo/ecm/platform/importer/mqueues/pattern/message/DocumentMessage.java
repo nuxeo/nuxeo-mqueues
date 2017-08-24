@@ -81,7 +81,7 @@ public class DocumentMessage implements Message {
     }
 
     public Blob getBlob() {
-        // TODO should return unmodifiable blob
+        // should return unmodifiable blob
         return blob;
     }
 

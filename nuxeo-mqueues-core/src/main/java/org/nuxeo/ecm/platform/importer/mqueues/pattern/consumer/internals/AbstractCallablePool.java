@@ -107,7 +107,7 @@ public abstract class AbstractCallablePool<T> implements AutoCloseable {
         }
         log.info("Pool is up and running");
         threadPool.shutdown();
-        // TODO: we may return here and wait only in the get impl, but the sync cost should be cheap here
+        // We may return here and wait only in the get impl, but the sync cost should be cheap here
         List<T> ret = new ArrayList<>(nbThreads);
         for (CompletableFuture<T> future : futures) {
             T status;
