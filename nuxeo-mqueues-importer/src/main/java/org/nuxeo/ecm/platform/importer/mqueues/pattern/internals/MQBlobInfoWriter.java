@@ -20,7 +20,7 @@
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.internals;
 
 import org.nuxeo.ecm.core.blob.BlobInfo;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQAppender;
+import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoWriter;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;

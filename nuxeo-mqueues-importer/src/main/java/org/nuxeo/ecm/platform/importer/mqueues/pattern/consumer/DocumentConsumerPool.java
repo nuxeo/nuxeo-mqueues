@@ -22,8 +22,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.event.EventServiceAdmin;
 import org.nuxeo.ecm.core.event.impl.EventListenerDescriptor;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.Message;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.pattern.Message;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerFactory;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.runtime.api.Framework;
 
 /**

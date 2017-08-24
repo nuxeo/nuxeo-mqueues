@@ -22,9 +22,9 @@ package org.nuxeo.ecm.platform.importer.mqueues.workmanager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.lib.core.mqueues.computation.Record;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 
 import java.nio.file.Path;
 

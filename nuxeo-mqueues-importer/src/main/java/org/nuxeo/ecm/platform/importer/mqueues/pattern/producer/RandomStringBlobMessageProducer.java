@@ -21,6 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.producer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
 import org.nuxeo.ecm.platform.importer.random.HunspellDictionaryHolder;
 import org.nuxeo.ecm.platform.importer.random.RandomTextGenerator;
+import org.nuxeo.lib.core.mqueues.pattern.producer.AbstractProducer;
 
 import java.util.concurrent.ThreadLocalRandom;
 

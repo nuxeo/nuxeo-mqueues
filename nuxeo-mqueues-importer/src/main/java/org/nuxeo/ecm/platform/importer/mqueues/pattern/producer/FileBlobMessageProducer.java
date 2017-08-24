@@ -21,6 +21,7 @@ package org.nuxeo.ecm.platform.importer.mqueues.pattern.producer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
+import org.nuxeo.lib.core.mqueues.pattern.producer.AbstractProducer;
 
 import java.io.File;
 import java.io.IOException;

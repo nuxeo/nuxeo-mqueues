@@ -24,6 +24,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoFetcher;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
 import org.nuxeo.ecm.platform.importer.random.HunspellDictionaryHolder;
 import org.nuxeo.ecm.platform.importer.random.RandomTextGenerator;
+import org.nuxeo.lib.core.mqueues.pattern.producer.AbstractProducer;
 
 import java.io.Serializable;
 import java.util.ArrayList;

@@ -29,11 +29,11 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
 import org.nuxeo.ecm.platform.importer.mqueues.chronicle.ChronicleConfig;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
-import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerPool;
+import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.api.Framework;
 

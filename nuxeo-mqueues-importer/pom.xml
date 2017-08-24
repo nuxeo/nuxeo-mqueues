@@ -13,8 +13,9 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.nuxeo.ecm.platform</groupId>
+      <groupId>org.nuxeo.lib.core</groupId>
       <artifactId>nuxeo-mqueues-core</artifactId>
+      <version>9.3-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.nuxeo.runtime</groupId>

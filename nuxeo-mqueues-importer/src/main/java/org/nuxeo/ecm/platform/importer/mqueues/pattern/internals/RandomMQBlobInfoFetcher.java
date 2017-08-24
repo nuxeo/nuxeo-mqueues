@@ -20,8 +20,8 @@
 package org.nuxeo.ecm.platform.importer.mqueues.pattern.internals;
 
 import org.nuxeo.ecm.core.blob.BlobInfo;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQRecord;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQTailer;
+import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
+import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.BlobInfoFetcher;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;

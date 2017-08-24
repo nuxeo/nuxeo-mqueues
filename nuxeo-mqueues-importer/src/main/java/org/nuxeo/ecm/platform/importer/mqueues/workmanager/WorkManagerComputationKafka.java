@@ -21,10 +21,10 @@ package org.nuxeo.ecm.platform.importer.mqueues.workmanager;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.platform.importer.mqueues.computation.Record;
+import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.ecm.platform.importer.mqueues.kafka.KafkaConfigService;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.kafka.KafkaMQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.runtime.api.Framework;
 
 

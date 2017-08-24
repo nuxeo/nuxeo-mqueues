@@ -19,8 +19,8 @@
 package org.nuxeo.ecm.platform.importer.mqueues.tests;
 
 import org.junit.After;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.importer.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 
 import java.nio.file.Path;
 
