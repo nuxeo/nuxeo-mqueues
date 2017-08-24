@@ -21,27 +21,21 @@ package org.nuxeo.ecm.platform.importer.mqueues.computation;
 import java.time.Duration;
 
 /**
+ * Run a topology of computations according to some settings.
+ *
  * @since 9.2
  */
 public interface ComputationManager {
-    /**
-     * Run the computations
-     */
-    void start();
 
     /**
-     * Wait for the computations to have assigned partitions ready to process records.
-     * <p/>
-     * Returns {@code true} if all computations have assigned partitions during the timeout delay.
+     * Run the computations defined by the topology and settings.
      */
-    boolean waitForAssignments(Duration timeout) throws InterruptedException;
+    void start(Topology topology, Settings settings);
 
     /**
      * Stop computations gracefully after processing a record or a timer.
      */
     boolean stop(Duration timeout);
-
-    boolean stop();
 
     /**
      * Stop computations when input streams are empty.
@@ -52,13 +46,34 @@ public interface ComputationManager {
     boolean drainAndStop(Duration timeout);
 
     /**
-     * Shutdown immediately
+     * Shutdown immediately.
      */
     void shutdown();
 
-    long getLowWatermark();
-
+    /**
+     * Return the low watermark for the computation.
+     * Any message with an offset below the low watermark has been processed by this computation and its ancestors..
+     */
     long getLowWatermark(String computationName);
 
+    /**
+     * Return the low watermark for all the computations of the topology.
+     * Any message with an offset below the low watermark has been processed.
+     */
+    long getLowWatermark();
+
+    /**
+     * Returns true if all messages with a lower timestamp has been processed by the topology.
+     */
     boolean isDone(long timestamp);
+
+
+    /**
+     * Wait for the computations to have assigned partitions ready to process records.
+     * This is useful for writing unit test.
+     * <p/>
+     * Returns {@code true} if all computations have assigned partitions during the timeout delay.
+     */
+    boolean waitForAssignments(Duration timeout) throws InterruptedException;
+
 }

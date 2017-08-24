@@ -32,11 +32,17 @@ public class Settings {
     protected final Map<String, Integer> concurrences = new HashMap<>();
     protected final Map<String, Integer> partitions = new HashMap<>();
 
+    /**
+     * Default concurrency and partition to use if not specified explicitely
+     */
     public Settings(int defaultConcurrency, int defaultPartitions) {
         this.defaultConcurrency = defaultConcurrency;
         this.defaultPartitions = defaultPartitions;
     }
 
+    /**
+     * Set the computation thread pool size.
+     */
     public Settings setConcurrency(String computationName, int concurrency) {
         concurrences.put(computationName, concurrency);
         return this;
@@ -46,6 +52,9 @@ public class Settings {
         return concurrences.getOrDefault(computationName, defaultConcurrency);
     }
 
+    /**
+     * Set the number of partitions for an input or ouput stream.
+     */
     public Settings setPartitions(String streamName, int partitions) {
         this.partitions.put(streamName, partitions);
         return this;

@@ -157,7 +157,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
             supplantWorkManagerImpl();
             initTopology();
             this.mqManager = initStream();
-            this.manager = new MQComputationManager(mqManager, topology, settings);
+            this.manager = new MQComputationManager(mqManager);
             started = true;
 
             Framework.getRuntime().getComponentManager().addListener(new ComponentManager.LifeCycleHandler() {
@@ -175,7 +175,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
                 @Override
                 public void afterStart(ComponentManager mgr, boolean isResume) {
-                    manager.start();
+                    manager.start(topology, settings);
                 }
 
                 @Override

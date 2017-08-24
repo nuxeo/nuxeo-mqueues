@@ -32,6 +32,8 @@ import java.util.stream.Collectors;
 
 
 /**
+ * Represent a Directed Acyclic Graph (DAG) of computations.
+ *
  * @since 9.2
  */
 public class Topology {

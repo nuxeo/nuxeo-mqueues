@@ -45,22 +45,22 @@ import java.util.stream.Collectors;
 public class MQComputationManager implements ComputationManager {
     private static final Log log = LogFactory.getLog(MQComputationManager.class);
     protected final MQManager<Record> manager;
-    protected final Topology topology;
-    protected final Settings settings;
-    protected final List<MQComputationPool> pools;
+    protected Topology topology;
+    protected Settings settings;
+    protected List<MQComputationPool> pools;
 
-    public MQComputationManager(MQManager<Record> manager, Topology topology, Settings settings) {
+    public MQComputationManager(MQManager<Record> manager) {
         this.manager = manager;
+    }
+
+    @Override
+    public void start(Topology topology, Settings settings) {
+        log.debug("Starting ...");
         this.topology = topology;
         this.settings = settings;
         initStreams();
         this.pools = initPools();
         Objects.requireNonNull(pools);
-    }
-
-    @Override
-    public void start() {
-        log.debug("Starting ...");
         pools.forEach(MQComputationPool::start);
     }
 
@@ -80,11 +80,6 @@ public class MQComputationManager implements ComputationManager {
         long failures = pools.parallelStream().filter(comp -> !comp.stop(timeout)).count();
         log.debug(String.format("Stopped %d failure", failures));
         return failures == 0L;
-    }
-
-    @Override
-    public boolean stop() {
-        return stop(Duration.ofSeconds(1));
     }
 
     @Override

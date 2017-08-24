@@ -48,7 +48,7 @@ public abstract class TestComputationManager {
 
     public abstract MQManager<Record> getSameStreams() throws Exception;
 
-    public abstract ComputationManager getManager(MQManager<Record> mqManager, Topology topology, Settings settings);
+    public abstract ComputationManager getManager(MQManager<Record> mqManager);
 
 
     public void testSimpleTopo(int nbRecords, int concurrency) throws Exception {
@@ -66,8 +66,8 @@ public abstract class TestComputationManager {
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
         try (MQManager<Record> streams = getStreams()) {
-            ComputationManager manager = getManager(streams, topology, settings);
-            manager.start();
+            ComputationManager manager = getManager(streams);
+            manager.start(topology, settings);
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             long start = System.currentTimeMillis();
             // this check works only if there is only one record with the target timestamp
@@ -85,8 +85,8 @@ public abstract class TestComputationManager {
             int result = readCounterFrom(streams, "output");
             int expected = nbRecords * settings.getConcurrency("GENERATOR");
             if (result != expected) {
-                manager = getManager(streams, topology, settings);
-                manager.start();
+                manager = getManager(streams);
+                manager.start(topology, settings);
                 int waiter = 200;
                 log.warn("FAILURE DEBUG TRACE ========================");
                 do {
@@ -147,9 +147,9 @@ public abstract class TestComputationManager {
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
         try (MQManager<Record> streams = getStreams()) {
-            ComputationManager manager = getManager(streams, topology, settings);
+            ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start();
+            manager.start(topology, settings);
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             // no record are processed so far
             long lowWatermark = manager.getLowWatermark();
@@ -238,9 +238,9 @@ public abstract class TestComputationManager {
 
         // 1. run generators
         try (MQManager<Record> streams = getStreams()) {
-            ComputationManager manager = getManager(streams, topology1, settings1);
+            ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start();
+            manager.start(topology1, settings1);
             // This is needed because drainAndStop might consider the source generator as terminated
             // because of a random lag due to kafka init and/or GC > 500ms.
             Thread.sleep(2000);
@@ -253,10 +253,10 @@ public abstract class TestComputationManager {
         // 2. resume and kill loop
         for (int i = 0; i < 10; i++) {
             try (MQManager<Record> streams = getSameStreams()) {
-                ComputationManager manager = getManager(streams, topology2, settings2);
+                ComputationManager manager = getManager(streams);
                 long start = System.currentTimeMillis();
                 log.info("RESUME computations");
-                manager.start();
+                manager.start(topology2, settings2);
                 assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
                 // must be greater than kafka heart beat ?
                 Thread.sleep(400 + i * 10);
@@ -270,9 +270,9 @@ public abstract class TestComputationManager {
         // 3. run the rest
         log.info("Now draining without interruption");
         try (MQManager<Record> streams = getSameStreams()) {
-            ComputationManager manager = getManager(streams, topology2, settings2);
+            ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start();
+            manager.start(topology2, settings2);
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             assertTrue(manager.drainAndStop(Duration.ofSeconds(200)));
             double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;
@@ -301,9 +301,9 @@ public abstract class TestComputationManager {
         Settings settings1 = new Settings(concurrent, concurrent);
 
         try (MQManager<Record> streams = getStreams()) {
-            ComputationManager manager = getManager(streams, topology1, settings1);
+            ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start();
+            manager.start(topology1, settings1);
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             // no record are processed so far
             assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));

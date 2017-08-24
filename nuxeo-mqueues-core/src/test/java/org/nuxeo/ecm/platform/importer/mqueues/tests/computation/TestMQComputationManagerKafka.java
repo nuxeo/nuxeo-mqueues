@@ -73,7 +73,7 @@ public class TestMQComputationManagerKafka extends TestComputationManager {
     }
 
     @Override
-    public ComputationManager getManager(MQManager<Record> mqManager, Topology topology, Settings settings) {
-        return new MQComputationManager(mqManager, topology, settings);
+    public ComputationManager getManager(MQManager<Record> mqManager) {
+        return new MQComputationManager(mqManager);
     }
 }
