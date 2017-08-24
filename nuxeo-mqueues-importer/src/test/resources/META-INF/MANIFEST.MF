@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 1
-Bundle-Name: MQueues Importer Test
-Bundle-SymbolicName: org.nuxeo.ecm.mqueues.importer.test;singleton:=true
+Bundle-Name: MQueues Test
+Bundle-SymbolicName: org.nuxeo.ecm.platform.mqueues.test;singleton:=true
 Bundle-Vendor: Nuxeo

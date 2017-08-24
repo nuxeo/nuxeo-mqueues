@@ -185,9 +185,9 @@ To do so, add the following contribution to override the default WorkManagerImpl
     <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
   </service>
 
-  <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationChronicle" />
+  <implementation class="WorkManagerComputationChronicle" />
 
-  <!-- <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationKafka" /> -->
+  <!-- <implementation class="WorkManagerComputationKafka" /> -->
 
   <extension-point name="queues">
     <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />

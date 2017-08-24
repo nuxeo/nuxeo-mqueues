@@ -7,7 +7,7 @@
     <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
   </service>
 
-  <implementation class="org.nuxeo.ecm.platform.importer.mqueues.workmanager.WorkManagerComputationKafka" />
+  <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationKafka" />
 
   <extension-point name="queues">
     <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />
