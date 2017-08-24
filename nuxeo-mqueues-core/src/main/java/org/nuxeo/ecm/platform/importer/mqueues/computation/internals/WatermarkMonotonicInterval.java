@@ -30,9 +30,9 @@ import org.nuxeo.ecm.platform.importer.mqueues.computation.Watermark;
  */
 public class WatermarkMonotonicInterval {
     private static final Log log = LogFactory.getLog(WatermarkMonotonicInterval.class);
-    private volatile Watermark low = Watermark.LOWEST;
-    private Watermark lowest = Watermark.LOWEST;
-    private Watermark high = Watermark.LOWEST;
+    protected volatile Watermark low = Watermark.LOWEST;
+    protected Watermark lowest = Watermark.LOWEST;
+    protected Watermark high = Watermark.LOWEST;
 
     public WatermarkMonotonicInterval() {
     }

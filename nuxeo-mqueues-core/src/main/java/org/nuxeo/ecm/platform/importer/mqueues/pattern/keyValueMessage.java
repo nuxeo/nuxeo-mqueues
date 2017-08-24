@@ -34,10 +34,10 @@ public class keyValueMessage implements Message {
     static final long serialVersionUID = 20170529L;
     public static final keyValueMessage POISON_PILL = new keyValueMessage("_POISON_PILL_", null, true, false);
 
-    private String key;
-    private byte[] value;
-    private boolean poisonPill = false;
-    private boolean forceBatch = false;
+    protected String key;
+    protected byte[] value;
+    protected boolean poisonPill = false;
+    protected boolean forceBatch = false;
 
     public keyValueMessage() {
     }

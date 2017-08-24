@@ -38,18 +38,18 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMessage> {
     private static final Log log = LogFactory.getLog(RandomDocumentMessageProducer.class);
-    private final long nbDocuments;
-    private final BlobInfoFetcher blobInfoFetcher;
-    private boolean countFolderAsDocument = true;
-    private int maxFoldersPerFolder = 50;
-    private int maxDocumentsPerFolder = 500;
-    private int blobSizeKB = 0;
-    private boolean blobOnlyText = false;
+    protected final long nbDocuments;
+    protected final BlobInfoFetcher blobInfoFetcher;
+    protected boolean countFolderAsDocument = true;
+    protected int maxFoldersPerFolder = 50;
+    protected int maxDocumentsPerFolder = 500;
+    protected int blobSizeKB = 0;
+    protected boolean blobOnlyText = false;
 
-    private int documentCount = 0;
-    private int folderCount = 0;
-    private final Random rand;
-    private static RandomTextGenerator gen;
+    protected int documentCount = 0;
+    protected int folderCount = 0;
+    protected final Random rand;
+    protected static RandomTextGenerator gen;
 
     static protected final String[] DC_NATURE = {"article", "acknowledgement", "assessment", "application", "order",
             "contract", "quotation", "fax", "worksheet", "letter", "memo", "note", "notification", "procedure",
@@ -69,17 +69,17 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
 
     static protected final String[] DC_COVERAGE = {"europe/France", "europe/Germany", "europe/Italy", "europe/Spain",
             "oceania/Tonga", "africa/Mali", "asia/Japan", "north-america/United_States_of_America"};
-    private int foldersInCurrentFolderLimit;
-    private int documentInCurrentFolderLimit;
+    protected int foldersInCurrentFolderLimit;
+    protected int documentInCurrentFolderLimit;
 
-    private enum DocType {Root, Folder, Document}
+    protected enum DocType {Root, Folder, Document}
 
-    private DocType currentType = DocType.Root;
-    private int parentIndex = 0;
-    private List<String> parents = new ArrayList<>();
-    private List<String> folderishChildren = new ArrayList<>();
-    private List<String> children = new ArrayList<>();
-    private int documentInCurrentFolderCount = 0;
+    protected DocType currentType = DocType.Root;
+    protected int parentIndex = 0;
+    protected List<String> parents = new ArrayList<>();
+    protected List<String> folderishChildren = new ArrayList<>();
+    protected List<String> children = new ArrayList<>();
+    protected int documentInCurrentFolderCount = 0;
 
     public RandomDocumentMessageProducer(int producerId, long nbDocuments, String lang, BlobInfoFetcher blobInfoFetcher) {
         super(producerId);
@@ -174,25 +174,25 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         return ret;
     }
 
-    private DocumentMessage createRoot() {
+    protected DocumentMessage createRoot() {
         folderCount++;
         return getRandomNodeWithPrefix(String.format("%02d-", getProducerId()), "Folder", "");
     }
 
 
-    private DocumentMessage createFolder(String parentPath, List<String> exclude) {
+    protected DocumentMessage createFolder(String parentPath, List<String> exclude) {
         DocumentMessage node = getRandomNode("Folder", parentPath, false, exclude);
         folderCount++;
         return node;
     }
 
-    private DocumentMessage createDocument(String parentPath, List<String> exclude) {
+    protected DocumentMessage createDocument(String parentPath, List<String> exclude) {
         DocumentMessage node = getRandomNode("File", parentPath, true, exclude);
         documentCount++;
         return node;
     }
 
-    private DocumentMessage getRandomNode(String type, String parentPath, boolean withBlob, List<String> exclude) {
+    protected DocumentMessage getRandomNode(String type, String parentPath, boolean withBlob, List<String> exclude) {
         DocumentMessage node = getRandomNode(type, parentPath, withBlob);
         String nodeId = node.getId();
         while (exclude.contains(nodeId)) {
@@ -203,7 +203,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         return node;
     }
 
-    private DocumentMessage getRandomNode(String type, String parentPath, boolean withBlob) {
+    protected DocumentMessage getRandomNode(String type, String parentPath, boolean withBlob) {
         String title = getTitle();
         String name = getName(title);
         HashMap<String, Serializable> props = getRandomProperties(title);
@@ -218,7 +218,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         return builder.build();
     }
 
-    private DocumentMessage getRandomNodeWithPrefix(String prefix, String type, String parentPath) {
+    protected DocumentMessage getRandomNodeWithPrefix(String prefix, String type, String parentPath) {
         String title = getTitle();
         String name = prefix + getName(title);
         HashMap<String, Serializable> props = getRandomProperties(title);
@@ -231,7 +231,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         return builder.build();
     }
 
-    private Blob getRandomBlob() {
+    protected Blob getRandomBlob() {
         if (blobSizeKB == 0) {
             return null;
         }
@@ -239,7 +239,7 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         return Blobs.createBlob(content, getBlobMimeType(), null, getName(getTitle()) + ".txt");
     }
 
-    private String getBlobMimeType() {
+    protected String getBlobMimeType() {
         if (blobOnlyText) {
             return "text/plain";
         } else {
@@ -247,16 +247,16 @@ public class RandomDocumentMessageProducer extends AbstractProducer<DocumentMess
         }
     }
 
-    private String getName(String title) {
+    protected String getName(String title) {
         return title.replaceAll("\\W+", "-").toLowerCase();
     }
 
-    private String getTitle() {
+    protected String getTitle() {
         return capitalize(gen.getRandomTitle(rand.nextInt(3) + 1).trim());
         //  return "f" + folderCount;
     }
 
-    private String capitalize(final String line) {
+    protected String capitalize(final String line) {
         return Character.toUpperCase(line.charAt(0)) + line.substring(1);
     }
 

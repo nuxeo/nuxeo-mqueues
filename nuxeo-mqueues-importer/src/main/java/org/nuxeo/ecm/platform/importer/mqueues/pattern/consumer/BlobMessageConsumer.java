@@ -37,10 +37,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @since 9.1
  */
 public class BlobMessageConsumer extends AbstractConsumer<BlobMessage> {
-    private static final AtomicInteger consumerCounter = new AtomicInteger(0);
-    private final BlobProvider blobProvider;
-    private final String blobProviderName;
-    private final BlobInfoWriter blobInfoWriter;
+    protected static final AtomicInteger consumerCounter = new AtomicInteger(0);
+    protected final BlobProvider blobProvider;
+    protected final String blobProviderName;
+    protected final BlobInfoWriter blobInfoWriter;
 
     public BlobMessageConsumer(String consumerId, String blobProviderName, BlobInfoWriter blobInfoWriter) {
         super(consumerId);

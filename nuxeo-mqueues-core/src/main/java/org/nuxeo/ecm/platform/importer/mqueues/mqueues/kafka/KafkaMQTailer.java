@@ -60,20 +60,20 @@ import java.util.stream.Collectors;
  */
 public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, ConsumerRebalanceListener {
     private static final Log log = LogFactory.getLog(KafkaMQTailer.class);
-    private final String group;
-    private final String prefix;
-    private KafkaConsumer<String, Bytes> consumer;
-    private String id;
-    private Collection<TopicPartition> topicPartitions;
-    private Collection<MQPartition> partitions;
-    private final Map<TopicPartition, Long> lastOffsets = new HashMap<>();
-    private final Map<TopicPartition, Long> lastCommittedOffsets = new HashMap<>();
-    private final Queue<ConsumerRecord<String, Bytes>> records = new LinkedList<>();
+    protected final String group;
+    protected final String prefix;
+    protected KafkaConsumer<String, Bytes> consumer;
+    protected String id;
+    protected Collection<TopicPartition> topicPartitions;
+    protected Collection<MQPartition> partitions;
+    protected final Map<TopicPartition, Long> lastOffsets = new HashMap<>();
+    protected final Map<TopicPartition, Long> lastCommittedOffsets = new HashMap<>();
+    protected final Queue<ConsumerRecord<String, Bytes>> records = new LinkedList<>();
     // keep track of all tailers on the same namespace index even from different mq
-    private boolean closed = false;
-    private Collection<String> names;
-    private MQRebalanceListener listener;
-    private boolean isRebalanced = false;
+    protected boolean closed = false;
+    protected Collection<String> names;
+    protected MQRebalanceListener listener;
+    protected boolean isRebalanced = false;
 
     protected KafkaMQTailer(String prefix, String group, Properties consumerProps) {
         Objects.requireNonNull(group);
@@ -108,11 +108,11 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         return ret;
     }
 
-    private static String buildId(String group, Collection<MQPartition> partitions) {
+    protected static String buildId(String group, Collection<MQPartition> partitions) {
         return group + ":" + partitions.stream().map(MQPartition::toString).collect(Collectors.joining("|"));
     }
 
-    private static String buildSubscribeId(String group, Collection<String> names) {
+    protected static String buildSubscribeId(String group, Collection<String> names) {
         return group + ":" + names.stream().collect(Collectors.joining("|"));
     }
 
@@ -147,12 +147,12 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         return new MQRecord<>(partition, value, offset);
     }
 
-    private String getNameForTopic(String topic) {
+    protected String getNameForTopic(String topic) {
         return topic.replaceFirst(prefix, "");
     }
 
     @SuppressWarnings("unchecked")
-    private M messageOf(Bytes value) {
+    protected M messageOf(Bytes value) {
         ByteArrayInputStream bis = new ByteArrayInputStream(value.get());
         ObjectInput in = null;
         try {
@@ -171,7 +171,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         }
     }
 
-    private int poll(Duration timeout) throws InterruptedException {
+    protected int poll(Duration timeout) throws InterruptedException {
         records.clear();
         try {
             for (ConsumerRecord<String, Bytes> record : consumer.poll(timeout.toMillis())) {
@@ -233,7 +233,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         records.clear();
     }
 
-    private long toLastCommitted(TopicPartition topicPartition) {
+    protected long toLastCommitted(TopicPartition topicPartition) {
         Long offset = lastCommittedOffsets.get(topicPartition);
         if (offset == null) {
             OffsetAndMetadata offsetMeta = consumer.committed(topicPartition);

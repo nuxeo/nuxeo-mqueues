@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class RandomIdMessageProducer extends AbstractProducer<keyValueMessage> {
 
-    private final long nbMessage;
-    private final AtomicLong totalCount = new AtomicLong(0);
-    private long count = 0;
+    protected final long nbMessage;
+    protected final AtomicLong totalCount = new AtomicLong(0);
+    protected long count = 0;
 
     public RandomIdMessageProducer(int producerId, long nbMessage) {
         super(producerId);

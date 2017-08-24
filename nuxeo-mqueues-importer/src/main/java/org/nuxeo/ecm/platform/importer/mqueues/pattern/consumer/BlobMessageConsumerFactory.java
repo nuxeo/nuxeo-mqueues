@@ -25,8 +25,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.BlobMessage;
  * @since 9.1
  */
 public class BlobMessageConsumerFactory implements ConsumerFactory<BlobMessage> {
-    private final String blobProviderName;
-    private final BlobInfoWriter blobInfoWriter;
+    protected final String blobProviderName;
+    protected final BlobInfoWriter blobInfoWriter;
 
     /**
      * Blob Consumer factory requires a blob providerName that is present in Nuxeo instance running the consumer.

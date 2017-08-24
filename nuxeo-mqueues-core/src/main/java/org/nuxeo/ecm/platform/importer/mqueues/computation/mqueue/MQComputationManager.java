@@ -44,10 +44,10 @@ import java.util.stream.Collectors;
  */
 public class MQComputationManager implements ComputationManager {
     private static final Log log = LogFactory.getLog(MQComputationManager.class);
-    private final MQManager<Record> manager;
-    private final Topology topology;
-    private final Settings settings;
-    private final List<MQComputationPool> pools;
+    protected final MQManager<Record> manager;
+    protected final Topology topology;
+    protected final Settings settings;
+    protected final List<MQComputationPool> pools;
 
     public MQComputationManager(MQManager<Record> manager, Topology topology, Settings settings) {
         this.manager = manager;
@@ -143,7 +143,7 @@ public class MQComputationManager implements ComputationManager {
         return Watermark.ofValue(getLowWatermark()).isDone(timestamp);
     }
 
-    private List<MQComputationPool> initPools() {
+    protected List<MQComputationPool> initPools() {
         log.debug("Initializing pools");
         return topology.metadataList().stream()
                 .map(meta -> new MQComputationPool(topology.getSupplier(meta.name()), meta,
@@ -151,14 +151,14 @@ public class MQComputationManager implements ComputationManager {
                 .collect(Collectors.toList());
     }
 
-    private List<List<MQPartition>> getDefaultAssignments(ComputationMetadataMapping meta) {
+    protected List<List<MQPartition>> getDefaultAssignments(ComputationMetadataMapping meta) {
         int threads = settings.getConcurrency(meta.name());
         Map<String, Integer> streams = new HashMap<>();
         meta.inputStreams().forEach(streamName -> streams.put(streamName, settings.getPartitions(streamName)));
         return KafkaUtils.roundRobinAssignments(threads, streams);
     }
 
-    private void initStreams() {
+    protected void initStreams() {
         log.debug("Initializing streams");
         topology.streamsSet().forEach(streamName -> manager.createIfNotExists(streamName, settings.getPartitions(streamName)));
     }

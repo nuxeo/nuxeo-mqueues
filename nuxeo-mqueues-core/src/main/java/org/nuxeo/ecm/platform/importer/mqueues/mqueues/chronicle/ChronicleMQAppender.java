@@ -61,27 +61,27 @@ import java.util.stream.Stream;
  */
 public class ChronicleMQAppender<M extends Externalizable> implements MQAppender<M>, StoreFileListener {
     private static final Log log = LogFactory.getLog(ChronicleMQAppender.class);
-    private static final String QUEUE_PREFIX = "Q-";
-    private static final int POLL_INTERVAL_MS = 100;
+    protected static final String QUEUE_PREFIX = "Q-";
+    protected static final int POLL_INTERVAL_MS = 100;
 
-    private static final String SECOND_ROLLING_PERIOD = "s";
+    protected static final String SECOND_ROLLING_PERIOD = "s";
 
-    private static final String MINUTE_ROLLING_PERIOD = "m";
+    protected static final String MINUTE_ROLLING_PERIOD = "m";
 
-    private static final String HOUR_ROLLING_PERIOD = "h";
+    protected static final String HOUR_ROLLING_PERIOD = "h";
 
-    private static final String DAY_ROLLING_PERIOD = "d";
+    protected static final String DAY_ROLLING_PERIOD = "d";
 
-    private final List<ChronicleQueue> queues;
-    private final int nbQueues;
-    private final File basePath;
-    private final String name;
+    protected final List<ChronicleQueue> queues;
+    protected final int nbQueues;
+    protected final File basePath;
+    protected final String name;
 
-    private int retentionNbCycles;
+    protected int retentionNbCycles;
 
     // keep track of created tailers to make sure they are closed before the mq
-    private final ConcurrentLinkedQueue<ChronicleMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
-    private boolean closed = false;
+    protected final ConcurrentLinkedQueue<ChronicleMQTailer<M>> tailers = new ConcurrentLinkedQueue<>();
+    protected boolean closed = false;
 
     static public boolean exists(File basePath) {
         //noinspection ConstantConditions
@@ -173,7 +173,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         return ret;
     }
 
-    private MQTailer<M> addTailer(ChronicleMQTailer<M> tailer) {
+    protected MQTailer<M> addTailer(ChronicleMQTailer<M> tailer) {
         tailers.add(tailer);
         return tailer;
     }
@@ -204,7 +204,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         return closed;
     }
 
-    private boolean isProcessed(ChronicleMQOffsetTracker tracker, long offset) {
+    protected boolean isProcessed(ChronicleMQOffsetTracker tracker, long offset) {
         long last = tracker.readLastCommittedOffset();
         return (last > 0) && (last >= offset);
     }
@@ -226,7 +226,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         closed = true;
     }
 
-    private ChronicleMQAppender(File basePath, int size, String retentionDuration) {
+    protected ChronicleMQAppender(File basePath, int size, String retentionDuration) {
         if (size == 0) {
             // open
             if (!exists(basePath)) {
@@ -274,7 +274,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         }
     }
 
-    private int findNbQueues(File basePath) {
+    protected int findNbQueues(File basePath) {
         int ret;
         try (Stream<Path> paths = Files.list(basePath.toPath())) {
             ret = (int) paths.filter(path -> (Files.isDirectory(path) && path.getFileName().toString().startsWith(QUEUE_PREFIX))).count();
@@ -287,7 +287,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         return ret;
     }
 
-    private RollCycle getRollCycle(String retentionDuration) {
+    protected RollCycle getRollCycle(String retentionDuration) {
         String rollingPeriod = retentionDuration.substring(retentionDuration.length() - 1);
         RollCycle rollCycle;
         switch (rollingPeriod) {
@@ -311,7 +311,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
         return rollCycle;
     }
 
-    private int findQueueIndex(File queueFile) {
+    protected int findQueueIndex(File queueFile) {
         String queueDirName = queueFile.getParentFile().getName();
         return Integer.valueOf(queueDirName.substring(queueDirName.length() - 2));
     }

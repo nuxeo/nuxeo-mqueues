@@ -29,8 +29,8 @@ public class BatchPolicy {
     public static final BatchPolicy NO_BATCH = builder().capacity(1).build();
     public static final BatchPolicy DEFAULT = builder().build();
 
-    private final int capacity;
-    private final Duration threshold;
+    protected final int capacity;
+    protected final Duration threshold;
 
     public BatchPolicy(Builder builder) {
         capacity = builder.capacity;
@@ -50,8 +50,8 @@ public class BatchPolicy {
     }
 
     public static class Builder {
-        private int capacity = 10;
-        private Duration threshold = Duration.ofSeconds(10);
+        protected int capacity = 10;
+        protected Duration threshold = Duration.ofSeconds(10);
 
         protected Builder() {
 

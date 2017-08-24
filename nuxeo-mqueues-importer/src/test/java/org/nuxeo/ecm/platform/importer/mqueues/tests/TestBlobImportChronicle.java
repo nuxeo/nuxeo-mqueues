@@ -28,7 +28,7 @@ import java.nio.file.Path;
  * @since 9.2
  */
 public class TestBlobImportChronicle extends TestBlobImport {
-    private Path basePath;
+    protected Path basePath;
 
     @Override
     public MQManager getManager() throws Exception {

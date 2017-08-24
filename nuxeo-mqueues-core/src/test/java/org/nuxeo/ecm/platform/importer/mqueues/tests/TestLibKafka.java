@@ -70,8 +70,8 @@ public class TestLibKafka {
     final static int TIMEOUT_MS = 6000;
     final static int CONNECTION_TIMEOUT_MS = 10000;
     final static int DEFAULT_REPLICATION = 1;
-    private static final String DEFAULT_ZK_SERVER = "localhost:2181";
-    private static final String DEFAULT_BOOTSTRAP_SERVER = "localhost:9092";
+    protected static final String DEFAULT_ZK_SERVER = "localhost:2181";
+    protected static final String DEFAULT_BOOTSTRAP_SERVER = "localhost:9092";
 
     @BeforeClass
     public static void assumeKafkaEnabled() {
@@ -198,7 +198,7 @@ public class TestLibKafka {
         //assertEquals(new HashMap<>(), assignor.assign(cluster,  subscriptions));
     }
 
-    private Collection<PartitionInfo> getPartsFor(String topic, int partitions) {
+    protected Collection<PartitionInfo> getPartsFor(String topic, int partitions) {
         Collection<PartitionInfo> ret = new ArrayList<>();
         for (int i = 0; i < partitions; i++) {
             ret.add(new PartitionInfo(topic, i, null, null, null));
@@ -227,7 +227,7 @@ public class TestLibKafka {
         return props;
     }
 
-    private static class TestCallback implements Callback {
+    protected static class TestCallback implements Callback {
         @Override
         public void onCompletion(RecordMetadata recordMetadata, Exception e) {
             if (e != null) {
@@ -240,7 +240,7 @@ public class TestLibKafka {
         }
     }
 
-    private void createTopic(String topic, int partitions) {
+    protected void createTopic(String topic, int partitions) {
         ZkUtils zkUtils = createZkUtils(DEFAULT_ZK_SERVER);
         if (!topicExists(zkUtils, topic)) {
             createTopic(zkUtils, topic, partitions);

@@ -36,8 +36,8 @@ import static org.junit.Assert.assertNotNull;
  * @since 9.2
  */
 public class TestKafkaUtils {
-    private static final String DEFAULT_TOPIC = "nuxeo-test-default-topic-10";
-    private static final int DEFAULT_TOPIC_PARTITION = 10;
+    protected static final String DEFAULT_TOPIC = "nuxeo-test-default-topic-10";
+    protected static final int DEFAULT_TOPIC_PARTITION = 10;
 
     @BeforeClass
     public static void assumeKafkaEnabled() {

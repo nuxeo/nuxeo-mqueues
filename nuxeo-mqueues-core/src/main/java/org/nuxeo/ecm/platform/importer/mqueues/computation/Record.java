@@ -32,7 +32,7 @@ import java.util.Map;
 public class Record implements Externalizable {
     // Externalizable do rely on serialVersionUID
     static final long serialVersionUID = 20170529L;
-    private static final EnumSet<Flag> DEFAULT_FLAG = EnumSet.of(Flag.DEFAULT);
+    protected static final EnumSet<Flag> DEFAULT_FLAG = EnumSet.of(Flag.DEFAULT);
 
     public long watermark;
     public EnumSet<Flag> flags;
@@ -83,7 +83,7 @@ public class Record implements Externalizable {
         }
     }
 
-    private short encodeFlags() {
+    protected short encodeFlags() {
         // adapted from Adamski: http://stackoverflow.com/questions/2199399/storing-enumset-in-a-database
         short ret = 0;
         if (flags != null) {
@@ -112,7 +112,7 @@ public class Record implements Externalizable {
         }
     }
 
-    private EnumSet<Flag> decodeFlags(short encoded) {
+    protected EnumSet<Flag> decodeFlags(short encoded) {
         // adapted from Adamski: http://stackoverflow.com/questions/2199399/storing-enumset-in-a-database
         Map<Integer, Flag> ordinalMap = new HashMap<>();
         for (Flag val : EnumSet.allOf(Flag.class)) {

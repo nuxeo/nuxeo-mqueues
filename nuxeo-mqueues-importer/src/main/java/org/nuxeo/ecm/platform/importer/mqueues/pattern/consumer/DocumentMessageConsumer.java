@@ -42,9 +42,9 @@ import static org.nuxeo.runtime.transaction.TransactionHelper.commitOrRollbackTr
  */
 public class DocumentMessageConsumer extends AbstractConsumer<DocumentMessage> {
     private static final Log log = LogFactory.getLog(DocumentMessageConsumer.class);
-    private final String rootPath;
-    private final String repositoryName;
-    private CoreSession session;
+    protected final String rootPath;
+    protected final String repositoryName;
+    protected CoreSession session;
 
     public DocumentMessageConsumer(String consumerId, String repositoryName, String rootPath) {
         super(consumerId);
@@ -85,7 +85,7 @@ public class DocumentMessageConsumer extends AbstractConsumer<DocumentMessage> {
         doc = session.createDocument(doc);
     }
 
-    private Blob getBlob(DocumentMessage message) {
+    protected Blob getBlob(DocumentMessage message) {
         Blob blob = null;
         if (message.getBlob() != null) {
             blob = message.getBlob();

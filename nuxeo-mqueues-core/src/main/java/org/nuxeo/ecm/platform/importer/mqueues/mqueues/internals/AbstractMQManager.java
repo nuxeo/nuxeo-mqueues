@@ -34,9 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 public abstract class AbstractMQManager<M extends Externalizable> implements MQManager<M> {
-    private final Map<String, MQAppender<M>> appenders = new ConcurrentHashMap<>();
-    private final Map<MQPartitionGroup, MQTailer<M>> tailersAssignments = new ConcurrentHashMap<>();
-    private final Set<MQTailer<M>> tailers = Collections.newSetFromMap(new ConcurrentHashMap<MQTailer<M>, Boolean>());
+    protected final Map<String, MQAppender<M>> appenders = new ConcurrentHashMap<>();
+    protected final Map<MQPartitionGroup, MQTailer<M>> tailersAssignments = new ConcurrentHashMap<>();
+    protected final Set<MQTailer<M>> tailers = Collections.newSetFromMap(new ConcurrentHashMap<MQTailer<M>, Boolean>());
 
     protected abstract void create(String name, int size);
 
@@ -82,7 +82,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
     }
 
 
-    private void checkTailerForPartition(String group, MQPartition partition) {
+    protected void checkTailerForPartition(String group, MQPartition partition) {
         MQPartitionGroup key = new MQPartitionGroup(group, partition);
         MQTailer<M> ret = tailersAssignments.get(key);
         if (ret != null && !ret.closed()) {

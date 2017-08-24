@@ -27,7 +27,7 @@ import java.util.Properties;
 
 @XObject("kafkaConfig")
 public class KafkaConfigDescriptor {
-    private static final String RANDOM_TOPIC_PREFIX = "RANDOM()";
+    protected static final String RANDOM_TOPIC_PREFIX = "RANDOM()";
 
     @XNode("@name")
     public String name;

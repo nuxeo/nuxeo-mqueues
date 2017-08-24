@@ -26,7 +26,7 @@ import java.io.File;
  * @since 9.1
  */
 public class FileBlobMessageProducerFactory implements ProducerFactory<BlobMessage> {
-    private final File listFile;
+    protected final File listFile;
 
     /**
      * Produce messages to import files listed in the listFile.

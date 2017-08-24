@@ -26,9 +26,9 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.consumer.BatchPolicy;
  * @since 9.1
  */
 public class BatchState {
-    private final BatchPolicy policy;
-    private int counter;
-    private long endMs;
+    protected final BatchPolicy policy;
+    protected int counter;
+    protected long endMs;
 
     public enum State {FILLING, FULL, TIMEOUT, LAST}
 

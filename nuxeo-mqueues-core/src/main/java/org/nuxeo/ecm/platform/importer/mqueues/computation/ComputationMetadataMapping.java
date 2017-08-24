@@ -24,8 +24,8 @@ import java.util.stream.Collectors;
 
 public class ComputationMetadataMapping extends ComputationMetadata {
 
-    private final Map<String, String> mapping;
-    private final Map<String, String> reverseMapping;
+    protected final Map<String, String> mapping;
+    protected final Map<String, String> reverseMapping;
 
     public ComputationMetadataMapping(ComputationMetadata metadata, Map<String, String> mapping) {
         super(mapping.getOrDefault(metadata.name, metadata.name),

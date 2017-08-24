@@ -25,8 +25,8 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.producer.ProducerIterator
  * @since 9.1
  */
 public class RandomIdMessageProducerFactory implements ProducerFactory<keyValueMessage> {
-    private final long nbDocuments;
-    private final ProducerType type;
+    protected final long nbDocuments;
+    protected final ProducerType type;
 
     public enum ProducerType {DEFAULT, ORDERED}
 

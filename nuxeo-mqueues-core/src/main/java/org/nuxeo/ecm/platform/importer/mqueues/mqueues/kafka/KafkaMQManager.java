@@ -45,12 +45,12 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     public static final String DISABLE_SUBSCRIBE_PROP = "subscribe.disable";
     public static final String DEFAULT_REPLICATION_FACTOR_PROP = "default.replication.factor";
 
-    private final KafkaUtils kUtils;
-    private final Properties producerProperties;
-    private final Properties consumerProperties;
-    private final String prefix;
-    private final Integer defaultReplicationFactor;
-    private boolean disableSubscribe = false;
+    protected final KafkaUtils kUtils;
+    protected final Properties producerProperties;
+    protected final Properties consumerProperties;
+    protected final String prefix;
+    protected final Integer defaultReplicationFactor;
+    protected boolean disableSubscribe = false;
 
 
     public KafkaMQManager(String zkServers, Properties producerProperties, Properties consumerProperties) {
@@ -92,7 +92,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
         return KafkaMQTailer.createAndAssign(prefix, partitions, group, (Properties) consumerProperties.clone());
     }
 
-    private void checkValidPartition(MQPartition partition) {
+    protected void checkValidPartition(MQPartition partition) {
         int partitions = kUtils.getNumberOfPartitions(getTopicName(partition.name()));
         if (partition.partition() >= partitions) {
             throw new IllegalArgumentException("Partition out of bound " + partition + " max: " + partitions);

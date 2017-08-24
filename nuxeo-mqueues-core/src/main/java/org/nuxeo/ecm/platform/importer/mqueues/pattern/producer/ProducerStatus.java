@@ -32,7 +32,7 @@ public class ProducerStatus {
     public final long stopTime;
     public final long nbProcessed;
     public final int producer;
-    private final boolean fail;
+    protected final boolean fail;
 
     public ProducerStatus(int producer, long nbProcessed, long startTime, long stopTime, boolean fail) {
         this.producer = producer;

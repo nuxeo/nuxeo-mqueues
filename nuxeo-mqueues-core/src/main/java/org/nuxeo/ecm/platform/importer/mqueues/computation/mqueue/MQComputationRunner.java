@@ -51,29 +51,29 @@ import java.util.stream.Collectors;
  */
 public class MQComputationRunner implements Runnable, MQRebalanceListener {
     private static final Log log = LogFactory.getLog(MQComputationRunner.class);
-    private static final long STARVING_TIMEOUT_MS = 1000;
+    protected static final long STARVING_TIMEOUT_MS = 1000;
     public static final Duration READ_TIMEOUT = Duration.ofMillis(25);
 
-    private ComputationContextImpl context;
-    private final MQManager<Record> mqManager;
-    private final ComputationMetadataMapping metadata;
-    private final MQTailer<Record> tailer;
-    private final Supplier<Computation> supplier;
+    protected ComputationContextImpl context;
+    protected final MQManager<Record> mqManager;
+    protected final ComputationMetadataMapping metadata;
+    protected final MQTailer<Record> tailer;
+    protected final Supplier<Computation> supplier;
 
-    private volatile boolean stop = false;
-    private volatile boolean drain = false;
-    private CountDownLatch assignmentLatch = new CountDownLatch(1);
+    protected volatile boolean stop = false;
+    protected volatile boolean drain = false;
+    protected CountDownLatch assignmentLatch = new CountDownLatch(1);
 
-    private Computation computation;
-    private long counter = 0;
-    private long inRecords = 0;
-    private long inCheckpointRecords = 0;
-    private long outRecords = 0;
-    private final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
-    private long lastReadTime = System.currentTimeMillis();
-    private long lastTimerExecution = 0;
-    private String threadName;
-    private boolean needContextInitialize = false;
+    protected Computation computation;
+    protected long counter = 0;
+    protected long inRecords = 0;
+    protected long inCheckpointRecords = 0;
+    protected long outRecords = 0;
+    protected final WatermarkMonotonicInterval lowWatermark = new WatermarkMonotonicInterval();
+    protected long lastReadTime = System.currentTimeMillis();
+    protected long lastTimerExecution = 0;
+    protected String threadName;
+    protected boolean needContextInitialize = false;
 
     @SuppressWarnings("unchecked")
     public MQComputationRunner(Supplier<Computation> supplier, ComputationMetadataMapping metadata,
@@ -151,7 +151,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         }
     }
 
-    private void closeTailer() {
+    protected void closeTailer() {
         if (tailer != null && !tailer.closed()) {
             try {
                 tailer.close();
@@ -161,7 +161,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         }
     }
 
-    private void processLoop() throws InterruptedException {
+    protected void processLoop() throws InterruptedException {
         while (continueLoop()) {
             processTimer();
             processRecord();
@@ -170,7 +170,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         }
     }
 
-    private boolean continueLoop() {
+    protected boolean continueLoop() {
         if (stop || Thread.currentThread().isInterrupted()) {
             return false;
         } else if (drain) {
@@ -192,7 +192,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         return true;
     }
 
-    private void processTimer() throws InterruptedException {
+    protected void processTimer() throws InterruptedException {
         Map<String, Long> timers = context.getTimers();
         if (timers.isEmpty()) {
             return;
@@ -218,7 +218,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
 
     }
 
-    private void processRecord() throws InterruptedException {
+    protected void processRecord() throws InterruptedException {
         if (tailer == null) {
             return;
         }
@@ -245,12 +245,12 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         }
     }
 
-    private Duration getTimeoutDuration() {
+    protected Duration getTimeoutDuration() {
         // Adapt the duration so we are not throttling when one of the input stream is empty
         return Duration.ofMillis(Math.min(READ_TIMEOUT.toMillis(), System.currentTimeMillis() - lastReadTime));
     }
 
-    private void checkSourceLowWatermark() {
+    protected void checkSourceLowWatermark() {
         long watermark = context.getSourceLowWatermark();
         if (watermark > 0) {
             lowWatermark.mark(Watermark.ofValue(watermark));
@@ -259,7 +259,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         }
     }
 
-    private void checkRecordFlags(Record record) {
+    protected void checkRecordFlags(Record record) {
         if (record.flags.contains(Record.Flag.POISON_PILL)) {
             log.info(metadata.name() + ": Receive POISON PILL");
             context.askForCheckpoint();
@@ -269,7 +269,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         }
     }
 
-    private void checkpointIfNecessary() throws InterruptedException {
+    protected void checkpointIfNecessary() throws InterruptedException {
         if (context.requireCheckpoint()) {
             boolean completed = false;
             try {
@@ -284,7 +284,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         }
     }
 
-    private void checkpoint() throws InterruptedException {
+    protected void checkpoint() throws InterruptedException {
         sendRecords();
         saveTimers();
         saveState();
@@ -303,21 +303,21 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         setThreadName("checkpoint");
     }
 
-    private void saveTimers() {
+    protected void saveTimers() {
         // TODO: save timers in the key value store NXP-22112
     }
 
-    private void saveState() {
+    protected void saveState() {
         // TODO: save key value store NXP-22112
     }
 
-    private void saveOffsets() {
+    protected void saveOffsets() {
         if (tailer != null) {
             tailer.commit();
         }
     }
 
-    private void sendRecords() {
+    protected void sendRecords() {
         for (String ostream : metadata.outputStreams()) {
             MQAppender<Record> appender = mqManager.getAppender(ostream);
             for (Record record : context.getRecords(ostream)) {
@@ -337,7 +337,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
         return lowWatermark.getLow();
     }
 
-    private void setThreadName(String message) {
+    protected void setThreadName(String message) {
         String name = threadName + ",in:" + inRecords + ",inCheckpoint:" + inCheckpointRecords + ",out:" + outRecords +
                 ",lastRead:" + lastReadTime +
                 ",lastTimer:" + lastTimerExecution + ",wm:" + lowWatermark.getLow().getValue() +

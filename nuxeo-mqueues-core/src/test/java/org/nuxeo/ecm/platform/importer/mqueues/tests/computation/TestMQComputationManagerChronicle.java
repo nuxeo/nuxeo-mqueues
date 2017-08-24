@@ -36,7 +36,7 @@ import java.io.IOException;
  */
 public class TestMQComputationManagerChronicle extends TestComputationManager {
 
-    private File basePath;
+    protected File basePath;
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();

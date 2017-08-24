@@ -48,13 +48,13 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
  */
 public class MQComputationPool {
     private static final Log log = LogFactory.getLog(MQComputationPool.class);
-    private final ComputationMetadataMapping metadata;
-    private final int threads;
-    private final MQManager<Record> manager;
-    private final Supplier<Computation> supplier;
-    private final List<List<MQPartition>> defaultAssignments;
-    private ExecutorService threadPool;
-    private final List<MQComputationRunner> runners;
+    protected final ComputationMetadataMapping metadata;
+    protected final int threads;
+    protected final MQManager<Record> manager;
+    protected final Supplier<Computation> supplier;
+    protected final List<List<MQPartition>> defaultAssignments;
+    protected ExecutorService threadPool;
+    protected final List<MQComputationRunner> runners;
 
     public MQComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, List<List<MQPartition>> defaultAssignments, MQManager<Record> manager) {
         this.supplier = supplier;
@@ -133,7 +133,7 @@ public class MQComputationPool {
         threadPool = null;
     }
 
-    private boolean awaitPoolTermination(Duration timeout) {
+    protected boolean awaitPoolTermination(Duration timeout) {
         try {
             if (!threadPool.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
                 log.warn(metadata.name() + ": Timeout on wait for pool termination");
@@ -167,8 +167,8 @@ public class MQComputationPool {
     }
 
     protected static class NamedThreadFactory implements ThreadFactory {
-        private final AtomicInteger count = new AtomicInteger(0);
-        private final String prefix;
+        protected final AtomicInteger count = new AtomicInteger(0);
+        protected final String prefix;
 
         public NamedThreadFactory(String prefix) {
             this.prefix = prefix;

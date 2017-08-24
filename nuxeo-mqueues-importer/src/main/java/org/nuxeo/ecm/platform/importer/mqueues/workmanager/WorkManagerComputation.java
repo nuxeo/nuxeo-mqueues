@@ -344,7 +344,7 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
         return false;
     }
 
-    private long getLowWaterMark(String queueId) {
+    protected long getLowWaterMark(String queueId) {
         if (queueId != null) {
             return manager.getLowWatermark(queueId);
         }

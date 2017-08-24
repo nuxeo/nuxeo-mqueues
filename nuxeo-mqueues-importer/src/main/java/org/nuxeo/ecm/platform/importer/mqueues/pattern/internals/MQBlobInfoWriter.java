@@ -32,7 +32,7 @@ import org.nuxeo.ecm.platform.importer.mqueues.pattern.message.DocumentMessage;
  * @since 9.3
  */
 public class MQBlobInfoWriter implements BlobInfoWriter {
-    private final MQAppender<BlobInfoMessage> appender;
+    protected final MQAppender<BlobInfoMessage> appender;
 
     public MQBlobInfoWriter(MQAppender<BlobInfoMessage> blobInfoAppender) {
         this.appender = blobInfoAppender;

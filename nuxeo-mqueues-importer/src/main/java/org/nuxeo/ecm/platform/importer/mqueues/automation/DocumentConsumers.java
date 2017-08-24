@@ -128,7 +128,7 @@ public class DocumentConsumers {
         }
     }
 
-    private short getNbThreads() {
+    protected short getNbThreads() {
         if (nbThreads != null) {
             return nbThreads.shortValue();
         }

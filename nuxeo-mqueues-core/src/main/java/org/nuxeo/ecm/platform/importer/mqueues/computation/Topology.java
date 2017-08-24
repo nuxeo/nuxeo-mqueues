@@ -36,17 +36,17 @@ import java.util.stream.Collectors;
  */
 public class Topology {
 
-    private enum VertexType {
+    protected enum VertexType {
         COMPUTATION, STREAM
     }
 
-    private final List<ComputationMetadataMapping> metadataList; // use a list because computation are ordered using dag
-    private final Map<String, ComputationMetadataMapping> metadataMap = new HashMap<>();
-    private final Map<String, Supplier<Computation>> supplierMap = new HashMap<>();
-    private final DirectedAcyclicGraph<Vertex, DefaultEdge> dag = new DirectedAcyclicGraph<>(DefaultEdge.class);
+    protected final List<ComputationMetadataMapping> metadataList; // use a list because computation are ordered using dag
+    protected final Map<String, ComputationMetadataMapping> metadataMap = new HashMap<>();
+    protected final Map<String, Supplier<Computation>> supplierMap = new HashMap<>();
+    protected final DirectedAcyclicGraph<Vertex, DefaultEdge> dag = new DirectedAcyclicGraph<>(DefaultEdge.class);
 
 
-    private Topology(Builder builder) {
+    protected Topology(Builder builder) {
         this.supplierMap.putAll(builder.suppliersMap);
         builder.metadataSet.forEach(meta -> metadataMap.put(meta.name, meta));
         this.metadataList = new ArrayList<>(builder.metadataSet.size());
@@ -85,7 +85,7 @@ public class Topology {
         return ret.toString();
     }
 
-    private void generateDag(Set<ComputationMetadataMapping> metadataSet) throws DirectedAcyclicGraph.CycleFoundException {
+    protected void generateDag(Set<ComputationMetadataMapping> metadataSet) throws DirectedAcyclicGraph.CycleFoundException {
         for (ComputationMetadata metadata : metadataSet) {
             Vertex computationVertex = new Vertex(VertexType.COMPUTATION, metadata.name);
             dag.addVertex(computationVertex);
@@ -161,7 +161,7 @@ public class Topology {
         return new Builder();
     }
 
-    private Vertex getVertex(String name) {
+    protected Vertex getVertex(String name) {
         Vertex ret;
         if (metadataMap.containsKey(name)) {
             ret = new Vertex(VertexType.COMPUTATION, name);
@@ -254,8 +254,8 @@ public class Topology {
     }
 
     public class Vertex {
-        private final String name;
-        private final VertexType type;
+        protected final String name;
+        protected final VertexType type;
 
         public Vertex(VertexType type, String name) {
             this.type = type;

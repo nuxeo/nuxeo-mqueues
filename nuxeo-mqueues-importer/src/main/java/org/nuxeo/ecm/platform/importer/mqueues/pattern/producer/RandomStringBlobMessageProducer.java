@@ -30,14 +30,14 @@ import java.util.concurrent.ThreadLocalRandom;
  * @since 9.1
  */
 public class RandomStringBlobMessageProducer extends AbstractProducer<BlobMessage> {
-    private static final String DEFAULT_MIME_TYPE = "plain/text";
-    private final long nbBlobs;
-    private final int averageSizeKB;
-    private final ThreadLocalRandom rand;
-    private final String marker;
-    private long count = 0;
-    private static RandomTextGenerator gen;
-    private final String mimetype;
+    protected static final String DEFAULT_MIME_TYPE = "plain/text";
+    protected final long nbBlobs;
+    protected final int averageSizeKB;
+    protected final ThreadLocalRandom rand;
+    protected final String marker;
+    protected long count = 0;
+    protected static RandomTextGenerator gen;
+    protected final String mimetype;
 
     public RandomStringBlobMessageProducer(int producerId, long nbBlobs, String lang, int averageSizeKB, String marker) {
         super(producerId);
@@ -78,11 +78,11 @@ public class RandomStringBlobMessageProducer extends AbstractProducer<BlobMessag
         return ret;
     }
 
-    private String generateFilename() {
+    protected String generateFilename() {
         return gen.getRandomTitle(rand.nextInt(4) + 1).trim().replaceAll("\\W+", "-").toLowerCase() + ".txt";
     }
 
-    private String generateContent() {
+    protected String generateContent() {
         return marker + gen.getRandomText(averageSizeKB);
     }
 

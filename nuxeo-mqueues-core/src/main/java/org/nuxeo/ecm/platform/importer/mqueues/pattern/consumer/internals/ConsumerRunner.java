@@ -60,20 +60,20 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     // This is the registry name used by Nuxeo without adding a dependency nuxeo-runtime
     public static final String NUXEO_METRICS_REGISTRY_NAME = "org.nuxeo.runtime.metrics.MetricsService";
 
-    private final ConsumerFactory<M> factory;
-    private final ConsumerPolicy policy;
-    private final MQTailer<M> tailer;
-    private String consumerId;
-    private BatchPolicy currentBatchPolicy;
-    private String threadName;
-    private Consumer<M> consumer;
+    protected final ConsumerFactory<M> factory;
+    protected final ConsumerPolicy policy;
+    protected final MQTailer<M> tailer;
+    protected String consumerId;
+    protected BatchPolicy currentBatchPolicy;
+    protected String threadName;
+    protected Consumer<M> consumer;
     protected final MetricRegistry registry = SharedMetricRegistries.getOrCreate(NUXEO_METRICS_REGISTRY_NAME);
     protected Timer acceptTimer;
     protected Counter committedCounter;
     protected Timer batchCommitTimer;
     protected Counter batchFailureCount;
     protected Counter consumersCount;
-    private boolean alreadySalted = false;
+    protected boolean alreadySalted = false;
 
 
     public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQManager<M> manager,
@@ -88,7 +88,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         log.debug("Consumer thread created tailing on: " + consumerId);
     }
 
-    private MQTailer<M> createTailer(MQManager<M> manager, List<MQPartition> defaultAssignments) {
+    protected MQTailer<M> createTailer(MQManager<M> manager, List<MQPartition> defaultAssignments) {
         MQTailer<M> tailer;
         if (manager.supportSubscribe()) {
             Set<String> names = defaultAssignments.stream().map(MQPartition::name).collect(Collectors.toSet());
@@ -99,12 +99,12 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         return tailer;
     }
 
-    private Counter newCounter(String name) {
+    protected Counter newCounter(String name) {
         registry.remove(name);
         return registry.counter(name);
     }
 
-    private Timer newTimer(String name) {
+    protected Timer newTimer(String name) {
         registry.remove(name);
         return registry.timer(name);
     }
@@ -126,14 +126,14 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
                 batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis(), false);
     }
 
-    private void setMetrics(String name) {
+    protected void setMetrics(String name) {
         acceptTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "accepted", name));
         committedCounter = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "committed", name));
         batchFailureCount = newCounter(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchFailure", name));
         batchCommitTimer = newTimer(MetricRegistry.name("nuxeo", "importer", "queue", "consumer", "batchCommit", name));
     }
 
-    private void addSalt() throws InterruptedException {
+    protected void addSalt() throws InterruptedException {
         if (alreadySalted) {
             return;
         }
@@ -145,7 +145,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         alreadySalted = true;
     }
 
-    private void setTailerPosition(MQManager<M> manager) {
+    protected void setTailerPosition(MQManager<M> manager) {
         ConsumerPolicy.StartOffset seekPosition = policy.getStartOffset();
         if (manager.supportSubscribe() && seekPosition != LAST_COMMITTED) {
             throw new UnsupportedOperationException("Tailer startOffset to " + seekPosition + " is not supported in subscribe mode");
@@ -162,7 +162,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         }
     }
 
-    private void consumerLoop() throws InterruptedException {
+    protected void consumerLoop() throws InterruptedException {
         boolean end = false;
         while (!end) {
             Execution execution = new Execution(policy.getRetryPolicy());
@@ -178,7 +178,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         }
     }
 
-    private boolean processBatchWithRetry(Execution execution) throws InterruptedException {
+    protected boolean processBatchWithRetry(Execution execution) throws InterruptedException {
         boolean end = false;
         while (!execution.isComplete()) {
             try {
@@ -207,15 +207,15 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         return end;
     }
 
-    private void setBatchRetryPolicy() {
+    protected void setBatchRetryPolicy() {
         currentBatchPolicy = BatchPolicy.NO_BATCH;
     }
 
-    private void restoreBatchPolicy() {
+    protected void restoreBatchPolicy() {
         currentBatchPolicy = policy.getBatchPolicy();
     }
 
-    private boolean processBatch() throws InterruptedException {
+    protected boolean processBatch() throws InterruptedException {
         boolean end = false;
         beginBatch();
         try {
@@ -237,11 +237,11 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         return end;
     }
 
-    private void beginBatch() {
+    protected void beginBatch() {
         consumer.begin();
     }
 
-    private void commitBatch(BatchState state) {
+    protected void commitBatch(BatchState state) {
         try (Timer.Context ignore = batchCommitTimer.time()) {
             consumer.commit();
             committedCounter.inc(state.getSize());
@@ -252,7 +252,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         }
     }
 
-    private void rollbackBatch(Exception e) {
+    protected void rollbackBatch(Exception e) {
         if (e instanceof MQRebalanceException) {
             log.warn("Rollback current batch because of consumer rebalancing");
         } else {
@@ -261,7 +261,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         consumer.rollback();
     }
 
-    private BatchState acceptBatch() throws InterruptedException {
+    protected BatchState acceptBatch() throws InterruptedException {
         BatchState batch = new BatchState(currentBatchPolicy);
         batch.start();
         MQRecord<M> record;
@@ -293,7 +293,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         return batch;
     }
 
-    private void setThreadName(M message) {
+    protected void setThreadName(M message) {
         String name = threadName + "-" + acceptTimer.getCount();
         if (message != null) {
             name += "-" + message.getId();

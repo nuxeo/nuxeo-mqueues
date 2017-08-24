@@ -29,7 +29,7 @@ import java.nio.file.Path;
  */
 public class TestDocumentImportChronicle extends TestDocumentImport {
 
-    private Path basePath;
+    protected Path basePath;
 
     @After
     public void resetBasePath() throws Exception {

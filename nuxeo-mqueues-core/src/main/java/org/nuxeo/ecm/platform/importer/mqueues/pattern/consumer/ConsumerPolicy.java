@@ -57,14 +57,14 @@ public class ConsumerPolicy {
             .retryPolicy(new RetryPolicy().withMaxRetries(3))
             .waitMessageForEver().build();
 
-    private final BatchPolicy batchPolicy;
-    private final RetryPolicy retryPolicy;
-    private final boolean skipFailure;
-    private final Duration waitMessageTimeout;
-    private final StartOffset startOffset;
-    private final boolean salted;
-    private final String name;
-    private final short maxThreads;
+    protected final BatchPolicy batchPolicy;
+    protected final RetryPolicy retryPolicy;
+    protected final boolean skipFailure;
+    protected final Duration waitMessageTimeout;
+    protected final StartOffset startOffset;
+    protected final boolean salted;
+    protected final String name;
+    protected final short maxThreads;
 
     public ConsumerPolicy(ConsumerPolicyBuilder builder) {
         batchPolicy = builder.batchPolicy;

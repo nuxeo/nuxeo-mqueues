@@ -36,7 +36,7 @@ public class IdMessageFactory implements ConsumerFactory<keyValueMessage> {
 
     protected enum ConsumerType {NOOP, BUGGY}
 
-    private final ConsumerType type;
+    protected final ConsumerType type;
 
     protected IdMessageFactory(ConsumerType type) {
         this.type = type;

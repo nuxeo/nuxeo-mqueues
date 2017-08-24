@@ -35,8 +35,8 @@ import java.time.Duration;
  * @since 9.3
  */
 public class RandomMQBlobInfoFetcher implements BlobInfoFetcher {
-    private static final int READ_DELAY_MS = 10;
-    private final MQTailer<BlobInfoMessage> tailer;
+    protected static final int READ_DELAY_MS = 10;
+    protected final MQTailer<BlobInfoMessage> tailer;
 
     public RandomMQBlobInfoFetcher(MQTailer<BlobInfoMessage> blobInfoTailer) {
         this.tailer = blobInfoTailer;

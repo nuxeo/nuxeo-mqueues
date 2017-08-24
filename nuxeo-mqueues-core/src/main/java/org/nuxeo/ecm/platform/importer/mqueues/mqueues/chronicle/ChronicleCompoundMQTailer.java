@@ -34,12 +34,12 @@ import java.util.List;
  * @since 9.2
  */
 public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTailer<M> {
-    private final List<ChronicleMQTailer<M>> tailers = new ArrayList<>();
-    private final String group;
-    private final int size;
-    private final List<MQPartition> mqPartitions = new ArrayList<>();
-    private boolean closed = false;
-    private long counter = 0;
+    protected final List<ChronicleMQTailer<M>> tailers = new ArrayList<>();
+    protected final String group;
+    protected final int size;
+    protected final List<MQPartition> mqPartitions = new ArrayList<>();
+    protected boolean closed = false;
+    protected long counter = 0;
 
     public ChronicleCompoundMQTailer(Collection<ChronicleMQTailer<M>> tailers, String group) {
         // empty tailers is an accepted input
@@ -65,7 +65,7 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
         return ret;
     }
 
-    private MQRecord<M> read() {
+    protected MQRecord<M> read() {
         if (size <= 0) {
             return null;
         }

@@ -98,7 +98,7 @@ public class TestLibChronicle implements StoreFileListener {
         return ret;
     }
 
-    private keyValueMessage get(ExcerptTailer tailer) {
+    protected keyValueMessage get(ExcerptTailer tailer) {
         final keyValueMessage[] ret = new keyValueMessage[1];
         if (tailer.readDocument(w -> ret[0] = (keyValueMessage) w.read("node").object())) {
             return ret[0];

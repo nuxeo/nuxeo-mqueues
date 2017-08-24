@@ -32,8 +32,8 @@ import java.util.List;
  * @since 9.1
  */
 public class ComputationForward extends AbstractComputation {
-    private final List<String> ostreamList;
-    private int counter = 0;
+    protected final List<String> ostreamList;
+    protected int counter = 0;
 
     public ComputationForward(String name, int inputs, int outputs) {
         super(name, inputs, outputs);
