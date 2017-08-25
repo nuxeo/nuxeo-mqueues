@@ -10,7 +10,7 @@
   <artifactId>nuxeo-mqueues-core</artifactId>
   <groupId>org.nuxeo.lib.core</groupId>
   <name>Nuxeo MQueues Core</name>
-  <description>MQueue Core API for Consumer Producer pattern and Computation</description>
+  <description>MQueues async message passing system with Consumer/Producer and Computation patterns. Not tied to Nuxeo.</description>
 
   <dependencies>
     <dependency>

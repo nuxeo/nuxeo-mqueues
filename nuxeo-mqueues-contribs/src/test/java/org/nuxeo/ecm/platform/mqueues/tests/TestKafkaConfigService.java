@@ -38,8 +38,8 @@ import static org.junit.Assert.assertNotNull;
  */
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
-@Deploy({"org.nuxeo.ecm.platform.mqueues", "org.nuxeo.ecm.automation.core", "org.nuxeo.ecm.core.io"})
-@LocalDeploy("org.nuxeo.ecm.mqueues.kafka.tests.contrib:test-kafka-config-contrib.xml")
+@Deploy({"org.nuxeo.lib.core.mqueues", "org.nuxeo.ecm.platform.mqueues", "org.nuxeo.ecm.automation.core", "org.nuxeo.ecm.core.io"})
+@LocalDeploy("org.nuxeo.ecm.platform.mqueues.test:test-kafka-config-contrib.xml")
 public class TestKafkaConfigService {
 
     @Test

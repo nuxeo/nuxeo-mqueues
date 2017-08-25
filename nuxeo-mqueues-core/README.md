@@ -153,7 +153,7 @@ This is a one time process:
 The proposed solution takes care of:
 
 * Driving producers/consumers thread pools
-* Following a [consumer policy](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/lib/core/mqueues/pattern/consumer/ConsumerPolicy.java) that defines:
+* Following a [consumer policy](./src/main/java/org/nuxeo/lib/core/mqueues/pattern/consumer/ConsumerPolicy.java) that defines:
     - the batch policy: capacity and timeout
     - the retry policy: which exceptions to catch, number of retry, backoff and much more see [failsafe](https://github.com/jhalterman/failsafe) library for more info
     - when to stop and what to do in case of failure
@@ -161,10 +161,10 @@ The proposed solution takes care of:
 * Starting consumers from the last successfully processed message
 * Exposing metrics for producers and consumers
 
-To use this pattern one must implement a [ProducerIterator](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/lib/core/mqueues/pattern/producer/ProducerIterator.java) and a [Consumer](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/main/java/org/nuxeo/ecm/platform/importer/mqueues/pattern/consumer/Consumer.java) with factories.
+To use this pattern one must implement a [ProducerIterator](./src/main/java/org/nuxeo/lib/core/mqueues/pattern/producer/ProducerIterator.java) with factories.
 Both the producer and consumer implementation are driven (pulled) by the module.
 
-See [TestBoundedQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/lib/core/mqueues/mqueues/tests/pattern/TestPatternBoundedQueuing.java) for basic examples.
+See [TestPatternBoundedQueuing](./src/test/java/org/nuxeo/lib/core/mqueues/tests/pattern/TestPatternBoundedQueuing.java) for basic examples.
 
 #### Queuing unlimited
 
@@ -179,7 +179,7 @@ The Consumer is driven the same way but its policy is different:
 
 A producer can wait for a message to be consumed, this can simulate an async call.
 
-See [TestQueuingPattern](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/ecm/platform/importer/mqueues/tests/pattern/TestPatternQueuing.java) for basic examples.
+See [TestPatternQueueing](./src/test/java/org/nuxeo/lib/core/mqueues/tests/pattern/TestPatternQueuing.java) for basic examples.
 
 
 ### Stream and Computations
@@ -203,7 +203,7 @@ Following is an example of a topology used in unit test, where boxes are computa
 
 A default implementation of Computation is provided based on MQueue, a stream is simply a MQueue of Record.
 
-See [TestComputationManager](https://github.com/nuxeo/nuxeo-mqueues/blob/master/nuxeo-mqueues-core/src/test/java/org/nuxeo/lib/core/mqueues/tests/computation/TestComputationManager.java) for examples.
+See [TestComputationManager](./src/test/java/org/nuxeo/lib/core/mqueues/tests/computation/TestComputationManager.java) for examples.
 
 
 ## Building

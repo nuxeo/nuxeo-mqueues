@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<component name="org.nuxeo.ecm.mqueues.work.service" version="1.0">
+<component name="org.nuxeo.ecm.platform.mqueues.tests.workmanager.chronicle.contrib" version="1.0">
 
   <require>org.nuxeo.ecm.core.work.service</require>
 
@@ -7,7 +7,7 @@
     <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
   </service>
 
-  <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationKafka" />
+  <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationChronicle" />
 
   <extension-point name="queues">
     <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />

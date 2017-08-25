@@ -16,7 +16,7 @@
 
   <modules>
     <module>nuxeo-mqueues-core</module>
-    <module>nuxeo-mqueues-importer</module>
+    <module>nuxeo-mqueues-contribs</module>
   </modules>
 
   <repositories>
