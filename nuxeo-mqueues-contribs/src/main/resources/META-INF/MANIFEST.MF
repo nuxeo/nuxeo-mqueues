@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 1
-Bundle-Name: Nuxeo MQueues
+Bundle-Name: Nuxeo MQueues Contribs
 Bundle-SymbolicName: org.nuxeo.ecm.platform.mqueues;singleton:=true
 Bundle-Vendor: Nuxeo
 Nuxeo-Component: OSGI-INF/operations-contrib.xml,

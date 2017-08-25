@@ -7,9 +7,9 @@
     <version>9.3-SNAPSHOT</version>
   </parent>
 
-  <artifactId>nuxeo-mqueues-importer</artifactId>
-  <name>Nuxeo MQueues Importer</name>
-  <description>MultiQueues producers/consumers for Nuxeo documents and blobs</description>
+  <artifactId>nuxeo-mqueues-contribs</artifactId>
+  <name>Nuxeo MQueues Contribs</name>
+  <description>Nuxeo contributions using MQueues, provides document importer, workmanager and more.</description>
 
   <dependencies>
     <dependency>

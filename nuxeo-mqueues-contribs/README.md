@@ -1,13 +1,13 @@
-nuxeo-mqueues-importer
+nuxeo-mqueues-contribs
 ======================
 
 ## About
 
-This module provides integration of MQueue with Nuxeo:
+This module provides contributions to Nuxeo platform using MQueue:
 
 - You can defines Kafka access via Nuxeo contribution.
 - The producer/consumer pattern is adapted to do document mass import, it is exposed as automation operations.
-- Computations are used to provide an alternative WorkManager implementation.
+ - Computations are used to provide an alternative WorkManager implementation.
 
 ## Warning
 
@@ -39,7 +39,7 @@ the value is expressed as a string like: `12h` or `7d`, respectively for 12 hour
 <?xml version="1.0"?>
 <component name="my.project.kafka.contrib">
 
-  <extension target="org.nuxeo.ecm.mqueues.importer.kafka.service" point="kafkaConfig">
+  <extension target="org.nuxeo.ecm.platform.mqueues.importer.kafka.service" point="kafkaConfig">
 
     <kafkaConfig name="default" zkServers="localhost:2181" topicPrefix="nuxeo-">
       <producerProperties>
@@ -185,9 +185,9 @@ To do so, add the following contribution to override the default WorkManagerImpl
     <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
   </service>
 
-  <implementation class="WorkManagerComputationChronicle" />
-
-  <!-- <implementation class="WorkManagerComputationKafka" /> -->
+  <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationChronicle" />
+  
+  <!-- <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationKafka" /> -->
 
   <extension-point name="queues">
     <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />
