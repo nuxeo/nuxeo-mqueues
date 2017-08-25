@@ -39,7 +39,7 @@ the value is expressed as a string like: `12h` or `7d`, respectively for 12 hour
 <?xml version="1.0"?>
 <component name="my.project.kafka.contrib">
 
-  <extension target="org.nuxeo.ecm.platform.mqueues.importer.kafka.service" point="kafkaConfig">
+  <extension target="org.nuxeo.ecm.platform.mqueues.kafka.service" point="kafkaConfig">
 
     <kafkaConfig name="default" zkServers="localhost:2181" topicPrefix="nuxeo-">
       <producerProperties>
