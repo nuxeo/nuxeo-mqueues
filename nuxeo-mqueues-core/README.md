@@ -92,16 +92,23 @@ the second is dedicated for cluster deployment.
 
 #### Kafka
 
-  Apache [Kafka](http://kafka.apache.org/) is a distributed streaming platform. You need to install and configure a Kafka cluster, the recommended version is 0.11.0.0.
-
-  Kafka brings distributed support and fault tolerance.
+  Apache [Kafka](http://kafka.apache.org/) is a distributed streaming platform. Kafka brings distributed support and fault tolerance.
 
   The implementation is straightforward:
   - A MQueue is a [topic](http://kafka.apache.org/intro#intro_topics), partitions have the same meaning.
   - Appender uses the Kafka [Producer API](http://kafka.apache.org/documentation.html#producerapi) and tailer the Kafka [Consumer API](http://kafka.apache.org/documentation.html#consumerapi).
   - Offsets are managed manually (auto commit is disable) and persisted in Kafka internal topic.
 
-  To create topic you need to provide a Zookeeper access, other [consumer and producer options](https://kafka.apache.org/documentation#configuration)
+  You need to install and configure a Kafka cluster, the recommended version is 0.11.0.x. To create topics MQueues need a Zookeeper access, the Kafka broker need to be tuned a bit:
+
+  | Kafka broker options | default | Description |
+  | --- | ---: |  --- |
+  | `offsets.retention.minutes` | `1440` | The default offset retention is only 1 day, without activity for this amount of time the current consumer offset position is lost and all messages will be reprocessed. To prevent this we recommend to use a value 2 times bigger as `log.retention.hours`, so by default 14 days or `20160`. See [KAFKA-3806](https://issues.apache.org/jira/browse/KAFKA-3806) for more information. |
+  | `log.retention.hours` | `168` | The default log retention is 7 days. If you change this make sure you update `offset.retention.minutes`.|
+  | `auto.create.topics.enable` |  `true` | This is not a requirement for MQueue, because topic are created from Zookeeper. |
+
+
+  Other [consumer and producer options](https://kafka.apache.org/documentation#configuration)
   can be tuned, here are some important options:
 
   | Consumer options | default | Description |
@@ -122,7 +129,6 @@ the second is dedicated for cluster deployment.
   | `acks` | `1` | The number of acknowledgments the producer requires the leader to have received before considering a request complete. |
   | `compression.type` | `none` | Valid values are none, gzip, snappy, or lz4. Compression is of full batches of data, so the efficacy of batching will also impact the compression ratio (more batching means better compression). |
   | `default.replication.factor` | `1` | This is a MQueue only option to set the topic replication factor when creating new topic. |
-
 
 
 ## Producer/Consumer Patterns

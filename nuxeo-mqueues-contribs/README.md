@@ -61,6 +61,8 @@ the value is expressed as a string like: `12h` or `7d`, respectively for 12 hour
 
 Then you can refer to this configuration named `default` to use the Kafka implementation of MQueue.
 
+Make sure you have read the [nuxeo-mqueues-core README](../nuxeo-mqueues-core/README.md) to setup properly Kafka.
+
 
 ## Producer/Consumer pattern with automation operations
 
