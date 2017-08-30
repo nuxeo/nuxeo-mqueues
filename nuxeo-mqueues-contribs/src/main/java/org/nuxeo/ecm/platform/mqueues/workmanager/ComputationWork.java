@@ -18,10 +18,14 @@
  */
 package org.nuxeo.ecm.platform.mqueues.workmanager;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
+import com.codahale.metrics.Timer;
 import org.nuxeo.ecm.core.work.api.Work;
 import org.nuxeo.lib.core.mqueues.computation.AbstractComputation;
 import org.nuxeo.lib.core.mqueues.computation.ComputationContext;
 import org.nuxeo.lib.core.mqueues.computation.Record;
+import org.nuxeo.runtime.metrics.MetricsService;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,14 +34,19 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.util.concurrent.TimeUnit;
 
 
 /**
  * @since 9.2
  */
 public class ComputationWork extends AbstractComputation {
+    protected final Timer workTimer;
+
     public ComputationWork(String name) {
         super(name, 1, 0);
+        MetricRegistry registry = SharedMetricRegistries.getOrCreate(MetricsService.class.getName());
+        workTimer = registry.timer(MetricRegistry.name("nuxeo", "works", name, "total"));
     }
 
     @Override
@@ -48,6 +57,7 @@ public class ComputationWork extends AbstractComputation {
         } finally {
             // TODO: catch error and propagate
             work.cleanUp(true, null);
+            workTimer.update(work.getCompletionTime() - work.getStartTime(), TimeUnit.MILLISECONDS);
         }
         context.askForCheckpoint();
     }

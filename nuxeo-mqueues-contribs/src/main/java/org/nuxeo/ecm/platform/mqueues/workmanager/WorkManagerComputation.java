@@ -197,10 +197,10 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
 
     protected void activateQueueMetrics(String queueId) {
         NuxeoMetricSet queueMetrics = new NuxeoMetricSet("nuxeo", new String[]{"works", "total", queueId});
-        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).scheduled, "scheduled", "count");
-        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).running, "running","count");
-        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).completed, "completed", "count");
-        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).canceled, "canceled", "count");
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).scheduled, "scheduled");
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).running, "running");
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).completed, "completed");
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).canceled, "canceled");
         registry.registerAll(queueMetrics);
     }
 
