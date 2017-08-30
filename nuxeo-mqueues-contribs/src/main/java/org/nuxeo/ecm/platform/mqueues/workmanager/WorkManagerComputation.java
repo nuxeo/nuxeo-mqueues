@@ -18,6 +18,7 @@
  */
 package org.nuxeo.ecm.platform.mqueues.workmanager;
 
+import com.codahale.metrics.MetricRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.NuxeoException;
@@ -35,6 +36,7 @@ import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQLag;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.metrics.NuxeoMetricSet;
 import org.nuxeo.runtime.model.ComponentContext;
 import org.nuxeo.runtime.model.ComponentManager;
 import org.nuxeo.runtime.transaction.TransactionHelper;
@@ -176,15 +178,35 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
                 @Override
                 public void afterStart(ComponentManager mgr, boolean isResume) {
                     manager.start(topology, settings);
+                    for (String id : workQueueConfig.getQueueIds()) {
+                        activateQueueMetrics(id);
+                    }
                 }
 
                 @Override
                 public void afterStop(ComponentManager mgr, boolean isStandby) {
                     Framework.getRuntime().getComponentManager().removeListener(this);
+                    for (String id : workQueueConfig.getQueueIds()) {
+                        deactivateQueueMetrics(id);
+                    }
                 }
             });
             log.info("Initialized");
         }
+    }
+
+    protected void activateQueueMetrics(String queueId) {
+        NuxeoMetricSet queueMetrics = new NuxeoMetricSet("nuxeo", new String[]{"works", "total", queueId});
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).scheduled, "scheduled", "count");
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).running, "running","count");
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).completed, "completed", "count");
+        queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).canceled, "canceled", "count");
+        registry.registerAll(queueMetrics);
+    }
+
+    protected void deactivateQueueMetrics(String queueId) {
+        String queueMetricsName = MetricRegistry.name("nuxeo", new String[]{"works", "total", queueId});
+        registry.removeMatching((name, metric) -> name.startsWith(queueMetricsName));
     }
 
     /**
@@ -267,6 +289,17 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
                 return getMetrics(queueId).getRunning().intValue();
         }
         return 0;
+    }
+
+    protected WorkQueueMetrics getMetricsWithNuxeoClassLoader(String queueId) {
+        // JMX threads have distinct class loader that need to be changed to get metrics
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(Framework.class.getClassLoader());
+            return getMetrics(queueId);
+        } finally {
+            Thread.currentThread().setContextClassLoader(classLoader);
+        }
     }
 
     @Override
