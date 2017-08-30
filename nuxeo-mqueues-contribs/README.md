@@ -188,7 +188,7 @@ To do so, add the following contribution to override the default WorkManagerImpl
   </service>
 
   <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationChronicle" />
-  
+
   <!-- <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationKafka" /> -->
 
   <extension-point name="queues">
@@ -217,6 +217,19 @@ we have 12 partitions in the MQueue:
 You can change the over provisioning factor using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.overprovisioning`.
 
 Note that work pool of size `1` are not over provisioned because we don't want any concurrency.
+
+### Limitations
+
+The computation WorkManager API is more limited than the default implementation because it is not possible
+to access submitted work. For instance it is not possible to list scheduled works or get the state of an existing work.
+Invoking those methods will return no result.
+
+This is mainly for performance reason, such kind of access find/list on a queue storage does not scale.
+This should not be a problem because accessing completed work to get a result is not a way to go,
+result can be persisted in a transient store or work chained using computations.
+
+The work pool metrics are still available and reflect the total number of scheduled, running, completed or canceled works. Note that at the
+moment the number of running works is just an estimation and don't reflect the exact number of concurrent running worker.
 
 ## Building
 
