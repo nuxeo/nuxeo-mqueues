@@ -20,12 +20,12 @@ package org.nuxeo.lib.core.mqueues.computation.mqueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.lib.core.mqueues.computation.Record;
-import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.computation.Computation;
 import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
+import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.Watermark;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 
 import java.time.Duration;
 import java.util.ArrayList;

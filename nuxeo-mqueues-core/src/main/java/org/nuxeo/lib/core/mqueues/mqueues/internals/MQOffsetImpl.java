@@ -18,8 +18,8 @@
  */
 package org.nuxeo.lib.core.mqueues.mqueues.internals;
 
-import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
+import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 
 /**
  * @since 9.1
@@ -60,7 +60,7 @@ public class MQOffsetImpl implements MQOffset {
 
         MQOffsetImpl offsetImpl = (MQOffsetImpl) o;
 
-        if (partition.equals(offsetImpl.partition)) return false;
+        if (!partition.equals(offsetImpl.partition)) return false;
         return offset == offsetImpl.offset;
     }
 

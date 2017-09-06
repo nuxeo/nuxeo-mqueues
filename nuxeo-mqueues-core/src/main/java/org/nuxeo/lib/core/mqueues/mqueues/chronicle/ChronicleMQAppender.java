@@ -18,8 +18,6 @@
  */
 package org.nuxeo.lib.core.mqueues.mqueues.chronicle;
 
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
-
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.RollCycle;
@@ -51,10 +49,10 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Stream;
 
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueue.SUFFIX;
+
 /**
  * Chronicle Queue implementation of MQAppender.
- *
- * Note that for performance reason the class loader assertion are disabled.
  *
  * @since 9.1
  */

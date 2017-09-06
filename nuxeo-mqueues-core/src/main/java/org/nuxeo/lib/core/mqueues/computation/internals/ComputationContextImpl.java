@@ -18,9 +18,9 @@
  */
 package org.nuxeo.lib.core.mqueues.computation.internals;
 
-import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.ComputationContext;
 import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
+import org.nuxeo.lib.core.mqueues.computation.Record;
 
 import java.util.ArrayList;
 import java.util.Collections;

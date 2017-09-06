@@ -29,15 +29,15 @@ import org.apache.commons.logging.LogFactory;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceException;
+import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
+import org.nuxeo.lib.core.mqueues.pattern.Message;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.Consumer;
-import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerStatus;
-import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
-import org.nuxeo.lib.core.mqueues.pattern.Message;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerFactory;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
+import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerStatus;
 
 import java.util.Collection;
 import java.util.List;

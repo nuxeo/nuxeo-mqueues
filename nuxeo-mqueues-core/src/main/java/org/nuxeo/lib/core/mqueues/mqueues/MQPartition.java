@@ -19,7 +19,7 @@
 package org.nuxeo.lib.core.mqueues.mqueues;
 
 /**
- * A tuple to store MQueue name and the partition index.
+ * A tuple to store a MQueue name and the partition index.
  *
  * @since 9.2
  */

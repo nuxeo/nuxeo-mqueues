@@ -20,15 +20,15 @@ package org.nuxeo.lib.core.mqueues.computation.mqueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
+import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
 import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.Settings;
+import org.nuxeo.lib.core.mqueues.computation.Topology;
+import org.nuxeo.lib.core.mqueues.computation.Watermark;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
-import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.lib.core.mqueues.computation.Topology;
-import org.nuxeo.lib.core.mqueues.computation.Watermark;
 
 import java.time.Duration;
 import java.util.Comparator;

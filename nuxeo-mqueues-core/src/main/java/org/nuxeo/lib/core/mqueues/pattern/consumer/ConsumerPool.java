@@ -23,9 +23,9 @@ import org.apache.commons.logging.LogFactory;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaUtils;
+import org.nuxeo.lib.core.mqueues.pattern.Message;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.internals.AbstractCallablePool;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.internals.ConsumerRunner;
-import org.nuxeo.lib.core.mqueues.pattern.Message;
 
 import java.util.Collections;
 import java.util.List;

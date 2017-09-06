@@ -20,19 +20,19 @@ package org.nuxeo.lib.core.mqueues.computation.mqueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.lib.core.mqueues.computation.Computation;
+import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
 import org.nuxeo.lib.core.mqueues.computation.Record;
+import org.nuxeo.lib.core.mqueues.computation.Watermark;
 import org.nuxeo.lib.core.mqueues.computation.internals.ComputationContextImpl;
+import org.nuxeo.lib.core.mqueues.computation.internals.WatermarkMonotonicInterval;
+import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceException;
+import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
-import org.nuxeo.lib.core.mqueues.computation.Computation;
-import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.lib.core.mqueues.computation.Watermark;
-import org.nuxeo.lib.core.mqueues.computation.internals.WatermarkMonotonicInterval;
-import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
-import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
 
 import java.time.Duration;
 import java.util.Collection;

@@ -19,11 +19,11 @@
 package org.nuxeo.lib.core.mqueues.mqueues.internals;
 
 
+import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
-import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
-import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
+import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 
 import java.io.Externalizable;
 import java.util.Collection;

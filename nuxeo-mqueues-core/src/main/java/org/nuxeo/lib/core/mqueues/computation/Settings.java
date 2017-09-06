@@ -33,7 +33,7 @@ public class Settings {
     protected final Map<String, Integer> partitions = new HashMap<>();
 
     /**
-     * Default concurrency and partition to use if not specified explicitely
+     * Default concurrency and partition to use if not specified explicitly
      */
     public Settings(int defaultConcurrency, int defaultPartitions) {
         this.defaultConcurrency = defaultConcurrency;
