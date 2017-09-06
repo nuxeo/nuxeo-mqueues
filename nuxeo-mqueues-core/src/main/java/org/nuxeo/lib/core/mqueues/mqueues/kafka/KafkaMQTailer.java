@@ -29,13 +29,13 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.utils.Bytes;
+import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceException;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.lib.core.mqueues.mqueues.internals.MQOffsetImpl;
-import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
 
 import java.io.ByteArrayInputStream;
 import java.io.Externalizable;
@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -104,6 +105,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         ret.listener = listener;
         ret.consumer.subscribe(topics, ret);
         ret.partitions = Collections.emptyList();
+        ret.topicPartitions = Collections.emptyList();
         log.debug(String.format("Created tailer with subscription: %s using prefix: %s", ret.id, prefix));
         return ret;
     }
@@ -253,13 +255,39 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
         return offset;
     }
 
-    public void seek(MQPartition partition, MQOffset offset) {
-        log.debug("seek tailer: " + id + " +" + offset);
-        TopicPartition topicPartition = new TopicPartition(prefix + partition.name(), partition.partition());
+    @Override
+    public void seek(MQOffset offset) {
+        log.debug("Seek to: " + offset + " from tailer: " + id);
+        TopicPartition topicPartition = new TopicPartition(prefix + offset.partition().name(),
+                offset.partition().partition());
         consumer.seek(topicPartition, offset.offset());
-        //lastOffsets.remove(topicPartition);
-        // records.stream().filter(rec -> partition.partition() != rec.partition() || partition.equals(rec.))
-        records.clear();
+        lastOffsets.remove(topicPartition);
+        List<ConsumerRecord<String, Bytes>> toRemove = records.stream().filter(rec -> rec.partition() == topicPartition.partition()).collect(Collectors.toList());
+        toRemove.forEach(records::remove);
+    }
+
+    @Override
+    public void reset() {
+        // we just commit the first offset
+        log.info("Reset committed offsets for all assigned partitions: " + topicPartitions + " tailer: " + id);
+        Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(topicPartitions);
+        Map<TopicPartition, OffsetAndMetadata> offsetToCommit = new HashMap<>();
+        beginningOffsets.forEach((tp, offset) -> offsetToCommit.put(tp, new OffsetAndMetadata(offset)));
+        consumer.commitSync(offsetToCommit);
+        lastCommittedOffsets.clear();
+        toLastCommitted();
+    }
+
+    @Override
+    public void reset(MQPartition partition) {
+        log.info("Reset committed offset for partition: " + partition + " tailer: " + id);
+        TopicPartition topicPartition = new TopicPartition(prefix + partition.name(), partition.partition());
+        Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(Collections.singleton(topicPartition));
+        Map<TopicPartition, OffsetAndMetadata> offsetToCommit = new HashMap<>();
+        beginningOffsets.forEach((tp, offset) -> offsetToCommit.put(tp, new OffsetAndMetadata(offset)));
+        consumer.commitSync(offsetToCommit);
+        lastCommittedOffsets.remove(topicPartition);
+        seek(new MQOffsetImpl(partition, beginningOffsets.get(0)));
     }
 
     @Override
@@ -362,6 +390,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
     public void onPartitionsAssigned(Collection<TopicPartition> newPartitions) {
         partitions = newPartitions.stream().map(tp -> MQPartition.of(getNameForTopic(tp.topic()), tp.partition()))
                 .collect(Collectors.toList());
+        topicPartitions = newPartitions;
         id = buildId(group, partitions);
         lastCommittedOffsets.clear();
         lastOffsets.clear();
@@ -372,6 +401,5 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
             listener.onPartitionsAssigned(partitions);
         }
     }
-
 
 }

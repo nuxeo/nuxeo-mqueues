@@ -24,19 +24,21 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
-import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
-import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
-import org.nuxeo.lib.core.mqueues.mqueues.MQLag;
 import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
+import org.nuxeo.lib.core.mqueues.mqueues.MQLag;
+import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
+import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.lib.core.mqueues.mqueues.internals.AbstractMQManager;
 
 import java.io.Externalizable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * @since 9.2
@@ -68,6 +70,13 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
 
     protected String getTopicName(String name) {
         return prefix + name;
+    }
+
+    protected String getNameFromTopic(String topic) {
+        if (!topic.startsWith(prefix)) {
+            throw new IllegalArgumentException(String.format("topic %s with invalid prefix %s", topic, prefix));
+        }
+        return topic.replaceFirst(prefix, "");
     }
 
     @Override
@@ -155,13 +164,14 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
 
     @Override
     public List<MQLag> getLagPerPartition(String name, String group) {
-        List<MQLag> ret = new ArrayList<>();
+        MQLag[] ret;
         Properties props = (Properties) consumerProperties.clone();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
         try (KafkaConsumer<String, Bytes> consumer = new KafkaConsumer<>(props)) {
             List<TopicPartition> topicPartitions = new ArrayList<>();
             consumer.partitionsFor(getTopicName(name)).forEach(
                     meta -> topicPartitions.add(new TopicPartition(meta.topic(), meta.partition())));
+            ret = new MQLag[topicPartitions.size()];
             Map<TopicPartition, Long> endOffsets = consumer.endOffsets(topicPartitions);
             for (TopicPartition topicPartition : topicPartitions) {
                 long committedOffset = 0L;
@@ -173,10 +183,34 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
                 if (endOffset == null) {
                     endOffset = 0L;
                 }
-                ret.add(new MQLag(committedOffset, endOffset));
+                ret[topicPartition.partition()] = new MQLag(committedOffset, endOffset);
             }
         }
-        return ret;
+        return Arrays.asList(ret);
+    }
+
+    @Override
+    public List<String> listAll() {
+        return kUtils.listTopics().stream().filter(name -> name.startsWith(prefix))
+                .map(this::getNameFromTopic).collect(Collectors.toList());
+    }
+
+    @Override
+    public String toString() {
+        return "KafkaMQManager{" +
+                "producerProperties=" + producerProperties +
+                ", consumerProperties=" + consumerProperties +
+                ", prefix='" + prefix + '\'' +
+                '}';
+    }
+
+    @Override
+    public List<String> listConsumerGroups(String name) {
+        String topic = getTopicName(name);
+        if (! exists(name)) {
+            throw new IllegalArgumentException("Unknown MQueue: "+ name);
+        }
+        return kUtils.listConsumers(getProducerProperties(), topic);
     }
 
 }

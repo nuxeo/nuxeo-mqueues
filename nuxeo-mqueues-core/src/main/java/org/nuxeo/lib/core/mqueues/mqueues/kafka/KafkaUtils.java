@@ -18,10 +18,12 @@
  */
 package org.nuxeo.lib.core.mqueues.mqueues.kafka;
 
+import kafka.admin.AdminClient;
 import kafka.admin.AdminUtils;
 import kafka.admin.RackAwareMode;
 import kafka.cluster.Broker;
 import kafka.cluster.EndPoint;
+import kafka.coordinator.group.GroupOverview;
 import kafka.utils.ZKStringSerializer$;
 import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
@@ -34,9 +36,11 @@ import org.apache.kafka.clients.consumer.RoundRobinAssignor;
 import org.apache.kafka.clients.consumer.internals.PartitionAssignor;
 import org.apache.kafka.common.Cluster;
 import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.requests.MetadataResponse;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import scala.collection.Iterator;
+import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
 import java.time.Duration;
@@ -110,6 +114,8 @@ public class KafkaUtils implements AutoCloseable {
         AdminUtils.createTopic(zkUtils, topic, partitions, replicationFactor,
                 new Properties(), RackAwareMode.Safe$.MODULE$);
         try {
+            // TODO: check if it could be replaced by
+            // TestUtils.waitUntilMetadataIsPropagated(zkUtils.getAllBrokersInCluster(), topic, 0, 5000);
             waitForTopicCreation(topic, Duration.ofSeconds(5));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -154,6 +160,49 @@ public class KafkaUtils implements AutoCloseable {
 
     public boolean topicExists(String topic) {
         return AdminUtils.topicExists(zkUtils, topic);
+    }
+
+    public List<String> listTopics() {
+        Seq<String> topics = zkUtils.getAllTopics();
+        return scala.collection.JavaConversions.seqAsJavaList(topics);
+    }
+
+    public List<String> listConsumers(Properties props, String topic) {
+        List<String> ret = new ArrayList<>();
+        List<String> consumers = listAllConsumers(props);
+        for (String consumer : consumers) {
+            if (getConsumerTopics(props, consumer).contains(topic)) {
+                ret.add(consumer);
+            }
+        }
+        return ret;
+    }
+
+    private List<String> getConsumerTopics(Properties props, String group) {
+        List<String> ret = new ArrayList<>();
+        AdminClient client = AdminClient.create(props);
+        Map<TopicPartition, Object> response = JavaConversions.mapAsJavaMap(client.listGroupOffsets(group));
+        for (TopicPartition tp : response.keySet()) {
+            ret.add(tp.topic());
+        }
+        return ret;
+    }
+
+
+    public List<String> listAllConsumers(Properties props) {
+        List<String> ret = new ArrayList<>();
+        AdminClient client = AdminClient.create(props);
+        // this returns only consumer group that use the subscribe API (known by coordinator)
+        scala.collection.immutable.List<GroupOverview> groups = client.listAllConsumerGroupsFlattened();
+        Iterator<GroupOverview> iter = groups.iterator();
+        GroupOverview group;
+        while (iter.hasNext()) {
+            group = iter.next();
+            if (group != null) {
+                ret.add(group.groupId());
+            }
+        }
+        return ret;
     }
 
     /**

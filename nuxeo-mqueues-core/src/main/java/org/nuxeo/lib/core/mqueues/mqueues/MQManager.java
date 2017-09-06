@@ -22,6 +22,8 @@ package org.nuxeo.lib.core.mqueues.mqueues;
 import java.io.Externalizable;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -66,9 +68,24 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
 
     /**
      * Create a tailer for a consumer {@code group} and assign multiple {@code partitions}.
+     * Note that {@code partitions} can be from different MQueues.
+     *
      * A tailer is NOT thread safe.
      */
     MQTailer<M> createTailer(String group, Collection<MQPartition> partitions);
+
+    /**
+     * Create a tailer for a consumer {@code group} and assign all {@code partitions} of a MQueue.
+     * A tailer is NOT thread safe.
+     *
+     * @since 9.3
+     */
+    default MQTailer<M> createTailer(String group, String name) {
+        int size = getAppender(name).size();
+        return createTailer(group,
+                IntStream.range(0, size).boxed().map(partition -> new MQPartition(name, partition))
+                        .collect(Collectors.toList()));
+    }
 
     /**
      * Returns {@code true} if the MQueue {@link #subscribe} method is supported.
@@ -89,6 +106,7 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
 
     /**
      * Returns the lag between consumer {@code group} and the producers for each partition.
+     * The result list is ordered, for instance index 0 is lag for partition 0.
      *
      * @since 9.3
      */
@@ -112,5 +130,20 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
         });
         return new MQLag(pos[0], end[0], lag[0], endMessages[0]);
     }
+
+    /**
+     * Returns all the MQueue names.
+     *
+     * @since 9.3
+     */
+    List<String> listAll();
+
+    /**
+     * List the consumer groups for a MQueue.
+     *
+     * @since 9.3
+     */
+    List<String> listConsumerGroups(String name);
+
 
 }

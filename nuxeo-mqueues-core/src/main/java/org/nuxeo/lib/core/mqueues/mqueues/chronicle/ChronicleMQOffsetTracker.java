@@ -48,6 +48,18 @@ public class ChronicleMQOffsetTracker implements AutoCloseable {
         offsetQueue.acquireAppender().pretouch();
     }
 
+    public static boolean isOffsetTracker(String dirName) {
+        return dirName.startsWith(OFFSET_QUEUE_PREFIX);
+    }
+
+    public static String getGroupFromDirectory(String dirName) {
+        if (!isOffsetTracker(dirName)) {
+            throw new IllegalArgumentException(String.format("Invalid directory %s, not an offset tracker", dirName));
+        }
+        return dirName.replaceFirst(OFFSET_QUEUE_PREFIX, "");
+    }
+
+
     /**
      * Use a cache to return the last committed offset, concurrent consumer is not taken in account
      * use {@link #readLastCommittedOffset()} in concurrency.

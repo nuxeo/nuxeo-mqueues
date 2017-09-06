@@ -18,10 +18,10 @@
  */
 package org.nuxeo.lib.core.mqueues.mqueues.chronicle;
 
+import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
-import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
 
 import java.io.Externalizable;
 import java.time.Duration;
@@ -31,6 +31,8 @@ import java.util.List;
 
 
 /**
+ * A compound tailer to handle multiple partitions.
+ *
  * @since 9.2
  */
 public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTailer<M> {
@@ -128,12 +130,29 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
         return closed;
     }
 
-    public void seek(MQPartition partition, MQOffset offset) {
+    @Override
+    public void seek(MQOffset offset) {
         for (MQTailer<M> tailer : tailers) {
-            if (tailer.assignments().contains(partition)) {
-                ((ChronicleMQTailer<M>) tailer).seek(partition, offset);
+            if (tailer.assignments().contains(offset.partition())) {
+                tailer.seek(offset);
                 return;
             }
+        }
+        // Should be an IllegalArgumentException but Kafka raise a state exception so do the same
+        throw new IllegalStateException("Can not seek, tailer " + this + " has no assignment for partition: " + offset);
+    }
+
+    @Override
+    public void reset() {
+        tailers.forEach(ChronicleMQTailer::reset);
+    }
+
+    @Override
+    public void reset(MQPartition partition) {
+        ChronicleMQTailer<M> tailer = tailers.stream().filter(t -> t.assignments().contains(partition)).findFirst().orElse(null);
+        if (tailer == null) {
+            throw new IllegalArgumentException(String.format("Can not reset, partition: %s not found on tailer assignments: %s",
+                    partition, mqPartitions));
         }
     }
 

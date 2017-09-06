@@ -56,6 +56,16 @@ public class MQRecord<M extends Externalizable> {
     public MQOffset offset() {
         return offset;
     }
+
+    @Override
+    public String toString() {
+        return "MQRecord{" +
+                "message=" + message +
+                ", partition=" + partition +
+                ", offset=" + offset +
+                '}';
+    }
+
 }
 
 

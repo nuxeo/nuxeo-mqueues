@@ -1,4 +1,4 @@
-package org.nuxeo.lib.core.mqueues.mqueues.chronicle;/*
+/*
  * (C) Copyright 2017 Nuxeo SA (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,16 +16,17 @@ package org.nuxeo.lib.core.mqueues.mqueues.chronicle;/*
  * Contributors:
  *     bdelbosc
  */
+package org.nuxeo.lib.core.mqueues.mqueues.chronicle;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.lib.core.mqueues.mqueues.internals.MQOffsetImpl;
 import org.nuxeo.lib.core.mqueues.mqueues.internals.MQPartitionGroup;
-import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
 
 import java.io.Externalizable;
 import java.time.Duration;
@@ -98,15 +99,15 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
             throw new IllegalStateException("The tailer has been closed.");
         }
         final List<M> value = new ArrayList<>(1);
+        long offset = cqTailer.index();
         if (!cqTailer.readDocument(w -> value.add((M) w.read("msg").object()))) {
             return null;
         }
-        return new MQRecord<>(partition, value.get(0), new MQOffsetImpl(partition, cqTailer.index()));
+        return new MQRecord<>(partition, value.get(0), new MQOffsetImpl(partition, offset));
     }
 
     @Override
     public MQOffset commit(MQPartition partition) {
-        // we write raw: queue, offset, timestamp
         if (!this.partition.equals(partition)) {
             throw new IllegalArgumentException("Can not commit this partition: " + partition + " from " + id);
         }
@@ -147,8 +148,28 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
         }
     }
 
-    public void seek(MQPartition partition, MQOffset offset) {
+    @Override
+    public void seek(MQOffset offset) {
+        if (!this.partition.equals(offset.partition())) {
+            throw new IllegalStateException("Can not seek, tailer " + this + " has no assignment for partition: " + offset);
+        }
+        log.debug("Seek to " + offset + " from tailer: " + this);
         cqTailer.moveToIndex(offset.offset());
+    }
+
+    @Override
+    public void reset() {
+        reset(new MQPartition(id.name, id.partition));
+    }
+
+    @Override
+    public void reset(MQPartition partition) {
+        if (!this.partition.equals(partition)) {
+            throw new IllegalArgumentException("Can not reset this partition: " + partition + " from " + id);
+        }
+        log.info("Reset offset for partition: " + partition + " from tailer: " + this);
+        cqTailer.toStart();
+        commit(partition);
     }
 
     @Override

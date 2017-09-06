@@ -21,11 +21,11 @@ package org.nuxeo.lib.core.mqueues.mqueues.chronicle;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
+import org.nuxeo.lib.core.mqueues.mqueues.MQLag;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.lib.core.mqueues.mqueues.internals.AbstractMQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.MQLag;
 
 import java.io.Externalizable;
 import java.io.File;
@@ -33,8 +33,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.io.FileUtils.deleteDirectory;
@@ -129,6 +131,32 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
             ret.add(getLagForPartition(name, i, group));
         }
         return ret;
+    }
+
+    @Override
+    public String toString() {
+        return "ChronicleMQManager{" +
+                "basePath=" + basePath +
+                ", retentionDuration='" + retentionDuration + '\'' +
+                '}';
+    }
+
+    @Override
+    public List<String> listAll() {
+        if (! basePath.toFile().exists() || ! basePath.toFile().isDirectory()) {
+            throw new IllegalArgumentException("Invalid base path: " + basePath);
+        }
+        return Arrays.asList(basePath.toFile().list((dir, name) -> new File(dir, name).isDirectory()));
+    }
+
+    @Override
+    public List<String> listConsumerGroups(String name) {
+        File mqRoot = new File(basePath.toFile(), name);
+        if (!exists(name)) {
+            throw new IllegalArgumentException("Unknown MQueue: " + name);
+        }
+        return Arrays.stream(mqRoot.list((dir, rep) -> new File(dir, rep).isDirectory() &&
+                ChronicleMQOffsetTracker.isOffsetTracker(rep))).map(ChronicleMQOffsetTracker::getGroupFromDirectory).collect(Collectors.toList());
     }
 
     @Override

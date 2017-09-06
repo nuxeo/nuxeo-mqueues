@@ -22,9 +22,14 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+
+import static java.lang.Math.min;
 
 /**
  * Basic data object that contains: key, value, flag and offset
@@ -64,11 +69,27 @@ public class Record implements Externalizable {
 
     @Override
     public String toString() {
+        String overview = "";
+        String wmDate = "";
+        if (data != null) {
+            try {
+                overview = ", data=\"" + new String(data, "UTF-8").substring(0, min(data.length, 512)) + '"';
+            } catch (UnsupportedEncodingException e) {
+                overview = "unsupported encoding";
+            }
+            overview = overview.replace('\r', ' ');
+            overview = overview.replace('\n', ' ');
+        }
+        if (watermark > 0) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+            Watermark wm = Watermark.ofValue(watermark);
+            wmDate = ", wmDate=" + dateFormat.format(new Date(wm.getTimestamp()));
+        }
         return "Record{" +
-                "watermark=" + watermark +
+                "watermark=" + watermark + wmDate +
                 ", flags=" + flags +
                 ", key='" + key + '\'' +
-                ", data.length=" + ((data == null) ? 0 : data.length) +
+                ", data.length=" + ((data == null) ? 0 : data.length) + overview +
                 '}';
     }
 

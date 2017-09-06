@@ -69,7 +69,7 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
     void toEnd();
 
     /**
-     * Set the current position to the fist message of all partitions.
+     * Set the current positions to the beginning of all partitions.
      */
     void toStart();
 
@@ -77,6 +77,25 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
      * Set the current positions to previously committed positions.
      */
     void toLastCommitted();
+
+    /**
+     * Set the current position for a single partition. Do not change other partitions positions.
+     * @since 9.3
+     */
+    void seek(MQOffset offset);
+
+    /**
+     * Reset all committed positions for this group, next read will be done from beginning.
+     * @since 9.3
+     */
+    void reset();
+
+    /**
+     * Reset the committed position for this group on this partition, next read for this partition
+     * will be done from the beginning.
+     * @since 9.3
+     */
+    void reset(MQPartition partition);
 
     /**
      * Returns {@code true} if the tailer has been closed.
