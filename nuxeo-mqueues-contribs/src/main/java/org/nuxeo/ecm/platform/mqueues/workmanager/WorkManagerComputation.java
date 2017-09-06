@@ -31,6 +31,7 @@ import org.nuxeo.ecm.core.work.api.WorkSchedulePath;
 import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.Settings;
 import org.nuxeo.lib.core.mqueues.computation.Topology;
+import org.nuxeo.lib.core.mqueues.computation.Watermark;
 import org.nuxeo.lib.core.mqueues.computation.mqueue.MQComputationManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQLag;
@@ -126,7 +127,8 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
                     getStreamForCategory(work.getCategory())));
             return;
         }
-        appender.append(key, Record.of(key, ComputationWork.serialize(work)));
+        appender.append(key, new Record(key, ComputationWork.serialize(work),
+                Watermark.ofTimestamp(System.currentTimeMillis()).getValue(), null));
     }
 
     public String getStreamForCategory(String category) {
