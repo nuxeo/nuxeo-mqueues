@@ -17,7 +17,7 @@ package org.nuxeo.lib.core.mqueues.tests.pattern.consumer;/*
  *     bdelbosc
  */
 
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.AbstractConsumer;
 
 /**
@@ -25,7 +25,7 @@ import org.nuxeo.lib.core.mqueues.pattern.consumer.AbstractConsumer;
  *
  * @since 9.1
  */
-public class NoopIdMessageConsumer extends AbstractConsumer<keyValueMessage> {
+public class NoopIdMessageConsumer extends AbstractConsumer<KeyValueMessage> {
 
     public NoopIdMessageConsumer(String consumerId) {
         super(consumerId);
@@ -37,7 +37,7 @@ public class NoopIdMessageConsumer extends AbstractConsumer<keyValueMessage> {
     }
 
     @Override
-    public void accept(keyValueMessage message) {
+    public void accept(KeyValueMessage message) {
 
     }
 

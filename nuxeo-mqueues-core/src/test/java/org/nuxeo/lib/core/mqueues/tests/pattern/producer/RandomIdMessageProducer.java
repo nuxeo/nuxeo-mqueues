@@ -18,7 +18,7 @@ package org.nuxeo.lib.core.mqueues.tests.pattern.producer;
  *     bdelbosc
  */
 
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.AbstractProducer;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @since 9.1
  */
-public class RandomIdMessageProducer extends AbstractProducer<keyValueMessage> {
+public class RandomIdMessageProducer extends AbstractProducer<KeyValueMessage> {
 
     protected final long nbMessage;
     protected final AtomicLong totalCount = new AtomicLong(0);
@@ -39,7 +39,7 @@ public class RandomIdMessageProducer extends AbstractProducer<keyValueMessage> {
     }
 
     @Override
-    public int getPartition(keyValueMessage message, int partitions) {
+    public int getPartition(KeyValueMessage message, int partitions) {
         // random attribution
         return ThreadLocalRandom.current().nextInt(0, partitions);
     }
@@ -50,8 +50,8 @@ public class RandomIdMessageProducer extends AbstractProducer<keyValueMessage> {
     }
 
     @Override
-    public keyValueMessage next() {
-        keyValueMessage ret = keyValueMessage.of("Random message " + totalCount.getAndIncrement());
+    public KeyValueMessage next() {
+        KeyValueMessage ret = KeyValueMessage.of("Random message " + totalCount.getAndIncrement());
         count += 1;
         return ret;
     }

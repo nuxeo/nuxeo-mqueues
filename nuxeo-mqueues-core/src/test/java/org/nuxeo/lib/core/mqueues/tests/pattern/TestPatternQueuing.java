@@ -26,7 +26,7 @@ import org.junit.rules.TestName;
 import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQOffset;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerStatus;
@@ -81,24 +81,24 @@ public abstract class TestPatternQueuing {
 
         manager.createIfNotExists(mqName, NB_QUEUE);
 
-        ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
+        ConsumerPool<KeyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
                 IdMessageFactory.NOOP,
                 ConsumerPolicy.UNBOUNDED);
         // run the consumers pool
         CompletableFuture<List<ConsumerStatus>> consumersFuture = consumers.start();
 
-        MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
+        MQAppender<KeyValueMessage> appender = manager.getAppender(mqName);
         // submit messages
-        MQOffset offset1 = appender.append(0, keyValueMessage.of("id1"));
+        MQOffset offset1 = appender.append(0, KeyValueMessage.of("id1"));
         // may be processed but not committed because batch is not full
         assertFalse(appender.waitFor(offset1, consumers.getConsumerGroupName(), Duration.ofMillis(0)));
         // send a force batch
-        appender.append(0, keyValueMessage.ofForceBatch("batch now"));
+        appender.append(0, KeyValueMessage.ofForceBatch("batch now"));
         assertTrue(appender.waitFor(offset1, consumers.getConsumerGroupName(), Duration.ofSeconds(10)));
 
         // terminate consumers
-        appender.append(0, keyValueMessage.POISON_PILL);
-        appender.append(1, keyValueMessage.POISON_PILL);
+        appender.append(0, KeyValueMessage.POISON_PILL);
+        appender.append(1, KeyValueMessage.POISON_PILL);
 
         List<ConsumerStatus> ret = consumersFuture.get();
         assertEquals(NB_QUEUE, (long) ret.size());
@@ -109,7 +109,7 @@ public abstract class TestPatternQueuing {
     public void endWithPoisonPillCommitTheBatch() throws Exception {
         final int NB_QUEUE = 1;
         manager.createIfNotExists(mqName, NB_QUEUE);
-        ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
+        ConsumerPool<KeyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
                 IdMessageFactory.NOOP,
                 ConsumerPolicy.UNBOUNDED);
 
@@ -117,11 +117,11 @@ public abstract class TestPatternQueuing {
         CompletableFuture<List<ConsumerStatus>> consumersFuture = consumers.start();
 
         // submit messages
-        MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
-        appender.append(0, keyValueMessage.of("id1"));
+        MQAppender<KeyValueMessage> appender = manager.getAppender(mqName);
+        appender.append(0, KeyValueMessage.of("id1"));
         // terminate consumers
-        appender.append(0, keyValueMessage.POISON_PILL);
-        appender.append(0, keyValueMessage.of("no consumer to read this one"));
+        appender.append(0, KeyValueMessage.POISON_PILL);
+        appender.append(0, KeyValueMessage.of("no consumer to read this one"));
         List<ConsumerStatus> ret = consumersFuture.get();
         assertEquals(NB_QUEUE, (long) ret.size());
         // with Kafka subscribe there is one more commit because of rebalance
@@ -133,25 +133,25 @@ public abstract class TestPatternQueuing {
     public void killConsumers() throws Exception {
         final int NB_QUEUE = 2;
         manager.createIfNotExists(mqName, NB_QUEUE);
-        ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
+        ConsumerPool<KeyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
                 IdMessageFactory.NOOP,
                 ConsumerPolicy.UNBOUNDED);
         // run the consumers pool
         CompletableFuture<List<ConsumerStatus>> future = consumers.start();
 
         // submit messages
-        MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
-        MQOffset offset1 = appender.append(0, keyValueMessage.of("id1"));
+        MQAppender<KeyValueMessage> appender = manager.getAppender(mqName);
+        MQOffset offset1 = appender.append(0, KeyValueMessage.of("id1"));
 
         // may be processed but not committed because batch is not full
         assertFalse(appender.waitFor(offset1, consumers.getConsumerGroupName(), Duration.ofMillis(0)));
         // send a force batch
-        appender.append(0, keyValueMessage.ofForceBatch("batch now"));
+        appender.append(0, KeyValueMessage.ofForceBatch("batch now"));
         assertTrue(appender.waitFor(offset1, consumers.getConsumerGroupName(), Duration.ofSeconds(10)));
 
         // send 2 more messages
-        appender.append(0, keyValueMessage.of("foo"));
-        appender.append(0, keyValueMessage.of("foo"));
+        appender.append(0, KeyValueMessage.of("foo"));
+        appender.append(0, KeyValueMessage.of("foo"));
 
         // terminate consumers abruptly without committing the last message
         consumers.close();
@@ -176,8 +176,8 @@ public abstract class TestPatternQueuing {
         future = consumers.start();
         appender = manager.getAppender(mqName);
         // terminate the consumers with pills
-        appender.append(0, keyValueMessage.POISON_PILL);
-        appender.append(1, keyValueMessage.POISON_PILL);
+        appender.append(0, KeyValueMessage.POISON_PILL);
+        appender.append(1, KeyValueMessage.POISON_PILL);
 
         ret = future.get();
         // 2 messages from the previous run, poison pill are not counted
@@ -189,24 +189,24 @@ public abstract class TestPatternQueuing {
         final int NB_QUEUE = 2;
         manager.createIfNotExists(mqName, NB_QUEUE);
 
-        ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
+        ConsumerPool<KeyValueMessage> consumers = new ConsumerPool<>(mqName, manager,
                 IdMessageFactory.NOOP,
                 ConsumerPolicy.UNBOUNDED);
         // run the consumers pool
         CompletableFuture<List<ConsumerStatus>> future = consumers.start();
 
         // submit messages
-        MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
-        MQOffset offset1 = appender.append(0, keyValueMessage.of("id1"));
+        MQAppender<KeyValueMessage> appender = manager.getAppender(mqName);
+        MQOffset offset1 = appender.append(0, KeyValueMessage.of("id1"));
         // may be processed but not committed because batch is not full
         assertFalse(appender.waitFor(offset1, consumers.getConsumerGroupName(), Duration.ofMillis(0)));
         // send a force batch
-        appender.append(0, keyValueMessage.ofForceBatch("batch now"));
+        appender.append(0, KeyValueMessage.ofForceBatch("batch now"));
         assertTrue(appender.waitFor(offset1, consumers.getConsumerGroupName(), Duration.ofSeconds(10)));
 
         // send 2 more messages
-        appender.append(0, keyValueMessage.of("foo"));
-        appender.append(0, keyValueMessage.of("foo"));
+        appender.append(0, KeyValueMessage.of("foo"));
+        appender.append(0, KeyValueMessage.of("foo"));
         // close the mq
 
         log.warn("Close the MQManager (errors expected)");
@@ -215,7 +215,7 @@ public abstract class TestPatternQueuing {
         appender = manager.getAppender(mqName);
         // open a new mq
 
-        appender.append(0, keyValueMessage.ofForceBatch("force batch"));
+        appender.append(0, KeyValueMessage.ofForceBatch("force batch"));
 
         // the consumers should be in error because their tailer are associated to a closed mqueues
         List<ConsumerStatus> ret = future.get();
@@ -230,8 +230,8 @@ public abstract class TestPatternQueuing {
         future = consumers.start();
         // terminate the consumers with pills
         // WARN: this will not work with subscribe if the partition are unbalanced
-        appender.append(0, keyValueMessage.POISON_PILL);
-        appender.append(1, keyValueMessage.POISON_PILL);
+        appender.append(0, KeyValueMessage.POISON_PILL);
+        appender.append(1, KeyValueMessage.POISON_PILL);
 
         ret = future.get();
         // 3 messages from the previous run + 2 poison pills

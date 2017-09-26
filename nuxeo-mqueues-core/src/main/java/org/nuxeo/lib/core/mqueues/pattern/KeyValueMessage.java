@@ -29,43 +29,43 @@ import java.util.Objects;
  *
  * @since 9.1
  */
-public class keyValueMessage implements Message {
+public class KeyValueMessage implements Message {
     // Externalizable do rely on serialVersionUID
     static final long serialVersionUID = 20170529L;
-    public static final keyValueMessage POISON_PILL = new keyValueMessage("_POISON_PILL_", null, true, false);
+    public static final KeyValueMessage POISON_PILL = new KeyValueMessage("_POISON_PILL_", null, true, false);
 
     protected String key;
     protected byte[] value;
     protected boolean poisonPill = false;
     protected boolean forceBatch = false;
 
-    public keyValueMessage() {
+    public KeyValueMessage() {
     }
 
-    protected keyValueMessage(String key, byte[] value, boolean poisonPill, boolean forceBatch) {
+    protected KeyValueMessage(String key, byte[] value, boolean poisonPill, boolean forceBatch) {
         this.key = Objects.requireNonNull(key);
         this.value = value;
         this.poisonPill = poisonPill;
         this.forceBatch = forceBatch;
     }
 
-    static public keyValueMessage of(String key, byte[] value) {
-        return new keyValueMessage(key, value, false, false);
+    static public KeyValueMessage of(String key, byte[] value) {
+        return new KeyValueMessage(key, value, false, false);
     }
 
-    static public keyValueMessage of(String key) {
-        return new keyValueMessage(key, null, false, false);
+    static public KeyValueMessage of(String key) {
+        return new KeyValueMessage(key, null, false, false);
     }
 
     /**
      * A message that force the batch.
      */
-    static public keyValueMessage ofForceBatch(String key, byte[] value) {
-        return new keyValueMessage(key, value, false, true);
+    static public KeyValueMessage ofForceBatch(String key, byte[] value) {
+        return new KeyValueMessage(key, value, false, true);
     }
 
-    static public keyValueMessage ofForceBatch(String key) {
-        return new keyValueMessage(key, null, false, true);
+    static public KeyValueMessage ofForceBatch(String key) {
+        return new KeyValueMessage(key, null, false, true);
     }
 
     public String key() {
@@ -127,7 +127,7 @@ public class keyValueMessage implements Message {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        keyValueMessage keyValueMessage = (keyValueMessage) o;
+        KeyValueMessage keyValueMessage = (KeyValueMessage) o;
 
         if (poisonPill != keyValueMessage.poisonPill) return false;
         if (forceBatch != keyValueMessage.forceBatch) return false;
@@ -146,7 +146,7 @@ public class keyValueMessage implements Message {
 
     @Override
     public String toString() {
-        return String.format("keyValueMessage(\"%s\", len:%d%s%s)", key, (value != null) ? value.length : 0,
+        return String.format("KeyValueMessage(\"%s\", len:%d%s%s)", key, (value != null) ? value.length : 0,
                 poisonPill ? ", poison" : "", forceBatch ? ", batch" : "");
     }
 }

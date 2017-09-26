@@ -25,11 +25,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerStatus;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerStatus;
 import org.nuxeo.lib.core.mqueues.tests.pattern.consumer.IdMessageFactory;
@@ -78,7 +78,7 @@ public abstract class TestPatternBoundedQueuing {
 
         // 1. Create a mq and run the producers
         manager.createIfNotExists(MQ_NAME, MQ_SIZE);
-        ProducerPool<keyValueMessage> producers = new ProducerPool<>(MQ_NAME, manager,
+        ProducerPool<KeyValueMessage> producers = new ProducerPool<>(MQ_NAME, manager,
                 new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
         List<ProducerStatus> pret = producers.start().get();
 
@@ -88,7 +88,7 @@ public abstract class TestPatternBoundedQueuing {
         // 2 run the consumers
         ConsumerPolicy consumerPolicy = ConsumerPolicy.builder().waitMessageTimeout(Duration.ofSeconds(5))
                 .continueOnFailure(false).maxThreads((short) 8).build();
-        ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
+        ConsumerPool<KeyValueMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
                 IdMessageFactory.NOOP, consumerPolicy);
         List<ConsumerStatus> cret = consumers.start().get();
 
@@ -104,9 +104,9 @@ public abstract class TestPatternBoundedQueuing {
         // Create a mq, producer and consumer pool
         manager.createIfNotExists(MQ_NAME, MQ_SIZE);
 
-        ProducerPool<keyValueMessage> producers = new ProducerPool<>(MQ_NAME, manager,
+        ProducerPool<KeyValueMessage> producers = new ProducerPool<>(MQ_NAME, manager,
                 new RandomIdMessageProducerFactory(NB_DOCUMENTS), NB_PRODUCERS);
-        ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
+        ConsumerPool<KeyValueMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
                 IdMessageFactory.NOOP, ConsumerPolicy.BOUNDED);
         CompletableFuture<List<ProducerStatus>> pfuture = producers.start();
         CompletableFuture<List<ConsumerStatus>> cfuture = consumers.start();
@@ -129,7 +129,7 @@ public abstract class TestPatternBoundedQueuing {
         final int BATCH_SIZE = 13;
 
         manager.createIfNotExists(MQ_NAME, NB_QUEUE);
-        ProducerPool<keyValueMessage> producers = new ProducerPool<>(MQ_NAME, manager,
+        ProducerPool<KeyValueMessage> producers = new ProducerPool<>(MQ_NAME, manager,
                 new RandomIdMessageProducerFactory(NB_DOCUMENTS,
                         RandomIdMessageProducerFactory.ProducerType.ORDERED),
                 NB_PRODUCERS);
@@ -143,7 +143,7 @@ public abstract class TestPatternBoundedQueuing {
                 .maxThreads(NB_CONSUMERS)
                 .batchPolicy(BatchPolicy.builder().capacity(BATCH_SIZE).build())
                 .retryPolicy(new RetryPolicy().withMaxRetries(10000)).build();
-        ConsumerPool<keyValueMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
+        ConsumerPool<KeyValueMessage> consumers = new ConsumerPool<>(MQ_NAME, manager,
                 IdMessageFactory.BUGGY,
                 consumerPolicy);
 
