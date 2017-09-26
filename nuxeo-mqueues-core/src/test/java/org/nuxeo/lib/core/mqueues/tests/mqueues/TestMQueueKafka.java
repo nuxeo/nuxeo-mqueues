@@ -25,9 +25,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceException;
-
 import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
@@ -36,7 +34,6 @@ import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
 
 import java.time.Duration;
 import java.util.ArrayList;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -65,11 +62,11 @@ public class TestMQueueKafka extends TestMQueue {
     }
 
     @Override
-    public MQManager<keyValueMessage> createManager() throws Exception {
+    public MQManager createManager() throws Exception {
         if (prefix == null) {
             prefix = getPrefix();
         }
-        return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix, getProducerProps(), getConsumerProps());
+        return new KafkaMQManager(KafkaUtils.DEFAULT_ZK_SERVER, prefix, getProducerProps(), getConsumerProps());
     }
 
     @After

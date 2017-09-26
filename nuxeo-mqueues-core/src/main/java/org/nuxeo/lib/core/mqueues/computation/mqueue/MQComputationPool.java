@@ -22,7 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.lib.core.mqueues.computation.Computation;
 import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.Watermark;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
@@ -50,13 +49,13 @@ public class MQComputationPool {
     private static final Log log = LogFactory.getLog(MQComputationPool.class);
     protected final ComputationMetadataMapping metadata;
     protected final int threads;
-    protected final MQManager<Record> manager;
+    protected final MQManager manager;
     protected final Supplier<Computation> supplier;
     protected final List<List<MQPartition>> defaultAssignments;
     protected ExecutorService threadPool;
     protected final List<MQComputationRunner> runners;
 
-    public MQComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, List<List<MQPartition>> defaultAssignments, MQManager<Record> manager) {
+    public MQComputationPool(Supplier<Computation> supplier, ComputationMetadataMapping metadata, List<List<MQPartition>> defaultAssignments, MQManager manager) {
         this.supplier = supplier;
         this.manager = manager;
         this.metadata = metadata;

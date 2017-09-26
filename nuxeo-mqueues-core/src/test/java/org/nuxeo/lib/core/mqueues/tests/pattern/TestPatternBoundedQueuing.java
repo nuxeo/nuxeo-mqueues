@@ -25,11 +25,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerStatus;
+import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerStatus;
 import org.nuxeo.lib.core.mqueues.tests.pattern.consumer.IdMessageFactory;
@@ -51,9 +51,9 @@ public abstract class TestPatternBoundedQueuing {
     @Rule
     public TestName name = new TestName();
 
-    protected MQManager<keyValueMessage> manager;
+    protected MQManager manager;
 
-    public abstract MQManager<keyValueMessage> createManager() throws Exception;
+    public abstract MQManager createManager() throws Exception;
 
     @Before
     public void initManager() throws Exception {

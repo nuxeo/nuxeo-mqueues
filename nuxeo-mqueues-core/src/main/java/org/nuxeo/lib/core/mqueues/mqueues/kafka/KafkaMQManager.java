@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 /**
  * @since 9.2
  */
-public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<M> {
+public class KafkaMQManager extends AbstractMQManager {
     public static final String DISABLE_SUBSCRIBE_PROP = "subscribe.disable";
     public static final String DEFAULT_REPLICATION_FACTOR_PROP = "default.replication.factor";
 
@@ -91,12 +91,12 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
 
 
     @Override
-    public MQAppender<M> createAppender(String name) {
+    public <M extends Externalizable> MQAppender<M> createAppender(String name) {
         return KafkaMQAppender.open(getTopicName(name), name, producerProperties, consumerProperties);
     }
 
     @Override
-    protected MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
+    protected <M extends Externalizable> MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
         partitions.forEach(this::checkValidPartition);
         return KafkaMQTailer.createAndAssign(prefix, partitions, group, (Properties) consumerProperties.clone());
     }
@@ -130,7 +130,7 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     }
 
     @Override
-    protected MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener) {
+    protected <M extends Externalizable> MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener) {
         return KafkaMQTailer.createAndSubscribe(prefix, names, group, (Properties) consumerProperties.clone(), listener);
     }
 
@@ -207,8 +207,8 @@ public class KafkaMQManager<M extends Externalizable> extends AbstractMQManager<
     @Override
     public List<String> listConsumerGroups(String name) {
         String topic = getTopicName(name);
-        if (! exists(name)) {
-            throw new IllegalArgumentException("Unknown MQueue: "+ name);
+        if (!exists(name)) {
+            throw new IllegalArgumentException("Unknown MQueue: " + name);
         }
         return kUtils.listConsumers(getProducerProperties(), topic);
     }

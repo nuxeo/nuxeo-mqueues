@@ -49,9 +49,9 @@ public abstract class TestPatternQueuing {
     public
     TestName name = new TestName();
 
-    protected MQManager<keyValueMessage> manager;
+    protected MQManager manager;
 
-    public abstract MQManager<keyValueMessage> createManager() throws Exception;
+    public abstract MQManager createManager() throws Exception;
 
 
     @Before

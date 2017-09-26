@@ -44,11 +44,11 @@ import static org.junit.Assert.assertTrue;
 public abstract class TestComputationManager {
     private static final Log log = LogFactory.getLog(TestComputationManager.class);
 
-    public abstract MQManager<Record> getStreams() throws Exception;
+    public abstract MQManager getStreams() throws Exception;
 
-    public abstract MQManager<Record> getSameStreams() throws Exception;
+    public abstract MQManager getSameStreams() throws Exception;
 
-    public abstract ComputationManager getManager(MQManager<Record> mqManager);
+    public abstract ComputationManager getManager(MQManager mqManager);
 
 
     public void testSimpleTopo(int nbRecords, int concurrency) throws Exception {
@@ -65,7 +65,7 @@ public abstract class TestComputationManager {
         Settings settings = new Settings(concurrency, concurrency).setConcurrency("GENERATOR", 1);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
-        try (MQManager<Record> streams = getStreams()) {
+        try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
             manager.start(topology, settings);
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
@@ -146,7 +146,7 @@ public abstract class TestComputationManager {
         Settings settings = new Settings(concurrency, partitions).setPartitions("output", 1);
         // uncomment to get the plantuml diagram
         // System.out.println(topology.toPlantuml(settings));
-        try (MQManager<Record> streams = getStreams()) {
+        try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
             manager.start(topology, settings);
@@ -237,7 +237,7 @@ public abstract class TestComputationManager {
         // System.out.println(topology.toPlantuml(settings));
 
         // 1. run generators
-        try (MQManager<Record> streams = getStreams()) {
+        try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
             manager.start(topology1, settings1);
@@ -252,7 +252,7 @@ public abstract class TestComputationManager {
         int result = 0;
         // 2. resume and kill loop
         for (int i = 0; i < 10; i++) {
-            try (MQManager<Record> streams = getSameStreams()) {
+            try (MQManager streams = getSameStreams()) {
                 ComputationManager manager = getManager(streams);
                 long start = System.currentTimeMillis();
                 log.info("RESUME computations");
@@ -269,7 +269,7 @@ public abstract class TestComputationManager {
         }
         // 3. run the rest
         log.info("Now draining without interruption");
-        try (MQManager<Record> streams = getSameStreams()) {
+        try (MQManager streams = getSameStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
             manager.start(topology2, settings2);
@@ -300,7 +300,7 @@ public abstract class TestComputationManager {
 
         Settings settings1 = new Settings(concurrent, concurrent);
 
-        try (MQManager<Record> streams = getStreams()) {
+        try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
             manager.start(topology1, settings1);
@@ -315,7 +315,7 @@ public abstract class TestComputationManager {
 
     }
 
-    protected int readCounterFrom(MQManager<Record> manager, String stream) throws InterruptedException {
+    protected int readCounterFrom(MQManager manager, String stream) throws InterruptedException {
         int partitions = manager.getAppender(stream).size();
         int ret = 0;
         for (int i = 0; i < partitions; i++) {
@@ -324,7 +324,7 @@ public abstract class TestComputationManager {
         return ret;
     }
 
-    protected int readCounterFromPartition(MQManager<Record> manager, String stream, int partition) throws InterruptedException {
+    protected int readCounterFromPartition(MQManager manager, String stream, int partition) throws InterruptedException {
         MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition));
         int result = 0;
         tailer.toStart();
@@ -336,7 +336,7 @@ public abstract class TestComputationManager {
     }
 
 
-    protected int countRecordIn(MQManager<Record> manager, String stream) throws Exception {
+    protected int countRecordIn(MQManager manager, String stream) throws Exception {
         int ret = 0;
         for (int i = 0; i < manager.getAppender(stream).size(); i++) {
             ret += countRecordInPartition(manager, stream, i);
@@ -344,7 +344,7 @@ public abstract class TestComputationManager {
         return ret;
     }
 
-    protected int countRecordInPartition(MQManager<Record> manager, String stream, int partition) throws Exception {
+    protected int countRecordInPartition(MQManager manager, String stream, int partition) throws Exception {
         try (MQTailer<Record> tailer = manager.createTailer("results", MQPartition.of(stream, partition))) {
             int result = 0;
             tailer.toStart();

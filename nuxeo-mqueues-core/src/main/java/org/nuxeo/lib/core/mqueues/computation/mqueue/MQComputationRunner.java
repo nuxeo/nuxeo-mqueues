@@ -55,7 +55,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
     public static final Duration READ_TIMEOUT = Duration.ofMillis(25);
 
     protected ComputationContextImpl context;
-    protected final MQManager<Record> mqManager;
+    protected final MQManager mqManager;
     protected final ComputationMetadataMapping metadata;
     protected final MQTailer<Record> tailer;
     protected final Supplier<Computation> supplier;
@@ -77,7 +77,7 @@ public class MQComputationRunner implements Runnable, MQRebalanceListener {
 
     @SuppressWarnings("unchecked")
     public MQComputationRunner(Supplier<Computation> supplier, ComputationMetadataMapping metadata,
-                               List<MQPartition> defaultAssignment, MQManager<Record> mqManager) {
+                               List<MQPartition> defaultAssignment, MQManager mqManager) {
         this.supplier = supplier;
         this.metadata = metadata;
         this.mqManager = mqManager;

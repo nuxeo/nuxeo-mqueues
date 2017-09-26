@@ -22,7 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
 import org.nuxeo.lib.core.mqueues.computation.ComputationMetadataMapping;
-import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.Settings;
 import org.nuxeo.lib.core.mqueues.computation.Topology;
 import org.nuxeo.lib.core.mqueues.computation.Watermark;
@@ -44,12 +43,12 @@ import java.util.stream.Collectors;
  */
 public class MQComputationManager implements ComputationManager {
     private static final Log log = LogFactory.getLog(MQComputationManager.class);
-    protected final MQManager<Record> manager;
+    protected final MQManager manager;
     protected Topology topology;
     protected Settings settings;
     protected List<MQComputationPool> pools;
 
-    public MQComputationManager(MQManager<Record> manager) {
+    public MQComputationManager(MQManager manager) {
         this.manager = manager;
     }
 

@@ -22,7 +22,6 @@ import org.junit.BeforeClass;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
 import org.nuxeo.lib.core.mqueues.tests.mqueues.TestMQueueKafka;
 
 public class TestPatternBoundedQueuingKafka extends TestPatternBoundedQueuing {
@@ -35,9 +34,9 @@ public class TestPatternBoundedQueuingKafka extends TestPatternBoundedQueuing {
     }
 
     @Override
-    public MQManager<keyValueMessage> createManager() throws Exception {
+    public MQManager createManager() throws Exception {
         prefix = TestMQueueKafka.getPrefix();
-        return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
+        return new KafkaMQManager(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),
                 TestMQueueKafka.getConsumerProps());
     }

@@ -52,16 +52,16 @@ public class TestMQComputationManagerKafka extends TestComputationManager {
     }
 
     @Override
-    public MQManager<Record> getStreams() throws Exception {
+    public MQManager getStreams() throws Exception {
         this.prefix = getTopicPrefix(testName.getMethodName());
-        return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
+        return new KafkaMQManager(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),
                 getConsumerProps());
     }
 
     @Override
-    public MQManager<Record> getSameStreams() throws Exception {
-        return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
+    public MQManager getSameStreams() throws Exception {
+        return new KafkaMQManager(KafkaUtils.DEFAULT_ZK_SERVER, prefix,
                 TestMQueueKafka.getProducerProps(),
                 getConsumerProps());
     }
@@ -71,7 +71,7 @@ public class TestMQComputationManagerKafka extends TestComputationManager {
     }
 
     @Override
-    public ComputationManager getManager(MQManager<Record> mqManager) {
+    public ComputationManager getManager(MQManager mqManager) {
         return new MQComputationManager(mqManager);
     }
 }

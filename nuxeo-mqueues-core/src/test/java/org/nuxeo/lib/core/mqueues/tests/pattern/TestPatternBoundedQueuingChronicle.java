@@ -21,7 +21,6 @@ import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -38,10 +37,10 @@ public class TestPatternBoundedQueuingChronicle extends TestPatternBoundedQueuin
     }
 
     @Override
-    public MQManager<keyValueMessage> createManager() throws Exception {
+    public MQManager createManager() throws Exception {
         if (basePath == null) {
             basePath = folder.newFolder().toPath();
         }
-        return new ChronicleMQManager<>(basePath);
+        return new ChronicleMQManager(basePath);
     }
 }

@@ -38,10 +38,10 @@ public class TestPatternQueuingChronicle extends TestPatternQueuing {
     }
 
     @Override
-    public MQManager<keyValueMessage> createManager() throws Exception {
+    public MQManager createManager() throws Exception {
         if (basePath == null) {
             basePath = folder.newFolder().toPath();
         }
-        return new ChronicleMQManager<>(basePath);
+        return new ChronicleMQManager(basePath);
     }
 }
