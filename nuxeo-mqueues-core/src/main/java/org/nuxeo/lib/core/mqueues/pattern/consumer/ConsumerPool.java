@@ -39,13 +39,13 @@ import java.util.concurrent.Callable;
  */
 public class ConsumerPool<M extends Message> extends AbstractCallablePool<ConsumerStatus> {
     private static final Log log = LogFactory.getLog(ConsumerPool.class);
-    protected final MQManager<M> manager;
+    protected final MQManager manager;
     protected final ConsumerFactory<M> factory;
     protected final ConsumerPolicy policy;
     protected final String mqName;
     protected final List<List<MQPartition>> defaultAssignments;
 
-    public ConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy policy) {
+    public ConsumerPool(String mqName, MQManager manager, ConsumerFactory<M> factory, ConsumerPolicy policy) {
         super(computeNbThreads((short) manager.getAppender(mqName).size(), policy.getMaxThreads()));
         this.mqName = mqName;
         this.manager = manager;

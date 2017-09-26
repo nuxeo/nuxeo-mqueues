@@ -44,7 +44,7 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 /**
  * @since 9.2
  */
-public class ChronicleMQManager<M extends Externalizable> extends AbstractMQManager<M> {
+public class ChronicleMQManager extends AbstractMQManager {
     private static final Log log = LogFactory.getLog(ChronicleMQManager.class);
 
     /**
@@ -88,7 +88,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
 
     @Override
     public void create(String name, int size) {
-        ChronicleMQAppender<M> cq = ChronicleMQAppender.create(new File(basePath.toFile(), name), size, retentionDuration);
+        ChronicleMQAppender cq = ChronicleMQAppender.create(new File(basePath.toFile(), name), size, retentionDuration);
         try {
             cq.close();
         } catch (Exception e) {
@@ -112,7 +112,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
         try (ChronicleMQOffsetTracker offsetTracker = new ChronicleMQOffsetTracker(path.toString(), partition, group)) {
             pos = offsetTracker.readLastCommittedOffset();
         }
-        ChronicleMQAppender<M> appender = (ChronicleMQAppender<M>) getAppender(name);
+        ChronicleMQAppender appender = (ChronicleMQAppender) getAppender(name);
         if (pos == 0) {
             pos = appender.firstOffset(partition);
         }
@@ -160,12 +160,13 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     }
 
     @Override
-    public MQAppender<M> createAppender(String name) {
+    public <M extends Externalizable> MQAppender<M> createAppender(String name) {
         return ChronicleMQAppender.open(new File(basePath.toFile(), name), retentionDuration);
     }
 
     @Override
-    protected MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
+    @SuppressWarnings("unchecked")
+    protected <M extends Externalizable> MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group) {
         Collection<ChronicleMQTailer<M>> pTailers = new ArrayList<>(partitions.size());
         partitions.forEach(partition -> pTailers.add((ChronicleMQTailer<M>) ((ChronicleMQAppender<M>) getAppender(partition.name())).createTailer(partition, group)));
         if (pTailers.size() == 1) {
@@ -175,7 +176,7 @@ public class ChronicleMQManager<M extends Externalizable> extends AbstractMQMana
     }
 
     @Override
-    protected MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener) {
+    protected <M extends Externalizable> MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener) {
         throw new UnsupportedOperationException("subscribe is not supported by Chronicle implementation");
 
     }

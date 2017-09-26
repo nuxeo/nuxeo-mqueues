@@ -39,17 +39,17 @@ public class TestMQComputationManagerChronicle extends TestComputationManager {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    public MQManager<Record> getStreams() throws Exception {
+    public MQManager getStreams() throws Exception {
         this.basePath = folder.newFolder();
-        return new ChronicleMQManager<>(basePath.toPath());
+        return new ChronicleMQManager(basePath.toPath());
     }
 
-    public MQManager<Record> getSameStreams() throws IOException {
-        return new ChronicleMQManager<>(basePath.toPath());
+    public MQManager getSameStreams() throws IOException {
+        return new ChronicleMQManager(basePath.toPath());
     }
 
     @Override
-    public ComputationManager getManager(MQManager<Record> mqManager) {
+    public ComputationManager getManager(MQManager mqManager) {
         return new MQComputationManager(mqManager);
     }
 }

@@ -35,7 +35,7 @@ import static java.lang.Math.min;
  *
  * @since 9.2
  */
-public interface MQManager<M extends Externalizable> extends AutoCloseable {
+public interface MQManager extends AutoCloseable {
 
     /**
      * Returns {@code true} if a MQueue with this {@code name} exists.
@@ -58,13 +58,13 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
      * Get an appender for the MQueue named {@code name}.
      * An appender is thread safe.
      */
-    MQAppender<M> getAppender(String name);
+    <M extends Externalizable> MQAppender<M> getAppender(String name);
 
     /**
      * Create a tailer for a consumer {@code group} and assign a single {@code partition}.
      * A tailer is NOT thread safe.
      */
-    MQTailer<M> createTailer(String group, MQPartition partition);
+    <M extends Externalizable> MQTailer<M> createTailer(String group, MQPartition partition);
 
     /**
      * Create a tailer for a consumer {@code group} and assign multiple {@code partitions}.
@@ -72,7 +72,7 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
      *
      * A tailer is NOT thread safe.
      */
-    MQTailer<M> createTailer(String group, Collection<MQPartition> partitions);
+    <M extends Externalizable> MQTailer<M> createTailer(String group, Collection<MQPartition> partitions);
 
     /**
      * Create a tailer for a consumer {@code group} and assign all {@code partitions} of a MQueue.
@@ -80,7 +80,7 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
      *
      * @since 9.3
      */
-    default MQTailer<M> createTailer(String group, String name) {
+    default <M extends Externalizable> MQTailer<M> createTailer(String group, String name) {
         int size = getAppender(name).size();
         return createTailer(group,
                 IntStream.range(0, size).boxed().map(partition -> new MQPartition(name, partition))
@@ -102,7 +102,7 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
      * <p/>
      * You should not mix {@link #createTailer} and {@code subscribe} usage using the same {@code group}.
      */
-    MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener);
+    <M extends Externalizable> MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener);
 
     /**
      * Returns the lag between consumer {@code group} and the producers for each partition.
@@ -144,6 +144,5 @@ public interface MQManager<M extends Externalizable> extends AutoCloseable {
      * @since 9.3
      */
     List<String> listConsumerGroups(String name);
-
 
 }

@@ -76,7 +76,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
     protected boolean alreadySalted = false;
 
 
-    public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQManager<M> manager,
+    public ConsumerRunner(ConsumerFactory<M> factory, ConsumerPolicy policy, MQManager manager,
                           List<MQPartition> defaultAssignments) {
         this.factory = factory;
         this.currentBatchPolicy = policy.getBatchPolicy();
@@ -88,7 +88,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         log.debug("Consumer thread created tailing on: " + consumerId);
     }
 
-    protected MQTailer<M> createTailer(MQManager<M> manager, List<MQPartition> defaultAssignments) {
+    protected MQTailer<M> createTailer(MQManager manager, List<MQPartition> defaultAssignments) {
         MQTailer<M> tailer;
         if (manager.supportSubscribe()) {
             Set<String> names = defaultAssignments.stream().map(MQPartition::name).collect(Collectors.toSet());
@@ -145,7 +145,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         alreadySalted = true;
     }
 
-    protected void setTailerPosition(MQManager<M> manager) {
+    protected void setTailerPosition(MQManager manager) {
         ConsumerPolicy.StartOffset seekPosition = policy.getStartOffset();
         if (manager.supportSubscribe() && seekPosition != LAST_COMMITTED) {
             throw new UnsupportedOperationException("Tailer startOffset to " + seekPosition + " is not supported in subscribe mode");

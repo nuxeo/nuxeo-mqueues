@@ -33,21 +33,21 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-public abstract class AbstractMQManager<M extends Externalizable> implements MQManager<M> {
-    protected final Map<String, MQAppender<M>> appenders = new ConcurrentHashMap<>();
-    protected final Map<MQPartitionGroup, MQTailer<M>> tailersAssignments = new ConcurrentHashMap<>();
-    protected final Set<MQTailer<M>> tailers = Collections.newSetFromMap(new ConcurrentHashMap<MQTailer<M>, Boolean>());
+public abstract class AbstractMQManager implements MQManager {
+    protected final Map<String, MQAppender> appenders = new ConcurrentHashMap<>();
+    protected final Map<MQPartitionGroup, MQTailer> tailersAssignments = new ConcurrentHashMap<>();
+    protected final Set<MQTailer> tailers = Collections.newSetFromMap(new ConcurrentHashMap<MQTailer, Boolean>());
 
     protected abstract void create(String name, int size);
 
-    protected abstract MQAppender<M> createAppender(String name);
+    protected abstract <M extends Externalizable> MQAppender<M> createAppender(String name);
 
-    protected abstract MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group);
+    protected abstract <M extends Externalizable> MQTailer<M> acquireTailer(Collection<MQPartition> partitions, String group);
 
-    protected abstract MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener);
+    protected abstract <M extends Externalizable> MQTailer<M> doSubscribe(String group, Collection<String> names, MQRebalanceListener listener);
 
     @Override
-    public boolean createIfNotExists(String name, int size) {
+    public synchronized boolean createIfNotExists(String name, int size) {
         if (!exists(name)) {
             create(name, size);
             return true;
@@ -61,7 +61,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
     }
 
     @Override
-    public MQTailer<M> createTailer(String group, Collection<MQPartition> partitions) {
+    public <M extends Externalizable> MQTailer<M> createTailer(String group, Collection<MQPartition> partitions) {
         partitions.forEach(partition -> checkTailerForPartition(group, partition));
         MQTailer<M> ret = acquireTailer(partitions, group);
         partitions.forEach(partition -> tailersAssignments.put(new MQPartitionGroup(group, partition), ret));
@@ -75,7 +75,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
     }
 
     @Override
-    public MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener) {
+    public <M extends Externalizable> MQTailer<M> subscribe(String group, Collection<String> names, MQRebalanceListener listener) {
         MQTailer<M> ret = doSubscribe(group, names, listener);
         tailers.add(ret);
         return ret;
@@ -84,7 +84,7 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
 
     protected void checkTailerForPartition(String group, MQPartition partition) {
         MQPartitionGroup key = new MQPartitionGroup(group, partition);
-        MQTailer<M> ret = tailersAssignments.get(key);
+        MQTailer ret = tailersAssignments.get(key);
         if (ret != null && !ret.closed()) {
             throw new IllegalArgumentException("Tailer for this partition already created: " + partition + ", group: " + group);
         }
@@ -94,30 +94,32 @@ public abstract class AbstractMQManager<M extends Externalizable> implements MQM
     }
 
     @Override
-    public MQTailer<M> createTailer(String group, MQPartition partition) {
+    public <M extends Externalizable> MQTailer<M> createTailer(String group, MQPartition partition) {
         return createTailer(group, Collections.singletonList(partition));
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public synchronized MQAppender<M> getAppender(String name) {
+    public synchronized <M extends Externalizable> MQAppender<M> getAppender(String name) {
         if (!appenders.containsKey(name) || appenders.get(name).closed()) {
             if (exists(name)) {
-                appenders.put(name, createAppender(name));
+                MQAppender<M> appender = createAppender(name);
+                appenders.put(name, appender);
             } else {
                 throw new IllegalArgumentException("unknown MQueue name: " + name);
             }
         }
-        return appenders.get(name);
+        return (MQAppender<M>) appenders.get(name);
     }
 
 
     @Override
     public void close() throws Exception {
-        for (MQAppender<M> app : appenders.values()) {
+        for (MQAppender app : appenders.values()) {
             app.close();
         }
         appenders.clear();
-        for (MQTailer<M> tailer : tailers) {
+        for (MQTailer tailer : tailers) {
             tailer.close();
         }
         tailers.clear();

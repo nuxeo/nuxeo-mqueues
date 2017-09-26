@@ -51,18 +51,18 @@ public class TestMQueueChronicle extends TestMQueue {
     }
 
     @Override
-    public MQManager<keyValueMessage> createManager() throws Exception {
+    public MQManager createManager() throws Exception {
         if (basePath == null) {
             basePath = folder.newFolder().toPath();
         }
-        return new ChronicleMQManager<>(basePath, "3s");
+        return new ChronicleMQManager(basePath, "3s");
     }
 
     @Test
     public void deleteInvalidPath() throws Exception {
         final int NB_QUEUES = 5;
 
-        ChronicleMQManager<keyValueMessage> manager = (ChronicleMQManager<keyValueMessage>) createManager();
+        ChronicleMQManager manager = (ChronicleMQManager) createManager();
         assertTrue(manager.createIfNotExists("foo", NB_QUEUES));
         String basePath = manager.getBasePath();
         assertTrue(manager.delete("foo"));
@@ -88,7 +88,7 @@ public class TestMQueueChronicle extends TestMQueue {
         keyValueMessage msg3 = keyValueMessage.of("id3");
         keyValueMessage msg4 = keyValueMessage.of("id4");
 
-        ChronicleMQManager<keyValueMessage> manager = (ChronicleMQManager<keyValueMessage>) createManager();
+        ChronicleMQManager manager = (ChronicleMQManager) createManager();
         manager.createIfNotExists("foo", 1);
         MQAppender<keyValueMessage> appender = manager.getAppender("foo");
 
