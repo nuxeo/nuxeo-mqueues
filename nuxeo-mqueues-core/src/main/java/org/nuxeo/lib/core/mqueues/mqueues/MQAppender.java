@@ -76,4 +76,7 @@ public interface MQAppender<M extends Externalizable> extends AutoCloseable {
      * Returns {@code true} if the appender has been closed.
      */
     boolean closed();
+
+    @Override
+    void close();
 }

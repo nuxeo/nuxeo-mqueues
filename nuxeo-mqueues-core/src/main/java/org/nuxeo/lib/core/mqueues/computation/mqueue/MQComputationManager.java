@@ -75,7 +75,7 @@ public class MQComputationManager implements ComputationManager {
 
     @Override
     public boolean stop(Duration timeout) {
-        log.debug("Starting ...");
+        log.debug("Stopping ...");
         long failures = pools.parallelStream().filter(comp -> !comp.stop(timeout)).count();
         log.debug(String.format("Stopped %d failure", failures));
         return failures == 0L;

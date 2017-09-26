@@ -35,7 +35,7 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
     protected final long nbDocuments;
     protected final String lang;
     protected final int blobSizeKb;
-    protected final MQManager<BlobInfoMessage> manager;
+    protected final MQManager manager;
     protected final String mqName;
 
     /**
@@ -53,7 +53,7 @@ public class RandomDocumentMessageProducerFactory implements ProducerFactory<Doc
      * Generates random documents messages that point to existing blobs.
      */
     public RandomDocumentMessageProducerFactory(long nbDocuments, String lang,
-                                                MQManager<BlobInfoMessage> manager, String mqBlobInfoName) {
+                                                MQManager manager, String mqBlobInfoName) {
         this.nbDocuments = nbDocuments;
         this.lang = lang;
         this.manager = manager;

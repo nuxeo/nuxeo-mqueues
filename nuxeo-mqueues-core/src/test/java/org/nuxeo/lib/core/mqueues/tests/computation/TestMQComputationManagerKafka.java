@@ -23,7 +23,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
-import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.mqueue.MQComputationManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;

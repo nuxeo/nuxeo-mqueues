@@ -183,7 +183,7 @@ public class ChronicleMQTailer<M extends Externalizable> implements MQTailer<M> 
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         offsetTracker.close();
         unregisterTailer();
         closed = true;

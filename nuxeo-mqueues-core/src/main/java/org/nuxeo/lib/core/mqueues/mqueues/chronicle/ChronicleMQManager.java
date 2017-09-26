@@ -143,7 +143,7 @@ public class ChronicleMQManager extends AbstractMQManager {
 
     @Override
     public List<String> listAll() {
-        if (! basePath.toFile().exists() || ! basePath.toFile().isDirectory()) {
+        if (!basePath.toFile().exists() || !basePath.toFile().isDirectory()) {
             throw new IllegalArgumentException("Invalid base path: " + basePath);
         }
         return Arrays.asList(basePath.toFile().list((dir, name) -> new File(dir, name).isDirectory()));

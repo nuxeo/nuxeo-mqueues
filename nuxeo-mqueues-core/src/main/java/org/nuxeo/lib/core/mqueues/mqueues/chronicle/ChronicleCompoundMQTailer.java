@@ -157,7 +157,7 @@ public class ChronicleCompoundMQTailer<M extends Externalizable> implements MQTa
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         for (ChronicleMQTailer<M> tailer : tailers) {
             tailer.close();
         }

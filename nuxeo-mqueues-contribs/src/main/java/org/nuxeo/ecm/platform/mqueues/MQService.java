@@ -16,22 +16,17 @@
  * Contributors:
  *     bdelbosc
  */
-package org.nuxeo.ecm.platform.mqueues.tests.tools;
-
+package org.nuxeo.ecm.platform.mqueues;
 
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 
-import java.io.File;
-import java.nio.file.Path;
-
-public class TestDebugToolsChronicle extends TestDebugTools {
-    public static final String BASE_PATH = "/tmp/nuxeo-server-tomcat-9.3-SNAPSHOT/nxserver/data/mqueue/work";
-
-    @Override
-    public MQManager createManager() {
-        Path basePath = new File(BASE_PATH).getAbsoluteFile().toPath();
-        return new ChronicleMQManager(basePath);
-    }
-
+/**
+ * @since 9.3
+ */
+public interface MQService {
+    /**
+     * Get a MQManager corresponding to the config name.
+     * The service take care of closing the manager on shutdown you should not do it directly.
+     */
+    MQManager getManager(String name);
 }

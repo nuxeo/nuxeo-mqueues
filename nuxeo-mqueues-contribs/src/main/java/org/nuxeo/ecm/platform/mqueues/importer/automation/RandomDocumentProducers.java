@@ -26,21 +26,18 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.platform.mqueues.chronicle.ChronicleConfig;
-import org.nuxeo.ecm.platform.mqueues.kafka.KafkaConfigService;
+import org.nuxeo.ecm.platform.mqueues.MQService;
+import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
+import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomDocumentMessageProducerFactory;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRebalanceListener;
-import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
-import org.nuxeo.ecm.platform.mqueues.importer.message.BlobInfoMessage;
-import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
-import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomDocumentMessageProducerFactory;
 import org.nuxeo.runtime.api.Framework;
 
-import java.io.Externalizable;
 import java.util.Collection;
+
+import static org.nuxeo.ecm.platform.mqueues.importer.automation.BlobConsumers.DEFAULT_MQ_CONFIG;
 
 
 /**
@@ -77,19 +74,20 @@ public class RandomDocumentProducers implements MQRebalanceListener {
     @Param(name = "mqBlobInfo", required = false)
     protected String mqBlobInfoName;
 
-    @Param(name = "kafkaConfig", required = false)
-    protected String kafkaConfig;
+    @Param(name = "mqConfig", required = false)
+    protected String mqConfig;
 
     @OperationMethod
     public void run() {
         RandomBlobProducers.checkAccess(ctx);
-        try (MQManager<DocumentMessage> manager = getManager();
-             MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
+        MQService service = Framework.getService(MQService.class);
+        MQManager manager = service.getManager(getMQConfig());
+        try {
             manager.createIfNotExists(getMQName(), getMQSize());
             ProducerPool<DocumentMessage> producers;
             if (mqBlobInfoName != null) {
                 producers = new ProducerPool<>(getMQName(), manager,
-                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, managerBlobInfo, mqBlobInfoName),
+                        new RandomDocumentMessageProducerFactory(nbDocuments, lang, manager, mqBlobInfoName),
                         nbThreads.shortValue());
             } else {
                 producers = new ProducerPool<>(getMQName(), manager,
@@ -116,19 +114,6 @@ public class RandomDocumentProducers implements MQRebalanceListener {
         return DEFAULT_MQ_NAME;
     }
 
-
-    protected <T extends Externalizable> MQManager<T> getManager() {
-        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
-            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"),
-                    ChronicleConfig.getRetentionDuration());
-        }
-        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
-        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
-                service.getTopicPrefix(kafkaConfig),
-                service.getProducerProperties(kafkaConfig),
-                service.getConsumerProperties(kafkaConfig));
-    }
-
     @Override
     public void onPartitionsRevoked(Collection<MQPartition> partitions) {
 
@@ -138,4 +123,12 @@ public class RandomDocumentProducers implements MQRebalanceListener {
     public void onPartitionsAssigned(Collection<MQPartition> partitions) {
 
     }
+
+    protected String getMQConfig() {
+        if (mqConfig != null) {
+            return mqConfig;
+        }
+        return DEFAULT_MQ_CONFIG;
+    }
+
 }

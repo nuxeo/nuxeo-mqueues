@@ -27,22 +27,17 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.platform.mqueues.chronicle.ChronicleConfig;
-import org.nuxeo.ecm.platform.mqueues.kafka.KafkaConfigService;
+import org.nuxeo.ecm.platform.mqueues.MQService;
 import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobInfoWriter;
+import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.ecm.platform.mqueues.importer.consumer.MQBlobInfoWriter;
-import org.nuxeo.ecm.platform.mqueues.importer.message.BlobInfoMessage;
 import org.nuxeo.ecm.platform.mqueues.importer.message.BlobMessage;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.BatchPolicy;
-import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.runtime.api.Framework;
 
-import java.io.Externalizable;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
@@ -58,6 +53,7 @@ public class BlobConsumers {
     private static final Log log = LogFactory.getLog(BlobConsumers.class);
     public static final String ID = "MQImporter.runBlobConsumers";
     public static final String DEFAULT_MQ_BLOB_INFO_NAME = "mq-blob-info";
+    public static final String DEFAULT_MQ_CONFIG = "import";
 
     @Context
     protected OperationContext ctx;
@@ -86,8 +82,8 @@ public class BlobConsumers {
     @Param(name = "mqBlobInfo", required = false)
     protected String mqBlobInfoName;
 
-    @Param(name = "kafkaConfig", required = false)
-    protected String kafkaConfig;
+    @Param(name = "mqConfig", required = false)
+    protected String mqConfig;
 
     @OperationMethod
     public void run() {
@@ -100,10 +96,9 @@ public class BlobConsumers {
                 .retryPolicy(new RetryPolicy().withMaxRetries(retryMax).withDelay(retryDelayS, TimeUnit.SECONDS))
                 .maxThreads(getNbThreads())
                 .build();
-
-        try (MQManager<BlobMessage> manager = getManager();
-             MQManager<BlobInfoMessage> managerBlobInfo = getManager();
-             BlobInfoWriter blobInfoWriter = getBlobInfoWriter(managerBlobInfo)) {
+        MQService service = Framework.getService(MQService.class);
+        MQManager manager = service.getManager(getMQConfig());
+        try (BlobInfoWriter blobInfoWriter = getBlobInfoWriter(manager)) {
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>(getMQName(), manager,
                     new BlobMessageConsumerFactory(blobProviderName, blobInfoWriter),
                     consumerPolicy);
@@ -113,12 +108,12 @@ public class BlobConsumers {
         }
     }
 
-    protected BlobInfoWriter getBlobInfoWriter(MQManager<BlobInfoMessage> managerBlobInfo) {
+    protected BlobInfoWriter getBlobInfoWriter(MQManager managerBlobInfo) {
         initBlobInfoMQ(managerBlobInfo);
         return new MQBlobInfoWriter(managerBlobInfo.getAppender(getMQBlobInfoName()));
     }
 
-    protected void initBlobInfoMQ(MQManager<BlobInfoMessage> manager) {
+    protected void initBlobInfoMQ(MQManager manager) {
         manager.createIfNotExists(getMQBlobInfoName(), 1);
     }
 
@@ -143,16 +138,10 @@ public class BlobConsumers {
         return DEFAULT_MQ_BLOB_INFO_NAME;
     }
 
-    protected <T extends Externalizable> MQManager<T> getManager() {
-        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
-            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"),
-                    ChronicleConfig.getRetentionDuration());
+    protected String getMQConfig() {
+        if (mqConfig != null) {
+            return mqConfig;
         }
-        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
-        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
-                service.getTopicPrefix(kafkaConfig),
-                service.getProducerProperties(kafkaConfig),
-                service.getConsumerProperties(kafkaConfig));
+        return DEFAULT_MQ_CONFIG;
     }
-
 }

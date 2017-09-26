@@ -44,7 +44,7 @@ public class TestDocumentImportKafka extends TestDocumentImport {
     public MQManager getManager() throws Exception {
         KafkaConfigService service = Framework.getService(KafkaConfigService.class);
         String kafkaConfig = "default";
-        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
+        return new KafkaMQManager(service.getZkServers(kafkaConfig),
                 service.getTopicPrefix(kafkaConfig),
                 service.getProducerProperties(kafkaConfig),
                 service.getConsumerProperties(kafkaConfig));

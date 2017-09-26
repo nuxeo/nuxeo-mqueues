@@ -18,21 +18,16 @@
  */
 package org.nuxeo.ecm.platform.mqueues.tests.workmanager;
 
-import org.nuxeo.ecm.core.work.api.WorkManager;
-import org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputation;
-import org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationChronicle;
-import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.LocalDeploy;
 
 /**
  * @since 9.2
  */
-@LocalDeploy("org.nuxeo.ecm.platform.mqueues.test:test-workmanager-chronicle-service.xml")
+@LocalDeploy("org.nuxeo.ecm.platform.mqueues.test:test-mq-chronicle-contrib.xml")
 public class TestWorkManagerChronicle extends TestWorkManager {
 
-
     @Override
-    public WorkManagerComputation getService() {
-        return (WorkManagerComputationChronicle) Framework.getLocalService(WorkManager.class);
+    public String getMQConfig() {
+        return "chronicle";
     }
 }

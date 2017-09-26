@@ -27,21 +27,20 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.platform.mqueues.chronicle.ChronicleConfig;
-import org.nuxeo.ecm.platform.mqueues.kafka.KafkaConfigService;
+import org.nuxeo.ecm.platform.mqueues.MQService;
 import org.nuxeo.ecm.platform.mqueues.importer.consumer.DocumentConsumerPolicy;
 import org.nuxeo.ecm.platform.mqueues.importer.consumer.DocumentConsumerPool;
 import org.nuxeo.ecm.platform.mqueues.importer.consumer.DocumentMessageConsumerFactory;
+import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.BatchPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
-import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
 import org.nuxeo.runtime.api.Framework;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+
+import static org.nuxeo.ecm.platform.mqueues.importer.automation.BlobConsumers.DEFAULT_MQ_CONFIG;
 
 /**
  * @since 9.1
@@ -79,8 +78,8 @@ public class DocumentConsumers {
     @Param(name = "mqName", required = false)
     protected String mqName;
 
-    @Param(name = "kafkaConfig", required = false)
-    protected String kafkaConfig;
+    @Param(name = "mqConfig", required = false)
+    protected String mqConfig;
 
     @Param(name = "blockIndexing", required = false)
     protected Boolean blockIndexing = false;
@@ -96,7 +95,6 @@ public class DocumentConsumers {
 
     @Param(name = "useBulkMode", required = false)
     protected Boolean useBulkMode = false;
-
 
     @OperationMethod
     public void run() {
@@ -118,10 +116,11 @@ public class DocumentConsumers {
                 .build();
         log.warn(String.format("Import documents from mqueue: %s into: %s/%s, with policy: %s",
                 getMQName(), repositoryName, rootFolder, (DocumentConsumerPolicy) consumerPolicy));
-        try (MQManager<DocumentMessage> manager = getManager();
-             DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
-                     new DocumentMessageConsumerFactory(repositoryName, rootFolder),
-                     consumerPolicy)) {
+        MQService service = Framework.getService(MQService.class);
+        MQManager manager = service.getManager(getMQConfig());
+        try (DocumentConsumerPool<DocumentMessage> consumers = new DocumentConsumerPool<>(getMQName(), manager,
+                new DocumentMessageConsumerFactory(repositoryName, rootFolder),
+                consumerPolicy)) {
             consumers.start().get();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -149,15 +148,10 @@ public class DocumentConsumers {
         return RandomDocumentProducers.DEFAULT_MQ_NAME;
     }
 
-    protected MQManager<DocumentMessage> getManager() {
-        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
-            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"),
-                    ChronicleConfig.getRetentionDuration());
+    protected String getMQConfig() {
+        if (mqConfig != null) {
+            return mqConfig;
         }
-        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
-        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
-                service.getTopicPrefix(kafkaConfig),
-                service.getProducerProperties(kafkaConfig),
-                service.getConsumerProperties(kafkaConfig));
+        return DEFAULT_MQ_CONFIG;
     }
 }

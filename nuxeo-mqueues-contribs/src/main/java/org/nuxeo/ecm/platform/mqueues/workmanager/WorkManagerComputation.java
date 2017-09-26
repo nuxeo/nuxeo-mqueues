@@ -28,6 +28,7 @@ import org.nuxeo.ecm.core.work.WorkQueueRegistry;
 import org.nuxeo.ecm.core.work.api.Work;
 import org.nuxeo.ecm.core.work.api.WorkQueueMetrics;
 import org.nuxeo.ecm.core.work.api.WorkSchedulePath;
+import org.nuxeo.ecm.platform.mqueues.MQService;
 import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.Settings;
 import org.nuxeo.lib.core.mqueues.computation.Topology;
@@ -64,18 +65,34 @@ import static java.lang.Math.min;
 /**
  * @since 9.2
  */
-public abstract class WorkManagerComputation extends WorkManagerImpl {
+public class WorkManagerComputation extends WorkManagerImpl {
     protected static final Log log = LogFactory.getLog(WorkManagerComputation.class);
-    protected static final int DEFAULT_CONCURRENCY = 4;
+    public static final String WORKMANAGER_CONFIG_PROP = "nuxeo.mqueue.work.config";
+    public static final String DEFAULT_WORKMANAGER_CONFIG = "work";
+    public static final String WORKMANAGER_OVERPROVISIONING_PROP = "nuxeo.mqueue.work.overprovisioning";
+    public static final String DEFAULT_WORKMANAGER_OVERPROVISIONING = "3";
+    public static final int DEFAULT_CONCURRENCY = 4;
+
     protected Topology topology;
     protected Settings settings;
     protected MQComputationManager manager;
-    protected MQManager<Record> mqManager;
+    protected MQManager mqManager;
     protected final Set<String> streamIds = new HashSet<>();
 
-    protected abstract MQManager<Record> initStream();
+    protected MQManager initStream() {
+        String config = getMQConfig();
+        log.info("Init WorkManagerComputation with MQueue configuration: " + config);
+        MQService service = Framework.getService(MQService.class);
+        return service.getManager(getMQConfig());
+    }
 
-    protected abstract int getOverProvisioningFactor();
+    protected String getMQConfig() {
+        return Framework.getProperty(WORKMANAGER_CONFIG_PROP, DEFAULT_WORKMANAGER_CONFIG);
+    }
+
+    protected int getOverProvisioningFactor() {
+        return Integer.valueOf(Framework.getProperty(WORKMANAGER_OVERPROVISIONING_PROP, DEFAULT_WORKMANAGER_OVERPROVISIONING));
+    }
 
     public class WorkScheduling implements Synchronization {
         public final Work work;
@@ -268,11 +285,6 @@ public abstract class WorkManagerComputation extends WorkManagerImpl {
         shutdownInProgress = true;
         try {
             boolean ret = manager.stop(Duration.ofMillis(timeUnit.toMillis(timeout)));
-            try {
-                mqManager.close();
-            } catch (Exception e) {
-                log.error("Error while closing WorkManager mqManager", e);
-            }
             if (!ret) {
                 log.error("Not able to stop worker pool within the timeout.");
             }

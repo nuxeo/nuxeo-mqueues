@@ -21,7 +21,6 @@ package org.nuxeo.lib.core.mqueues.tests.computation;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
-import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.mqueue.MQComputationManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;

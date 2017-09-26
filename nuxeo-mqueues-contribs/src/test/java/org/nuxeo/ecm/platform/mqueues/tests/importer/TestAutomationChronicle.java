@@ -27,6 +27,6 @@ public class TestAutomationChronicle extends TestAutomation {
 
     @Override
     public void addExtraParams(Map<String, Object> params) {
-
+        params.put("mqConfig", "chronicle");
     }
 }

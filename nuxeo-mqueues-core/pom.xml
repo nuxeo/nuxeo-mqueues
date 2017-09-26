@@ -10,7 +10,9 @@
   <artifactId>nuxeo-mqueues-core</artifactId>
   <groupId>org.nuxeo.lib.core</groupId>
   <name>Nuxeo MQueues Core</name>
-  <description>MQueues async message passing system with Consumer/Producer and Computation patterns. Not tied to Nuxeo.</description>
+  <description>MQueues async message passing system with Consumer/Producer and Computation patterns. Not tied to
+    Nuxeo.
+  </description>
 
   <dependencies>
     <dependency>
@@ -63,7 +65,7 @@
     </dependency>
   </dependencies>
 
-<build>
+  <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -75,7 +77,7 @@
         </configuration>
       </plugin>
     </plugins>
-</build>
+  </build>
   <properties>
     <it.failsafe.argLine>-Xloggc:gc.log -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
     </it.failsafe.argLine>

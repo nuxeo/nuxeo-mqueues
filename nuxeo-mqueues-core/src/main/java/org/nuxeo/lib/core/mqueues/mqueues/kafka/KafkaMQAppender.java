@@ -176,7 +176,7 @@ public class KafkaMQAppender<M extends Externalizable> implements MQAppender<M> 
 
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         log.debug("Closing appender: " + name);
         tailers.stream().filter(Objects::nonNull).forEach(tailer -> {
             try {

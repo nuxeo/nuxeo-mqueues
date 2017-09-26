@@ -38,6 +38,6 @@ public class TestAutomationKafkaNoSubscribe extends TestAutomation {
 
     @Override
     public void addExtraParams(Map<String, Object> params) {
-        params.put("kafkaConfig", "no-subscribe");
+        params.put("mqConfig", "kafka-no-subscribe");
     }
 }

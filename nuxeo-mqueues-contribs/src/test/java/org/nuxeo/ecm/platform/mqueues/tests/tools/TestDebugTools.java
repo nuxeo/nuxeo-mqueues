@@ -23,6 +23,8 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.work.api.Work;
 import org.nuxeo.ecm.platform.mqueues.workmanager.ComputationWork;
 import org.nuxeo.lib.core.mqueues.computation.Record;
@@ -34,8 +36,9 @@ import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
 import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.lib.core.mqueues.mqueues.internals.MQOffsetImpl;
+import org.nuxeo.runtime.test.runner.Features;
+import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
-import java.io.Externalizable;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.List;
@@ -50,12 +53,12 @@ import static java.lang.Math.min;
  * @since 9.3
  */
 // Uncomment to be able to deserialize Nuxeo work
-// @RunWith(FeaturesRunner.class)
-// @Features(CoreFeature.class)
+@RunWith(FeaturesRunner.class)
+@Features(CoreFeature.class)
 public abstract class TestDebugTools {
     protected static final Log log = LogFactory.getLog(TestDebugTools.class);
 
-    public abstract <M extends Externalizable> MQManager<M> createManager();
+    public abstract MQManager createManager();
 
     protected MQManager manager;
 
@@ -79,7 +82,9 @@ public abstract class TestDebugTools {
         // First check the MQManager connection in derived class
         // Then build the command you need
 
+//        cat("mq-doc", 1, 0, 10, this::renderWork);
 //        listConsumerLags();
+//        tail("default");
 //        listConsumerLags(Collections.singletonList("default"));
 //        cat("default", 10);
 //        cat("default", 1, 3, 10);
@@ -303,6 +308,7 @@ public abstract class TestDebugTools {
                 ));
             } catch (Exception e) {
                 System.err.println("Can not deserialize work: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }

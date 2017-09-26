@@ -342,7 +342,7 @@ public class KafkaMQTailer<M extends Externalizable> implements MQTailer<M>, Con
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (consumer != null) {
             log.info("Closing tailer: " + id);
             try {

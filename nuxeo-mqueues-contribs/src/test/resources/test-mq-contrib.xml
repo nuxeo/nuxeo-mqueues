@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.ecm.platform.mqueues.tests.service.contrib">
+
+  <extension target="org.nuxeo.ecm.platform.mqueues.service" point="config">
+
+    <config name="default">
+      <mqueue name="input" size="1" />
+      <mqueue name="output" size="1" />
+      <mqueue name="aqueue" size="1" />
+    </config>
+
+    <config name="import" />
+
+    <config name="chronicle" />
+
+    <config name="kafka" type="kafka">
+      <option name="config">default</option>
+    </config>
+
+    <config name="kafka-no-subscribe" type="kafka">
+      <option name="config">no-subscribe</option>
+    </config>
+
+    <config name="custom" type="chronicle">
+      <option name="directory">import</option>
+      <option name="basePath">/tmp</option>
+      <option name="retention">4d</option>
+    </config>
+
+  </extension>
+
+  <extension target="org.nuxeo.ecm.platform.mqueues.service" point="topology">
+
+    <topology name="myComputation" config="default" defaultConcurrency="1" defaultPartitions="1"
+      class="org.nuxeo.ecm.platform.mqueues.tests.MyComputationTopology">
+      <computation name="C1" concurrency="1" />
+    </topology>
+
+  </extension>
+
+</component>

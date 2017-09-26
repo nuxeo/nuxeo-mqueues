@@ -27,15 +27,14 @@ import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.NuxeoPrincipal;
-import org.nuxeo.ecm.platform.mqueues.chronicle.ChronicleConfig;
-import org.nuxeo.ecm.platform.mqueues.kafka.KafkaConfigService;
+import org.nuxeo.ecm.platform.mqueues.MQService;
 import org.nuxeo.ecm.platform.mqueues.importer.message.BlobMessage;
-import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
-import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomStringBlobMessageProducerFactory;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
+import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.runtime.api.Framework;
+
+import static org.nuxeo.ecm.platform.mqueues.importer.automation.BlobConsumers.DEFAULT_MQ_CONFIG;
 
 /**
  * @since 9.1
@@ -68,8 +67,8 @@ public class RandomBlobProducers {
     @Param(name = "mqSize", required = false)
     protected Integer mqSize;
 
-    @Param(name = "kafkaConfig", required = false)
-    protected String kafkaConfig;
+    @Param(name = "mqConfig", required = false)
+    protected String mqConfig;
 
     @Param(name = "blobMarker", required = false)
     protected String blobMarker;
@@ -78,7 +77,9 @@ public class RandomBlobProducers {
     @OperationMethod
     public void run() {
         checkAccess(ctx);
-        try (MQManager<BlobMessage> manager = getManager()) {
+        MQService service = Framework.getService(MQService.class);
+        MQManager manager = service.getManager(getMQConfig());
+        try {
             manager.createIfNotExists(getMQName(), getMQSize());
             try (ProducerPool<BlobMessage> producers = new ProducerPool<>(getMQName(), manager,
                     new RandomStringBlobMessageProducerFactory(nbBlobs, lang, avgBlobSizeKB, blobMarker),
@@ -104,18 +105,6 @@ public class RandomBlobProducers {
         return nbThreads;
     }
 
-    protected MQManager<BlobMessage> getManager() {
-        if (kafkaConfig == null || kafkaConfig.isEmpty()) {
-            return new ChronicleMQManager<>(ChronicleConfig.getBasePath("import"),
-                    ChronicleConfig.getRetentionDuration());
-        }
-        KafkaConfigService service = Framework.getService(KafkaConfigService.class);
-        return new KafkaMQManager<>(service.getZkServers(kafkaConfig),
-                service.getTopicPrefix(kafkaConfig),
-                service.getProducerProperties(kafkaConfig),
-                service.getConsumerProperties(kafkaConfig));
-    }
-
     protected static void checkAccess(OperationContext context) {
         NuxeoPrincipal principal = (NuxeoPrincipal) context.getPrincipal();
         if (principal == null || !principal.isAdministrator()) {
@@ -123,5 +112,10 @@ public class RandomBlobProducers {
         }
     }
 
-
+    protected String getMQConfig() {
+        if (mqConfig != null) {
+            return mqConfig;
+        }
+        return DEFAULT_MQ_CONFIG;
+    }
 }
