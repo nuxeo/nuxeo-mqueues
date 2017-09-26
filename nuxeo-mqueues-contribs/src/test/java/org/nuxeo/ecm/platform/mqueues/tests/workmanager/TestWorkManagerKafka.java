@@ -19,22 +19,19 @@
 package org.nuxeo.ecm.platform.mqueues.tests.workmanager;
 
 import org.junit.Ignore;
-import org.nuxeo.ecm.core.work.api.WorkManager;
-import org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputation;
-import org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationKafka;
-import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.LocalDeploy;
 
 /**
  * @since 9.2
  */
-@LocalDeploy({"org.nuxeo.ecm.mqueues.kafka.tests.contrib:test-kafka-config-contrib.xml",
-        "org.nuxeo.ecm.platform.mqueues.test:test-workmanager-kafka-service.xml"})
+@LocalDeploy({"org.nuxeo.ecm.platform.mqueues.test:test-kafka-config-contrib.xml",
+        "org.nuxeo.ecm.platform.mqueues.test:test-workmanager-service.xml",
+        "org.nuxeo.ecm.platform.mqueues.test:test-mq-kafka-contrib.xml"})
 @Ignore("because we can not use assumption to check if kafka is up")
 public class TestWorkManagerKafka extends TestWorkManager {
 
     @Override
-    public WorkManagerComputation getService() {
-        return (WorkManagerComputationKafka) Framework.getLocalService(WorkManager.class);
+    public String getMQConfig() {
+        return "kafka";
     }
 }

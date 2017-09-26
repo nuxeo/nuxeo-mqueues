@@ -34,6 +34,7 @@ import org.nuxeo.ecm.platform.mqueues.importer.automation.RandomDocumentProducer
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.test.runner.LocalDeploy;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
 import java.util.HashMap;
@@ -48,6 +49,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
 @Deploy({"org.nuxeo.ecm.platform.mqueues", "org.nuxeo.ecm.automation.core", "org.nuxeo.ecm.core.io"})
+@LocalDeploy("org.nuxeo.ecm.platform.mqueues.test:test-mq-contrib.xml")
 public abstract class TestAutomation {
 
     @Inject

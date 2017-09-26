@@ -27,23 +27,22 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.test.CoreFeature;
-import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobInfoWriter;
-import org.nuxeo.ecm.platform.mqueues.importer.consumer.MQBlobInfoWriter;
 import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobMessageConsumerFactory;
+import org.nuxeo.ecm.platform.mqueues.importer.consumer.DocumentMessageConsumerFactory;
+import org.nuxeo.ecm.platform.mqueues.importer.consumer.MQBlobInfoWriter;
+import org.nuxeo.ecm.platform.mqueues.importer.message.BlobMessage;
+import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
+import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomDocumentMessageProducerFactory;
+import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomStringBlobMessageProducerFactory;
+import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerFactory;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerStatus;
-import org.nuxeo.ecm.platform.mqueues.importer.consumer.DocumentMessageConsumerFactory;
-import org.nuxeo.ecm.platform.mqueues.importer.message.BlobInfoMessage;
-import org.nuxeo.ecm.platform.mqueues.importer.message.BlobMessage;
-import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerFactory;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerStatus;
-import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomDocumentMessageProducerFactory;
-import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -77,7 +76,7 @@ public abstract class TestDocumentImport {
         final int NB_QUEUE = 5;
         final short NB_PRODUCERS = 5;
         final int NB_DOCUMENTS = 2 * 100;
-        try (MQManager<DocumentMessage> manager = getManager()) {
+        try (MQManager manager = getManager()) {
             // 1. generate documents with blobs
             manager.createIfNotExists("document-import", NB_QUEUE);
             ProducerPool<DocumentMessage> producers = new ProducerPool<>("document-import", manager,
@@ -107,8 +106,7 @@ public abstract class TestDocumentImport {
         final long NB_DOCUMENTS = 2 * 100;
         final Path blobInfoPath = folder.newFolder("blob-info").toPath();
 
-        try (MQManager<BlobMessage> manager = getManager();
-             MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
+        try (MQManager manager = getManager()) {
             manager.createIfNotExists("blob", NB_QUEUE);
             // 1. generates blobs
             ProducerPool<BlobMessage> producers = new ProducerPool<>("blob", manager,
@@ -121,7 +119,7 @@ public abstract class TestDocumentImport {
             // 2. import blobs
             String blobProviderName = "test";
             manager.createIfNotExists("blob-info", NB_QUEUE);
-            BlobInfoWriter blobInfoWriter = new MQBlobInfoWriter(managerBlobInfo.getAppender("blob-info"));
+            BlobInfoWriter blobInfoWriter = new MQBlobInfoWriter(manager.getAppender("blob-info"));
             ConsumerFactory<BlobMessage> factory = new BlobMessageConsumerFactory(blobProviderName, blobInfoWriter);
             ConsumerPool<BlobMessage> consumers = new ConsumerPool<>("blob", manager, factory, ConsumerPolicy.BOUNDED);
             List<ConsumerStatus> ret2 = consumers.start().get();
@@ -131,12 +129,11 @@ public abstract class TestDocumentImport {
         }
 
 
-        try (MQManager<DocumentMessage> manager = getManager();
-             MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
+        try (MQManager manager = getManager()) {
             manager.createIfNotExists("document", NB_QUEUE);
             // 3. generate documents using blob reference
             ProducerFactory<DocumentMessage> factory = new RandomDocumentMessageProducerFactory(NB_DOCUMENTS, "en_US",
-                    managerBlobInfo, "blob-info");
+                    manager, "blob-info");
             ProducerPool<DocumentMessage> producers = new ProducerPool<>("document", manager, factory, NB_PRODUCERS);
             List<ProducerStatus> ret = producers.start().get();
             assertEquals(NB_PRODUCERS, (long) ret.size());

@@ -121,6 +121,7 @@ public class ConsumerRunner<M extends Message> implements Callable<ConsumerStatu
         } finally {
             consumer.close();
             consumersCount.dec();
+            tailer.close();
         }
         return new ConsumerStatus(consumerId, acceptTimer.getCount(), committedCounter.getCount(),
                 batchCommitTimer.getCount(), batchFailureCount.getCount(), start, Time.currentTimeMillis(), false);

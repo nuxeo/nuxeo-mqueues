@@ -20,9 +20,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
-import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
 import org.nuxeo.ecm.platform.importer.random.HunspellDictionaryHolder;
 import org.nuxeo.ecm.platform.importer.random.RandomTextGenerator;
+import org.nuxeo.ecm.platform.mqueues.importer.message.DocumentMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.AbstractProducer;
 
 import java.io.Serializable;

@@ -56,7 +56,7 @@ public class DocumentConsumerPool<M extends Message> extends ConsumerPool<M> {
     protected boolean listenerBinaryEnabled;
     protected boolean listenerUidEnabled;
 
-    public DocumentConsumerPool(String mqName, MQManager<M> manager, ConsumerFactory<M> factory, ConsumerPolicy consumerPolicy) {
+    public DocumentConsumerPool(String mqName, MQManager manager, ConsumerFactory<M> factory, ConsumerPolicy consumerPolicy) {
         super(mqName, manager, factory, consumerPolicy);
         EventServiceAdmin eventAdmin = Framework.getLocalService(EventServiceAdmin.class);
         policy = (DocumentConsumerPolicy) consumerPolicy;

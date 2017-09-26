@@ -25,20 +25,19 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.test.CoreFeature;
+import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobInfoWriter;
+import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobMessageConsumerFactory;
+import org.nuxeo.ecm.platform.mqueues.importer.consumer.MQBlobInfoWriter;
+import org.nuxeo.ecm.platform.mqueues.importer.message.BlobMessage;
+import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
-import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobInfoWriter;
-import org.nuxeo.ecm.platform.mqueues.importer.consumer.MQBlobInfoWriter;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.BatchPolicy;
-import org.nuxeo.ecm.platform.mqueues.importer.consumer.BlobMessageConsumerFactory;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPolicy;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerPool;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerStatus;
-import org.nuxeo.ecm.platform.mqueues.importer.message.BlobInfoMessage;
-import org.nuxeo.ecm.platform.mqueues.importer.message.BlobMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerPool;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerStatus;
-import org.nuxeo.ecm.platform.mqueues.importer.producer.RandomStringBlobMessageProducerFactory;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
@@ -63,7 +62,7 @@ public abstract class TestBlobImport {
         final short NB_PRODUCERS = 10;
         final int NB_BLOBS = 2 * 1000;
 
-        try (MQManager<BlobMessage> manager = getManager()) {
+        try (MQManager manager = getManager()) {
             manager.createIfNotExists("blob-import", NB_QUEUE);
             try (MQAppender<BlobMessage> appender = manager.getAppender("blob-import")) {
                 ProducerPool<BlobMessage> producers = new ProducerPool<>("blob-import", manager,
@@ -74,7 +73,7 @@ public abstract class TestBlobImport {
                 assertEquals(NB_PRODUCERS * NB_BLOBS, ret.stream().mapToLong(r -> r.nbProcessed).sum());
             }
 
-            try (MQManager<BlobInfoMessage> managerBlobInfo = getManager()) {
+            try (MQManager managerBlobInfo = getManager()) {
                 String blobProviderName = "test";
                 managerBlobInfo.createIfNotExists("blob-info", NB_QUEUE);
                 BlobInfoWriter blobInfoWriter = new MQBlobInfoWriter(managerBlobInfo.getAppender("blob-info"));

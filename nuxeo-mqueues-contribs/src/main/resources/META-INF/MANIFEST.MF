@@ -3,6 +3,7 @@ Bundle-ManifestVersion: 1
 Bundle-Name: Nuxeo MQueues Contribs
 Bundle-SymbolicName: org.nuxeo.ecm.platform.mqueues;singleton:=true
 Bundle-Vendor: Nuxeo
-Nuxeo-Component: OSGI-INF/operations-contrib.xml,
- OSGI-INF/kafka-config-service.xml
+Nuxeo-Component: OSGI-INF/kafka-config-service.xml,
+ OSGI-INF/mq-service.xml,
+ OSGI-INF/operations-contrib.xml
 

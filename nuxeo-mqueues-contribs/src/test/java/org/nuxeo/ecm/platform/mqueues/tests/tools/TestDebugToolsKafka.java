@@ -27,7 +27,6 @@ import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaUtils;
 
-import java.io.Externalizable;
 import java.util.Properties;
 
 public class TestDebugToolsKafka extends TestDebugTools {
@@ -40,8 +39,8 @@ public class TestDebugToolsKafka extends TestDebugTools {
     }
 
     @Override
-    public <M extends Externalizable> MQManager<M> createManager() {
-        return new KafkaMQManager<>(KafkaUtils.DEFAULT_ZK_SERVER, PREFIX, getProducerProps(), getConsumerProps());
+    public MQManager createManager() {
+        return new KafkaMQManager(KafkaUtils.DEFAULT_ZK_SERVER, PREFIX, getProducerProps(), getConsumerProps());
     }
 
     public static Properties getProducerProps() {

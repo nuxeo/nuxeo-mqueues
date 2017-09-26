@@ -97,6 +97,9 @@ public interface MQTailer<M extends Externalizable> extends AutoCloseable {
      */
     void reset(MQPartition partition);
 
+    @Override
+    void close();
+
     /**
      * Returns {@code true} if the tailer has been closed.
      */

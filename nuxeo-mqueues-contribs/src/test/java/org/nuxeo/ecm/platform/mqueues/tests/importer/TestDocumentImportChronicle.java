@@ -41,6 +41,6 @@ public class TestDocumentImportChronicle extends TestDocumentImport {
         if (basePath == null) {
             basePath = folder.newFolder("mqueue").toPath();
         }
-        return new ChronicleMQManager<>(basePath);
+        return new ChronicleMQManager(basePath);
     }
 }

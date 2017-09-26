@@ -6,34 +6,19 @@ nuxeo-mqueues-contribs
 This module provides contributions to Nuxeo platform using MQueue:
 
 - You can defines Kafka access via Nuxeo contribution.
+- A Nuxeo service that takes care of initialize MQManager, creates MQueue, start computations topologies.
 - The producer/consumer pattern is adapted to do document mass import, it is exposed as automation operations.
- - Computations are used to provide an alternative WorkManager implementation.
+- Computations are used to provide an alternative WorkManager implementation.
 
 ## Warning
 
 This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
 
-## Choosing the MQueue implementation
+## Configurations
 
-You can use Chronicle or Kafka MQueue implementation.
+### Kafka
 
-Chronicle implementation is limited for single node (all producers and consumers are on the same server),
-while distributed nodes requires the Kafka implementation.
-
-The default MQueue implementation is using Chronicle Queue.
-
-### The Chronicle implementation
-
-By default MQueues are stored in the Nuxeo data directory: `${nuxeo.data.dir}/data/mqueue`.
-This path can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.dir`.
-
-The default retention is four days. This can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.retention.duration`,
-the value is expressed as a string like: `12h` or `7d`, respectively for 12 hours and 7 days.
-
-
-### Kafka implementation
-
- To use the Kafka implementation you need to register a Kafka configuration.
+ You can register one or multiple Kafka configuration using this Nuxeo extention point:
 
 ```
 <?xml version="1.0"?>
@@ -59,9 +44,89 @@ the value is expressed as a string like: `12h` or `7d`, respectively for 12 hour
 </component>
 ```
 
-Then you can refer to this configuration named `default` to use the Kafka implementation of MQueue.
+The kafka configuration named `default` can be used in the MQueue configuration below.
 
 Make sure you have read the [nuxeo-mqueues-core README](../nuxeo-mqueues-core/README.md) to setup properly Kafka.
+
+
+### MQueues
+
+You can define multiple MQueue configurations.
+
+There are 2 types of configurations:
+
+- Chronicle: limited for single node, all producers and consumers are on the same server.
+- Kafka: required for distributed producers and consumers.
+
+You can configure the MQ configuration with the following Nuxeo extention point:
+
+```
+<?xml version="1.0"?>
+<component name="my.project.mqueue.contrib">
+
+  <extension target="org.nuxeo.ecm.platform.mqueues.service" point="config">
+
+    <!-- Chronicle impl, storage ${nuxeo.data.dir}/data/mqueue/default, 4 days of retention -->
+    <config name="default" />
+
+    <!-- Chronicle impl, storage ${nuxeo.data.dir}/data/mqueue/custom, 4 days of retention,         create a MQueue named aqueue if not exists, with 5 partitions. -->
+    <config name="custom">
+      <mqueue name="aqueue" size="5" />
+    </config>
+
+    <!-- Chronicle impl, storage in /tmp/imp, a week of retention -->
+    <config name="import" type="chronicle">
+      <option name="directory">imp</option>
+      <option name="basePath">/tmp</option>
+      <option name="retention">7d</option>
+    </config>
+
+    <!-- Kafka impl, referencing the default Kafka config -->
+    <config name="work" type="kafka">
+      <option name="config">default</option>
+    </config>
+
+  </extension>
+
+  <extension target="org.nuxeo.ecm.platform.mqueues.service" point="topology">
+
+    <!-- Start computations once Nuxeo is ready, the class provides the topology and the EP the settings -->
+    <topology name="myComputation" config="default" defaultConcurrency="4" defaultPartitions="4"
+      class="org.nuxeo.ecm.platform.mqueues.tests.MyComputationTopology">
+      <computation name="some-computation" concurrency="10" />
+      <stream name="some-stream" partitions="10" />
+    </topology>
+
+  </extension>
+
+</component>
+```
+
+By default the Chronicle Queue storage is located in the Nuxeo data directory: `${nuxeo.data.dir}/data/mqueue`.
+This path can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.dir`.
+The default retention for Chronicle implementation is four days. This can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.retention.duration`,
+the value is expressed as a string like: `12h` or `7d`, respectively for 12 hours and 7 days.
+
+
+
+### Get a MQManager from Nuxeo
+
+The Nuxeo service MQService enable to get and share access to MQManager with different configuration:
+
+```
+        MQService service = Framework.getService(MQService.class);
+        MQManager manager = service.getManager("default");
+        // append
+        try (MQAppender<Record> appender = manager.getAppender(mqName)) {
+            appender.append(key, Record.of(key, value.getBytes()));
+        }
+        // or tail
+        try (MQTailer<Record> tailer = manager.createTailer("myGroup", mqName)) {
+            MQRecord<Record> mqRecord = tailer.read(Duration.ofSeconds(1));
+            assertEquals(key, mqRecord.message().key);
+        }
+        // don't close the manager, this is done by the service
+```
 
 
 ## Producer/Consumer pattern with automation operations
@@ -95,7 +160,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomDo
 | `mqName` | `mq-doc` | The name of the MQueue. |
 | `mqSize` | `$nbThreads` |The size of the MQueue which will fix the maximum number of consumer threads |
 | `mqBlobInfo` |  | A MQueue containing blob information to use, see section below for use case |
-| `kafkaConfig` |  |Choose the Kafka implementation, use the name of a registered Kafka configuration |
+| `mqConfig` | `import` | The MQ configuration name |
 
 2. Run consumers of document messages creating Nuxeo documents, the concurrency will match the previous nbThreads producers parameters
   ```
@@ -113,7 +178,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runDocument
 | `retryMax` | `3` | Number of time a consumer retry to import in case of failure |
 | `retryDelayS` | `2` | Delay between retries |
 | `mqName` | `mq-doc` | The name of the MQueue to tail |
-| `kafkaConfig` |  | Choose the Kafka implementation, use the name of a registered Kafka configuration |
+| `mqConfig` | `import` | The MQ configuration name |
 | `useBulkMode` | `false` | Process asynchronous listeners in bulk mode |
 | `blockIndexing` | `false` | Do not index created document with Elasticsearch |
 | `blockAsyncListeners` | `false` | Do not process any asynchronous listeners |
@@ -136,7 +201,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runRandomBl
 | `lang` | `en_US` | The locale used for the generated content, can be "fr_FR" or "en_US" |
 | `mqName` | `mq-blob` |  The name of the MQueue to store blobs. |
 | `mqSize` | `$nbThreads`| The size of the MQueue which will fix the maximum number of consumer threads |
-| `kafkaConfig` |  | Choose the Kafka implementation, use the name of a registered Kafka configuration |
+| `mqConfig` | `import` | The MQ configuration name |
 
 2. Run consumers of blob messages importing into the Nuxeo binary store, saving blob information into a new MQueue.
   ```
@@ -153,7 +218,7 @@ curl -X POST 'http://localhost:8080/nuxeo/site/automation/MQImporter.runBlobCons
 | `nbThreads` | `$mqSize` | The number of concurrent consumer, should not be greater than the mqSize |
 | `retryMax` | `3` | Number of time a consumer retry to import in case of failure |
 | `retryDelayS` | `2` | Delay between retries |
-| `kafkaConfig` | | Choose the Kafka implementation, use the name of a registered Kafka configuration |
+| `mqConfig` | `import` | The MQ configuration name |
 
 3. Run producers of random Nuxeo document messages which use produced blobs created in step 2
   ```
@@ -187,9 +252,7 @@ To do so, add the following contribution to override the default WorkManagerImpl
     <provide interface="org.nuxeo.ecm.core.work.api.WorkManager" />
   </service>
 
-  <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationChronicle" />
-
-  <!-- <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputationKafka" /> -->
+  <implementation class="org.nuxeo.ecm.platform.mqueues.workmanager.WorkManagerComputation" />
 
   <extension-point name="queues">
     <object class="org.nuxeo.ecm.core.work.api.WorkQueueDescriptor" />
@@ -198,10 +261,9 @@ To do so, add the following contribution to override the default WorkManagerImpl
 </component>
 ```
 
-When using the Kafka implementation you need to contribute a configuration (see above).
+The MQ configuration used by default is named `work`, this can be configured using
+the `nuxeo.conf` option: `nuxeo.mqueue.work.config`.
 
-The Kafka default configuration used is named "default", you can choose another one using
-using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.config`.
 
 The goal when using Kafka is to scale horizontally, so that adding a Nuxeo node supports more load.
 To do so the number of partitions that fix the maximum concurrency must be greater than
@@ -214,9 +276,12 @@ we have 12 partitions in the MQueue:
 - With 3 nodes we reach the maximum concurrency of 12 threads, each thread reading from one partition.
 - With more than 3 nodes some threads in the work pool will be unused, reducing the overall node load.
 
-You can change the over provisioning factor using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.overprovisioning`.
-
 Note that work pool of size `1` are not over provisioned because we don't want any concurrency.
+
+You can change the over provisioning factor using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.overprovisioning`.
+If the topics where already created you must delete them before or change the size of topic using Kafka tools.
+
+
 
 ### Limitations
 

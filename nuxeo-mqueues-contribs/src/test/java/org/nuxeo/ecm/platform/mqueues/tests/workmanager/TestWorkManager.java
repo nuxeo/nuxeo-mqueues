@@ -34,6 +34,7 @@ import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.test.runner.LocalDeploy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,9 +53,14 @@ import static org.junit.Assert.assertTrue;
 @RunWith(FeaturesRunner.class)
 @Features(CoreFeature.class)
 @Deploy({"org.nuxeo.ecm.platform.mqueues", "org.nuxeo.ecm.platform.mqueues.test"})
+@LocalDeploy("org.nuxeo.ecm.platform.mqueues.test:test-workmanager-service.xml")
 public abstract class TestWorkManager {
 
-    public abstract WorkManagerComputation getService() throws Exception;
+    public abstract String getMQConfig();
+
+    public WorkManagerComputation getService() throws Exception {
+        return (WorkManagerComputation) Framework.getLocalService(WorkManager.class);
+    }
 
     @Inject
     protected CoreSession session;

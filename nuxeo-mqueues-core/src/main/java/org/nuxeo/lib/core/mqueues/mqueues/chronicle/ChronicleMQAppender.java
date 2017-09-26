@@ -208,7 +208,7 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
 
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         log.debug("Closing queue");
         tailers.stream().filter(Objects::nonNull).forEach(tailer -> {
             try {

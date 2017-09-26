@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="org.nuxeo.ecm.platform.mqueues.service" version="1.0">
+
+  <documentation>
+    The component allows to register MQueues configuration.
+  </documentation>
+
+  <implementation class="org.nuxeo.ecm.platform.mqueues.MQServiceImpl" />
+
+  <service>
+    <provide interface="org.nuxeo.ecm.platform.mqueues.MQService" />
+  </service>
+
+  <extension-point name="config">
+    <object class="org.nuxeo.ecm.platform.mqueues.ConfigDescriptor" />
+  </extension-point>
+
+  <extension-point name="topology">
+    <object class="org.nuxeo.ecm.platform.mqueues.TopologyDescriptor" />
+  </extension-point>
+
+</component>
