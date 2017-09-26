@@ -17,14 +17,14 @@ package org.nuxeo.lib.core.mqueues.tests.pattern.consumer;/*
  *     bdelbosc
  */
 
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.Consumer;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.ConsumerFactory;
 
 /**
  * @since 9.1
  */
-public class IdMessageFactory implements ConsumerFactory<keyValueMessage> {
+public class IdMessageFactory implements ConsumerFactory<KeyValueMessage> {
     /**
      * Factory for consumer that do nothing no op
      */
@@ -43,7 +43,7 @@ public class IdMessageFactory implements ConsumerFactory<keyValueMessage> {
     }
 
     @Override
-    public Consumer<keyValueMessage> createConsumer(String consumerId) {
+    public Consumer<KeyValueMessage> createConsumer(String consumerId) {
         switch (type) {
             case BUGGY:
                 return new BuggyIdMessageConsumer(consumerId);

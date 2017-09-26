@@ -17,14 +17,14 @@ package org.nuxeo.lib.core.mqueues.tests.pattern.producer;/*
  *     bdelbosc
  */
 
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerFactory;
 import org.nuxeo.lib.core.mqueues.pattern.producer.ProducerIterator;
 
 /**
  * @since 9.1
  */
-public class RandomIdMessageProducerFactory implements ProducerFactory<keyValueMessage> {
+public class RandomIdMessageProducerFactory implements ProducerFactory<KeyValueMessage> {
     protected final long nbDocuments;
     protected final ProducerType type;
 
@@ -40,7 +40,7 @@ public class RandomIdMessageProducerFactory implements ProducerFactory<keyValueM
     }
 
     @Override
-    public ProducerIterator<keyValueMessage> createProducer(int producerId) {
+    public ProducerIterator<KeyValueMessage> createProducer(int producerId) {
         switch (type) {
             case ORDERED:
                 return new OrderedIdMessageProducer(producerId, nbDocuments);

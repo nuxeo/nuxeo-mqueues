@@ -25,7 +25,7 @@ import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.mqueues.MQAppender;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,14 +83,14 @@ public class TestMQueueChronicle extends TestMQueue {
     @Test
     public void testFileRetention() throws Exception {
 
-        keyValueMessage msg1 = keyValueMessage.of("id1");
-        keyValueMessage msg2 = keyValueMessage.of("id2");
-        keyValueMessage msg3 = keyValueMessage.of("id3");
-        keyValueMessage msg4 = keyValueMessage.of("id4");
+        KeyValueMessage msg1 = KeyValueMessage.of("id1");
+        KeyValueMessage msg2 = KeyValueMessage.of("id2");
+        KeyValueMessage msg3 = KeyValueMessage.of("id3");
+        KeyValueMessage msg4 = KeyValueMessage.of("id4");
 
         ChronicleMQManager manager = (ChronicleMQManager) createManager();
         manager.createIfNotExists("foo", 1);
-        MQAppender<keyValueMessage> appender = manager.getAppender("foo");
+        MQAppender<KeyValueMessage> appender = manager.getAppender("foo");
 
         File queueFile = new File(manager.getBasePath(), "foo/Q-00");
         assertEquals(0, queueFile.list().length);

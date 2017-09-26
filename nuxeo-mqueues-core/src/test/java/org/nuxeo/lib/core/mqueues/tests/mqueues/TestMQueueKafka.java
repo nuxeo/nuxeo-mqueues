@@ -30,7 +30,7 @@ import org.nuxeo.lib.core.mqueues.mqueues.MQRecord;
 import org.nuxeo.lib.core.mqueues.mqueues.MQTailer;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaMQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.kafka.KafkaUtils;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -107,19 +107,19 @@ public class TestMQueueKafka extends TestMQueue {
         final String group = "consumer";
 
         manager.createIfNotExists(mqName, NB_QUEUE);
-        MQAppender<keyValueMessage> appender = manager.getAppender(mqName);
+        MQAppender<KeyValueMessage> appender = manager.getAppender(mqName);
 
-        keyValueMessage msg1 = keyValueMessage.of("id1");
-        keyValueMessage msg2 = keyValueMessage.of("id2");
+        KeyValueMessage msg1 = KeyValueMessage.of("id1");
+        KeyValueMessage msg2 = KeyValueMessage.of("id2");
         for (int i = 0; i < NB_MSG; i++) {
             appender.append(i % NB_QUEUE, msg1);
         }
 
-        MQTailer<keyValueMessage> tailer1 = manager.subscribe(group, Collections.singleton(mqName), null);
+        MQTailer<KeyValueMessage> tailer1 = manager.subscribe(group, Collections.singleton(mqName), null);
 
         // until we call read there is no assignments
         assertTrue(tailer1.assignments().isEmpty());
-        MQRecord<keyValueMessage> record = null;
+        MQRecord<KeyValueMessage> record = null;
         try {
             tailer1.read(Duration.ofSeconds(2));
             fail("Should have raise a rebalance exception");
@@ -141,8 +141,8 @@ public class TestMQueueKafka extends TestMQueue {
         // And now enter the 2nd tailer
         Callable<Integer> consumer = () -> {
             int count = 0;
-            MQTailer<keyValueMessage> consumerTailer = manager.subscribe(group, Collections.singleton(mqName), null);
-            MQRecord<keyValueMessage> consumerRecord = null;
+            MQTailer<KeyValueMessage> consumerTailer = manager.subscribe(group, Collections.singleton(mqName), null);
+            MQRecord<KeyValueMessage> consumerRecord = null;
             while (true) {
                 try {
                     consumerRecord = consumerTailer.read(Duration.ofMillis(200));

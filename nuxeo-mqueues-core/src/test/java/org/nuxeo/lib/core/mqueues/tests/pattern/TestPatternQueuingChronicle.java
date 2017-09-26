@@ -21,7 +21,6 @@ import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
 
 import java.io.IOException;
 import java.nio.file.Path;

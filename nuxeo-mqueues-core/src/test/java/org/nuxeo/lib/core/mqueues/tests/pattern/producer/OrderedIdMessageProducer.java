@@ -18,7 +18,7 @@ package org.nuxeo.lib.core.mqueues.tests.pattern.producer;
  *     bdelbosc
  */
 
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.producer.AbstractProducer;
 
 /**
@@ -26,7 +26,7 @@ import org.nuxeo.lib.core.mqueues.pattern.producer.AbstractProducer;
  *
  * @since 9.1
  */
-public class OrderedIdMessageProducer extends AbstractProducer<keyValueMessage> {
+public class OrderedIdMessageProducer extends AbstractProducer<KeyValueMessage> {
     protected final long nbMessage;
     protected long count = 0;
 
@@ -36,7 +36,7 @@ public class OrderedIdMessageProducer extends AbstractProducer<keyValueMessage> 
     }
 
     @Override
-    public int getPartition(keyValueMessage message, int partitions) {
+    public int getPartition(KeyValueMessage message, int partitions) {
         if (getProducerId() > partitions) {
             throw new IllegalStateException("You should use less producers than consumers to get ordering");
         }
@@ -49,8 +49,8 @@ public class OrderedIdMessageProducer extends AbstractProducer<keyValueMessage> 
     }
 
     @Override
-    public keyValueMessage next() {
-        keyValueMessage ret = keyValueMessage.of(String.valueOf(count));
+    public KeyValueMessage next() {
+        KeyValueMessage ret = KeyValueMessage.of(String.valueOf(count));
         count += 1;
         return ret;
     }

@@ -19,7 +19,7 @@ package org.nuxeo.lib.core.mqueues.tests.pattern.consumer;/*
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.lib.core.mqueues.pattern.keyValueMessage;
+import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
 import org.nuxeo.lib.core.mqueues.pattern.consumer.AbstractConsumer;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,7 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * @since 9.1
  */
-public class BuggyIdMessageConsumer extends AbstractConsumer<keyValueMessage> {
+public class BuggyIdMessageConsumer extends AbstractConsumer<KeyValueMessage> {
     private static final Log log = LogFactory.getLog(BuggyIdMessageConsumer.class);
     protected long lastAccepted = -1;
     protected long lastCommitted = -1;
@@ -46,7 +46,7 @@ public class BuggyIdMessageConsumer extends AbstractConsumer<keyValueMessage> {
     }
 
     @Override
-    public void accept(keyValueMessage message) {
+    public void accept(KeyValueMessage message) {
         if (getRandom100() < 10) {
             throw new BuggyException("Failure in accept: " + message);
         }
