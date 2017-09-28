@@ -5,8 +5,8 @@ nuxeo-mqueues-contribs
 
 This module provides contributions to Nuxeo platform using MQueue:
 
-- You can defines Kafka access via Nuxeo contribution.
-- A Nuxeo service that takes care of initialize MQManager, creates MQueue, start computations topologies.
+- You can define Kafka access via Nuxeo contribution.
+- A Nuxeo service that takes care of initialize MQManager, creates MQueue, starts computations topologies.
 - The producer/consumer pattern is adapted to do document mass import, it is exposed as automation operations.
 - Computations are used to provide an alternative WorkManager implementation.
 
@@ -69,7 +69,8 @@ You can configure the MQ configuration with the following Nuxeo extention point:
     <!-- Chronicle impl, storage ${nuxeo.data.dir}/data/mqueue/default, 4 days of retention -->
     <config name="default" />
 
-    <!-- Chronicle impl, storage ${nuxeo.data.dir}/data/mqueue/custom, 4 days of retention,         create a MQueue named aqueue if not exists, with 5 partitions. -->
+    <!-- Chronicle impl, storage ${nuxeo.data.dir}/data/mqueue/custom, 4 days of retention,
+         create a MQueue named aqueue with 5 partitions if it does not exist. -->
     <config name="custom">
       <mqueue name="aqueue" size="5" />
     </config>
@@ -90,7 +91,7 @@ You can configure the MQ configuration with the following Nuxeo extention point:
 
   <extension target="org.nuxeo.ecm.platform.mqueues.service" point="topology">
 
-    <!-- Start computations once Nuxeo is ready, the class provides the topology and the EP the settings -->
+    <!-- Start computations once Nuxeo is fully started, the class provides the topology and the EP the settings -->
     <topology name="myComputation" config="default" defaultConcurrency="4" defaultPartitions="4"
       class="org.nuxeo.ecm.platform.mqueues.tests.MyComputationTopology">
       <computation name="some-computation" concurrency="10" />
@@ -104,6 +105,7 @@ You can configure the MQ configuration with the following Nuxeo extention point:
 
 By default the Chronicle Queue storage is located in the Nuxeo data directory: `${nuxeo.data.dir}/data/mqueue`.
 This path can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.dir`.
+
 The default retention for Chronicle implementation is four days. This can be changed using the `nuxeo.conf` option: `nuxeo.mqueue.chronicle.retention.duration`,
 the value is expressed as a string like: `12h` or `7d`, respectively for 12 hours and 7 days.
 
@@ -111,10 +113,11 @@ the value is expressed as a string like: `12h` or `7d`, respectively for 12 hour
 
 ### Get a MQManager from Nuxeo
 
-The Nuxeo service MQService enable to get and share access to MQManager with different configuration:
+The Nuxeo service MQService enables to get and share access to MQManager:
 
 ```
         MQService service = Framework.getService(MQService.class);
+        // Get a MQManager with the 'default' configuration
         MQManager manager = service.getManager("default");
         // append
         try (MQAppender<Record> appender = manager.getAppender(mqName)) {
