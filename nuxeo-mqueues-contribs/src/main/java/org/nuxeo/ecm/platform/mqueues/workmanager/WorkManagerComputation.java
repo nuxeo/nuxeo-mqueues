@@ -69,7 +69,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
     protected static final Log log = LogFactory.getLog(WorkManagerComputation.class);
     public static final String WORKMANAGER_CONFIG_PROP = "nuxeo.mqueue.work.config";
     public static final String DEFAULT_WORKMANAGER_CONFIG = "work";
-    public static final String WORKMANAGER_OVERPROVISIONING_PROP = "nuxeo.mqueue.work.overprovisioning";
+    public static final String WORKMANAGER_OVERPROVISIONING_PROP = "nuxeo.mqueue.work.over.provisioning";
     public static final String DEFAULT_WORKMANAGER_OVERPROVISIONING = "3";
     public static final int DEFAULT_CONCURRENCY = 4;
 
@@ -216,7 +216,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
     }
 
     protected void activateQueueMetrics(String queueId) {
-        NuxeoMetricSet queueMetrics = new NuxeoMetricSet("nuxeo", new String[]{"works", "total", queueId});
+        NuxeoMetricSet queueMetrics = new NuxeoMetricSet("nuxeo", "works", "total", queueId);
         queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).scheduled, "scheduled");
         queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).running, "running");
         queueMetrics.putGauge(() -> getMetricsWithNuxeoClassLoader(queueId).completed, "completed");
@@ -225,7 +225,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
     }
 
     protected void deactivateQueueMetrics(String queueId) {
-        String queueMetricsName = MetricRegistry.name("nuxeo", new String[]{"works", "total", queueId});
+        String queueMetricsName = MetricRegistry.name("nuxeo", "works", "total", queueId);
         registry.removeMatching((name, metric) -> name.startsWith(queueMetricsName));
     }
 

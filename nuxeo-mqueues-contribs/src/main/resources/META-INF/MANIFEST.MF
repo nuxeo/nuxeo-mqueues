@@ -6,4 +6,3 @@ Bundle-Vendor: Nuxeo
 Nuxeo-Component: OSGI-INF/kafka-config-service.xml,
  OSGI-INF/mq-service.xml,
  OSGI-INF/operations-contrib.xml
-

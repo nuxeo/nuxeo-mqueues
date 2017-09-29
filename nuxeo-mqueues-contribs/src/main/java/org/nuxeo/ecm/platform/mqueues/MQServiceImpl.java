@@ -69,7 +69,7 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
                 throw new IllegalArgumentException("Unknown MQ configuration: " + name);
             }
             ConfigDescriptor config = configs.get(name);
-            if (config.getType() == "kafka") {
+            if ("kafka".equalsIgnoreCase(config.getType())) {
                 managers.put(name, createKafkaMQManager(config));
             } else {
                 managers.put(name, createChronicleMQManager(config));
@@ -145,7 +145,7 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
         MQManager manager = getManager(descriptor.config);
         Topology topology;
         try {
-            topology = descriptor.klass.newInstance().getTopology();
+            topology = descriptor.klass.newInstance().getTopology(descriptor.options);
         } catch (InstantiationException | IllegalAccessException e) {
             log.error("Can not create topology for " + name, e);
             return;
@@ -178,9 +178,7 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
     }
 
     protected void stopComputations() {
-        computationManagers.forEach((name, manager) -> {
-            manager.stop(Duration.ofSeconds(1));
-        });
+        computationManagers.forEach((name, manager) -> manager.stop(Duration.ofSeconds(1)));
         computationManagers.clear();
     }
 
