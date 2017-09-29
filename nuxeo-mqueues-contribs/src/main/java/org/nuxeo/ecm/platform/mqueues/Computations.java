@@ -20,9 +20,11 @@ package org.nuxeo.ecm.platform.mqueues;
 
 import org.nuxeo.lib.core.mqueues.computation.Topology;
 
+import java.util.Map;
+
 /**
  * @since 9.3
  */
 public interface Computations {
-    Topology getTopology();
+    Topology getTopology(Map<String, String> options);
 }

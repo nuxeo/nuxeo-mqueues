@@ -65,6 +65,14 @@
     <priority value="WARN" />
   </category>
 
+  <category name="org.hibernate">
+    <priority value="WARN" />
+  </category>
+
+  <category name="com.codahale.metrics.jvm">
+    <priority value="WARN" />
+  </category>
+
   <root>
     <appender-ref ref="CONSOLE" />
     <appender-ref ref="FILE" />
