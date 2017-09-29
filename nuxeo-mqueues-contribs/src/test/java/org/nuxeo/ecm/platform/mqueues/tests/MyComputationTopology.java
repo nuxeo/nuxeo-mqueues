@@ -25,6 +25,7 @@ import org.nuxeo.lib.core.mqueues.computation.Record;
 import org.nuxeo.lib.core.mqueues.computation.Topology;
 
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  * @since 9.3
@@ -32,11 +33,10 @@ import java.util.Arrays;
 public class MyComputationTopology implements Computations {
 
     @Override
-    public Topology getTopology() {
-        Topology topology = Topology.builder()
+    public Topology getTopology(Map<String, String> options) {
+        return Topology.builder()
                 .addComputation(() -> new ComputationNoop("C1"), Arrays.asList("i1:input", "o1:output"))
                 .build();
-        return topology;
     }
 
     // Simple computation that forward a record

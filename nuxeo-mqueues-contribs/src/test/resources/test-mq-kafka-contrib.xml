@@ -5,7 +5,7 @@
 
     <config name="default" type="kafka">
       <option name="config">default</option>
-      <queue name="foo" size="10"</queue>
+      <queue name="foo" size="10" />
     </config>
 
     <config name="work" type="kafka">

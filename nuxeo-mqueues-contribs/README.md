@@ -5,10 +5,11 @@ nuxeo-mqueues-contribs
 
 This module provides contributions to Nuxeo platform using MQueue:
 
-- You can define Kafka access via Nuxeo contribution.
+- You can register Kafka access and properties via Nuxeo contribution.
 - A Nuxeo service that takes care of initialize MQManager, creates MQueue, starts computations topologies.
 - The producer/consumer pattern is adapted to do document mass import, it is exposed as automation operations.
 - Computations are used to provide an alternative WorkManager implementation.
+- Computations are also used to replace the Audit writer.
 
 ## Warning
 
@@ -281,7 +282,7 @@ we have 12 partitions in the MQueue:
 
 Note that work pool of size `1` are not over provisioned because we don't want any concurrency.
 
-You can change the over provisioning factor using the `nuxeo.conf` option: `nuxeo.mqueue.work.kafka.overprovisioning`.
+You can change the over provisioning factor using the `nuxeo.conf` option: `nuxeo.mqueue.work.over.provisioning`.
 If the topics where already created you must delete them before or change the size of topic using Kafka tools.
 
 
@@ -298,6 +299,20 @@ result can be persisted in a transient store or work chained using computations.
 
 The work pool metrics are still available and reflect the total number of scheduled, running, completed or canceled works. Note that at the
 moment the number of running works is just an estimation and don't reflect the exact number of concurrent running worker.
+
+## Audit writer
+
+The default audit writer has some drawback because it works as a post commit listener, it generates too much overhead.
+
+The implementation with computation is a simple synchronous listener that collect events and save log entries as JSON into a stream.
+
+A simple computation is processing the stream and performs the batching to submit log entries to the audit backend.
+
+This improves the performance by not having to reconnect bundle event using new session and threads, but it also brings
+reliability because events are persisted first into a MQueue. So even
+if the audit backend is not reachable the application is not affected and we don't loose any log.
+
+See the `test-audit-contrib.xml` file to activate this implementation.
 
 ## Building
 
