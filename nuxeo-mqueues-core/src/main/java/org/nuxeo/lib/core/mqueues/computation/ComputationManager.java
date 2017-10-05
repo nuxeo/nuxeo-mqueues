@@ -28,9 +28,14 @@ import java.time.Duration;
 public interface ComputationManager {
 
     /**
-     * Run the computations defined by the topology and settings.
+     * Initialize streams, but don't run the computations
      */
-    void start(Topology topology, Settings settings);
+    ComputationManager init(Topology topology, Settings settings);
+
+    /**
+     * Run the initialized computations.
+     */
+    void start();
 
     /**
      * Stop computations gracefully after processing a record or a timer.
@@ -75,5 +80,6 @@ public interface ComputationManager {
      * Returns {@code true} if all computations have assigned partitions during the timeout delay.
      */
     boolean waitForAssignments(Duration timeout) throws InterruptedException;
+
 
 }

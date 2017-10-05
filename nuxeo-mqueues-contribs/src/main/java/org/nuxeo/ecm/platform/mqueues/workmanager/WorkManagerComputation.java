@@ -79,17 +79,6 @@ public class WorkManagerComputation extends WorkManagerImpl {
     protected MQManager mqManager;
     protected final Set<String> streamIds = new HashSet<>();
 
-    protected MQManager initStream() {
-        String config = getMQConfig();
-        log.info("Init WorkManagerComputation with MQueue configuration: " + config);
-        MQService service = Framework.getService(MQService.class);
-        return service.getManager(getMQConfig());
-    }
-
-    protected String getMQConfig() {
-        return Framework.getProperty(WORKMANAGER_CONFIG_PROP, DEFAULT_WORKMANAGER_CONFIG);
-    }
-
     protected int getOverProvisioningFactor() {
         return Integer.valueOf(Framework.getProperty(WORKMANAGER_OVERPROVISIONING_PROP, DEFAULT_WORKMANAGER_OVERPROVISIONING));
     }
@@ -177,8 +166,9 @@ public class WorkManagerComputation extends WorkManagerImpl {
             }
             supplantWorkManagerImpl();
             initTopology();
-            this.mqManager = initStream();
+            this.mqManager = getMQManager();
             this.manager = new MQComputationManager(mqManager);
+            manager.init(topology, settings);
             started = true;
 
             Framework.getRuntime().getComponentManager().addListener(new ComponentManager.LifeCycleHandler() {
@@ -196,7 +186,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
 
                 @Override
                 public void afterStart(ComponentManager mgr, boolean isResume) {
-                    manager.start(topology, settings);
+                    manager.start();
                     for (String id : workQueueConfig.getQueueIds()) {
                         activateQueueMetrics(id);
                     }
@@ -212,6 +202,17 @@ public class WorkManagerComputation extends WorkManagerImpl {
             });
             log.info("Initialized");
         }
+    }
+
+    protected MQManager getMQManager() {
+        String config = getMQConfig();
+        log.info("Init WorkManagerComputation with MQueue configuration: " + config);
+        MQService service = Framework.getService(MQService.class);
+        return service.getManager(getMQConfig());
+    }
+
+    protected String getMQConfig() {
+        return Framework.getProperty(WORKMANAGER_CONFIG_PROP, DEFAULT_WORKMANAGER_CONFIG);
     }
 
     protected void activateQueueMetrics(String queueId) {

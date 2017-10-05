@@ -116,6 +116,7 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
     }
 
     protected void createMQueueIfNotExists(String name, ConfigDescriptor config) {
+        // create mqueue defined in the config
         if (config.getMQueuesToCreate().isEmpty()) {
             return;
         }
@@ -131,19 +132,16 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
     public void start(ComponentContext context) {
         super.start(context);
         configs.forEach(this::createMQueueIfNotExists);
+        topologies.forEach(this::initComputations);
         Framework.getRuntime().getComponentManager().addListener(new ComponentsLifeCycleListener());
     }
 
-    protected void startComputations() {
-        topologies.forEach(this::startComputations);
-    }
-
-    protected void startComputations(String name, TopologyDescriptor descriptor) {
+    protected void initComputations(String name, TopologyDescriptor descriptor) {
         if (computationManagers.containsKey(name)) {
-            log.error("Computation topology already started: " + name);
+            log.error("Computation topology already initialized: " + name);
             return;
         }
-        log.info("Starting computation topology: " + name + " with manager: " + descriptor.config);
+        log.warn("Init computation topology: " + name + " with manager: " + descriptor.config);
         MQManager manager = getManager(descriptor.config);
         Topology topology;
         try {
@@ -159,9 +157,8 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
         if (log.isDebugEnabled()) {
             log.debug("Starting computation topology: " + name + "\n" + topology.toPlantuml(settings));
         }
-        computationManager.start(topology, settings);
+        computationManager.init(topology, settings);
         computationManagers.put(name, computationManager);
-
     }
 
     @Override
@@ -169,6 +166,15 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
         super.stop(context);
         stopComputations(); // should have already be done by the beforeStop listener
         closeManagers();
+    }
+
+    protected void startComputations() {
+        topologies.keySet().forEach(name -> {
+            ComputationManager manager = computationManagers.get(name);
+            if (manager != null) {
+                manager.start();
+            }
+        });
     }
 
     protected void stopComputations() {

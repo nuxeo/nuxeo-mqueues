@@ -67,7 +67,7 @@ public abstract class TestComputationManager {
         // System.out.println(topology.toPlantuml(settings));
         try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
-            manager.start(topology, settings);
+            manager.init(topology, settings).start();
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             long start = System.currentTimeMillis();
             // this check works only if there is only one record with the target timestamp
@@ -86,7 +86,7 @@ public abstract class TestComputationManager {
             int expected = nbRecords * settings.getConcurrency("GENERATOR");
             if (result != expected) {
                 manager = getManager(streams);
-                manager.start(topology, settings);
+                manager.init(topology, settings).start();
                 int waiter = 200;
                 log.warn("FAILURE DEBUG TRACE ========================");
                 do {
@@ -149,7 +149,7 @@ public abstract class TestComputationManager {
         try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start(topology, settings);
+            manager.init(topology, settings).start();
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             // no record are processed so far
             long lowWatermark = manager.getLowWatermark();
@@ -240,7 +240,7 @@ public abstract class TestComputationManager {
         try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start(topology1, settings1);
+            manager.init(topology1, settings1).start();
             // This is needed because drainAndStop might consider the source generator as terminated
             // because of a random lag due to kafka init and/or GC > 500ms.
             Thread.sleep(2000);
@@ -256,7 +256,7 @@ public abstract class TestComputationManager {
                 ComputationManager manager = getManager(streams);
                 long start = System.currentTimeMillis();
                 log.info("RESUME computations");
-                manager.start(topology2, settings2);
+                manager.init(topology2, settings2).start();
                 assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
                 // must be greater than kafka heart beat ?
                 Thread.sleep(400 + i * 10);
@@ -272,7 +272,7 @@ public abstract class TestComputationManager {
         try (MQManager streams = getSameStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start(topology2, settings2);
+            manager.init(topology2, settings2).start();
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             assertTrue(manager.drainAndStop(Duration.ofSeconds(200)));
             double elapsed = (double) (System.currentTimeMillis() - start) / 1000.0;
@@ -303,7 +303,7 @@ public abstract class TestComputationManager {
         try (MQManager streams = getStreams()) {
             ComputationManager manager = getManager(streams);
             long start = System.currentTimeMillis();
-            manager.start(topology1, settings1);
+            manager.init(topology1, settings1).start();
             assertTrue(manager.waitForAssignments(Duration.ofSeconds(10)));
             // no record are processed so far
             assertTrue(manager.drainAndStop(Duration.ofSeconds(100)));

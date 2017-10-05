@@ -52,12 +52,19 @@ public class MQComputationManager implements ComputationManager {
         this.manager = manager;
     }
 
+
     @Override
-    public void start(Topology topology, Settings settings) {
-        log.debug("Starting ...");
+    public ComputationManager init(Topology topology, Settings settings) {
+        log.debug("Initializing ...");
         this.topology = topology;
         this.settings = settings;
         initStreams();
+        return this;
+    }
+
+    @Override
+    public void start() {
+        log.debug("Starting ...");
         this.pools = initPools();
         Objects.requireNonNull(pools);
         pools.forEach(MQComputationPool::start);
@@ -76,6 +83,9 @@ public class MQComputationManager implements ComputationManager {
     @Override
     public boolean stop(Duration timeout) {
         log.debug("Stopping ...");
+        if (pools == null) {
+            return true;
+        }
         long failures = pools.parallelStream().filter(comp -> !comp.stop(timeout)).count();
         log.debug(String.format("Stopped %d failure", failures));
         return failures == 0L;
@@ -85,6 +95,9 @@ public class MQComputationManager implements ComputationManager {
     public boolean drainAndStop(Duration timeout) {
         // here the order matters, this must be done sequentially
         log.debug("Drain and stop");
+        if (pools == null) {
+            return true;
+        }
         long failures = pools.stream().filter(comp -> !comp.drainAndStop(timeout)).count();
         log.debug(String.format("Drained and stopped %d failure", failures));
         return failures == 0L;
@@ -93,6 +106,9 @@ public class MQComputationManager implements ComputationManager {
     @Override
     public void shutdown() {
         log.debug("Shutdown ...");
+        if (pools == null) {
+            return;
+        }
         pools.parallelStream().forEach(MQComputationPool::shutdown);
         log.debug("Shutdown done");
     }
