@@ -21,13 +21,10 @@ package org.nuxeo.ecm.platform.mqueues;
 
 import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XNodeList;
-import org.nuxeo.common.xmap.annotation.XNodeMap;
 import org.nuxeo.common.xmap.annotation.XObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @XObject("topology")
 public class TopologyDescriptor {
@@ -47,9 +44,6 @@ public class TopologyDescriptor {
 
     @XNode("@defaultPartitions")
     public Integer defaultPartitions = DEFAULT_CONCURRENCY;
-
-    @XNodeMap(value = "option", key = "@name", type = HashMap.class, componentType = String.class)
-    public Map<String, String> options = new HashMap<>();
 
     public String getName() {
         return name;
@@ -85,4 +79,5 @@ public class TopologyDescriptor {
 
     @XNodeList(value = "stream", type = ArrayList.class, componentType = StreamDescriptor.class)
     public List<StreamDescriptor> streams = new ArrayList<>(0);
+
 }
