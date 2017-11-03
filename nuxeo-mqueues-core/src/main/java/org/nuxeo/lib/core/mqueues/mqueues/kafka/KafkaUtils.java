@@ -18,32 +18,6 @@
  */
 package org.nuxeo.lib.core.mqueues.mqueues.kafka;
 
-import kafka.admin.AdminClient;
-import kafka.admin.AdminUtils;
-import kafka.admin.RackAwareMode;
-import kafka.cluster.Broker;
-import kafka.cluster.EndPoint;
-import kafka.coordinator.group.GroupOverview;
-import kafka.utils.ZKStringSerializer$;
-import kafka.utils.ZkUtils;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
-import org.I0Itec.zkclient.exception.ZkTimeoutException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.kafka.clients.consumer.RangeAssignor;
-import org.apache.kafka.clients.consumer.RoundRobinAssignor;
-import org.apache.kafka.clients.consumer.internals.PartitionAssignor;
-import org.apache.kafka.common.Cluster;
-import org.apache.kafka.common.PartitionInfo;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.requests.MetadataResponse;
-import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
-import scala.collection.Iterator;
-import scala.collection.JavaConversions;
-import scala.collection.Seq;
-
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,20 +27,55 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
+import org.I0Itec.zkclient.exception.ZkTimeoutException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.kafka.clients.admin.DescribeTopicsResult;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.RangeAssignor;
+import org.apache.kafka.clients.consumer.RoundRobinAssignor;
+import org.apache.kafka.clients.consumer.internals.PartitionAssignor;
+import org.apache.kafka.common.Cluster;
+import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
+
+import kafka.admin.AdminClient;
+
+import kafka.admin.AdminUtils;
+import kafka.cluster.Broker;
+import kafka.cluster.EndPoint;
+import kafka.coordinator.group.GroupOverview;
+import kafka.utils.ZKStringSerializer$;
+import kafka.utils.ZkUtils;
+import org.nuxeo.lib.core.mqueues.mqueues.MQPartition;
+import scala.collection.Iterable;
+import scala.collection.IterableLike;
+import scala.collection.Iterator;
+import scala.collection.JavaConversions;
+import scala.collection.Seq;
 
 /**
  * Misc Kafka Utils
- * @since 9.2
+ *
+ * @since 9.3
  */
 public class KafkaUtils implements AutoCloseable {
-    private static final Log log = LogFactory.getLog(KafkaUtils.class);
-    protected final ZkClient zkClient;
-    protected final ZkUtils zkUtils;
     public static final String DEFAULT_ZK_SERVER = "localhost:2181";
+
     public static final int ZK_TIMEOUT_MS = 6000;
+
     public static final int ZK_CONNECTION_TIMEOUT_MS = 10000;
+
+    private static final Log log = LogFactory.getLog(KafkaUtils.class);
+
+    protected final ZkClient zkClient;
+
+    protected final ZkUtils zkUtils;
 
     public KafkaUtils() {
         this(DEFAULT_ZK_SERVER);
@@ -100,62 +109,61 @@ public class KafkaUtils implements AutoCloseable {
         return new ZkClient(zkServers, ZK_TIMEOUT_MS, ZK_CONNECTION_TIMEOUT_MS, ZKStringSerializer$.MODULE$);
     }
 
-    public void createTopicWithoutReplication(String topic, int partitions) {
-        createTopic(topic, partitions, 1);
+    public static List<List<MQPartition>> rangeAssignments(int threads, Map<String, Integer> streams) {
+        PartitionAssignor assignor = new RangeAssignor();
+        return assignments(assignor, threads, streams);
     }
 
-    public void createTopic(String topic, int partitions, int replicationFactor) {
-        log.info("Creating topic: " + topic + ", partitions: " + partitions + ", replications: " + replicationFactor);
-        if (AdminUtils.topicExists(zkUtils, topic)) {
-            String msg = "Can not create Topic already exists: " + topic;
-            log.error(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        AdminUtils.createTopic(zkUtils, topic, partitions, replicationFactor,
-                new Properties(), RackAwareMode.Safe$.MODULE$);
-        try {
-            // TODO: check if it could be replaced by
-            // TestUtils.waitUntilMetadataIsPropagated(zkUtils.getAllBrokersInCluster(), topic, 0, 5000);
-            waitForTopicCreation(topic, Duration.ofSeconds(5));
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
-        AdminUtils.deleteAllConsumerGroupInfoForTopicInZK(zkUtils, topic);
+    public static List<List<MQPartition>> roundRobinAssignments(int threads, Map<String, Integer> streams) {
+        PartitionAssignor assignor = new RoundRobinAssignor();
+        return assignments(assignor, threads, streams);
     }
 
-    protected boolean waitForTopicCreation(String topic, Duration timeout) throws InterruptedException {
-        // if you don't wait for a topic to be ready, this raise LEADER_NOT_AVAILABLE warning
-        // and you can expects lots of rebalancing
-        final long timeoutMs = timeout.toMillis();
-        final long deadline = System.currentTimeMillis() + timeoutMs;
-        boolean ret = false;
-        while (!ret && System.currentTimeMillis() < deadline) {
-            ret = allPartitionsAssigned(topic);
-            Thread.sleep(100);
+    protected static List<List<MQPartition>> assignments(PartitionAssignor assignor, int threads,
+            Map<String, Integer> streams) {
+        final List<PartitionInfo> parts = new ArrayList<>();
+        streams.forEach((streamName, size) -> parts.addAll(getPartsFor(streamName, size)));
+        Map<String, PartitionAssignor.Subscription> subscriptions = new HashMap<>();
+        List<String> streamNames = streams.keySet().stream().sorted().collect(Collectors.toList());
+        for (int i = 0; i < threads; i++) {
+            subscriptions.put(String.valueOf(i), new PartitionAssignor.Subscription(streamNames));
         }
-        if (!ret) {
-            log.error("Topic: " + topic + " has some uninitialized partitions.");
+        Cluster cluster = new Cluster("kafka-cluster", Collections.emptyList(), parts, Collections.emptySet(),
+                Collections.emptySet());
+        Map<String, PartitionAssignor.Assignment> assignments = assignor.assign(cluster, subscriptions);
+        List<List<MQPartition>> ret = new ArrayList<>(threads);
+        for (int i = 0; i < threads; i++) {
+            ret.add(assignments.get(String.valueOf(i))
+                               .partitions()
+                               .stream()
+                               .map(part -> new MQPartition(part.topic(), part.partition()))
+                               .collect(Collectors.toList()));
         }
         return ret;
     }
 
-    protected boolean allPartitionsAssigned(String topic) {
-        if (!AdminUtils.topicExists(zkUtils, topic)) {
-            log.debug("Topic " + topic + " does not exists yet");
-            return false;
+    protected static Collection<PartitionInfo> getPartsFor(String topic, int partitions) {
+        Collection<PartitionInfo> ret = new ArrayList<>();
+        for (int i = 0; i < partitions; i++) {
+            ret.add(new PartitionInfo(topic, i, null, null, null));
         }
-        MetadataResponse.TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zkUtils);
-        if (meta.partitionMetadata().isEmpty()) {
-            log.debug("Topic " + topic + " has no partition yet");
-            return false;
+        return ret;
+    }
+
+    public void createTopicWithoutReplication(Properties properties, String topic, int partitions) {
+        createTopic(properties, topic, partitions, (short) 1);
+    }
+
+    public void createTopic(Properties properties, String topic, int partitions, short replicationFactor) {
+        log.info("Creating topic: " + topic + ", partitions: " + partitions + ", replications: " + replicationFactor);
+        if (AdminUtils.topicExists(zkUtils, topic)) {
+            String msg = "Cannot create Topic already exists: " + topic;
+            log.error(msg);
+            throw new IllegalArgumentException(msg);
         }
-        long errors = meta.partitionMetadata().stream().filter(p -> p.error().code() > 0).count();
-        // System.out.println(topic + ": "+ errors);
-        if (errors != 0) {
-            log.debug("Topic " + topic + " have some uninitialized partitions");
+        try (org.apache.kafka.clients.admin.AdminClient client = org.apache.kafka.clients.admin.AdminClient.create(properties)) {
+            client.createTopics(Collections.singletonList(new NewTopic(topic, partitions, replicationFactor)));
         }
-        return errors == 0;
     }
 
     public boolean topicExists(String topic) {
@@ -164,30 +172,23 @@ public class KafkaUtils implements AutoCloseable {
 
     public List<String> listTopics() {
         Seq<String> topics = zkUtils.getAllTopics();
-        return scala.collection.JavaConversions.seqAsJavaList(topics);
+        return JavaConversions.seqAsJavaList(topics);
     }
 
     public List<String> listConsumers(Properties props, String topic) {
-        List<String> ret = new ArrayList<>();
-        List<String> consumers = listAllConsumers(props);
-        for (String consumer : consumers) {
-            if (getConsumerTopics(props, consumer).contains(topic)) {
-                ret.add(consumer);
-            }
-        }
-        return ret;
+        return listAllConsumers(props).stream()
+                                      .filter(consumer -> getConsumerTopics(props, consumer).contains(topic))
+                                      .collect(Collectors.toList());
     }
 
-    private List<String> getConsumerTopics(Properties props, String group) {
-        List<String> ret = new ArrayList<>();
+    protected List<String> getConsumerTopics(Properties props, String group) {
         AdminClient client = AdminClient.create(props);
-        Map<TopicPartition, Object> response = JavaConversions.mapAsJavaMap(client.listGroupOffsets(group));
-        for (TopicPartition tp : response.keySet()) {
-            ret.add(tp.topic());
-        }
-        return ret;
+        return JavaConversions.mapAsJavaMap(client.listGroupOffsets(group))
+                              .keySet()
+                              .stream()
+                              .map(TopicPartition::topic)
+                              .collect(Collectors.toList());
     }
-
 
     public List<String> listAllConsumers(Properties props) {
         List<String> ret = new ArrayList<>();
@@ -213,9 +214,18 @@ public class KafkaUtils implements AutoCloseable {
         AdminUtils.deleteTopic(zkUtils, topic);
     }
 
-    public int getNumberOfPartitions(String topic) {
-        MetadataResponse.TopicMetadata metadata = AdminUtils.fetchTopicMetadataFromZk(topic, zkUtils);
-        return metadata.partitionMetadata().size();
+    public int getNumberOfPartitions(Properties properties, String topic) {
+        try (org.apache.kafka.clients.admin.AdminClient client = org.apache.kafka.clients.admin.AdminClient.create(properties)) {
+            DescribeTopicsResult descriptions = client.describeTopics(Collections.singletonList(topic));
+            try {
+                return descriptions.values().get(topic).get().partitions().size();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public void resetConsumerStates(String topic) {
@@ -225,13 +235,19 @@ public class KafkaUtils implements AutoCloseable {
 
     public Set<String> getBrokerEndPoints() {
         Set<String> ret = new HashSet<>();
-        Seq<Broker> brokers = zkUtils.getAllBrokersInCluster();
+        // don't use "Seq<Broker> brokers" as it causes compilation issues with Eclipse
+        // when calling brokers.iterator()
+        // (The method iterator() is ambiguous for the type Seq<Broker>)
+        IterableLike<Broker, Iterable<Broker>> brokers = zkUtils.getAllBrokersInCluster();
         Broker broker;
         Iterator<Broker> iter = brokers.iterator();
         while (iter.hasNext()) {
             broker = iter.next();
             if (broker != null) {
-                Seq<EndPoint> endPoints = broker.endPoints();
+                // don't use "Seq<EndPoint> endPoints" as it causes compilation issues with Eclipse
+                // when calling endPoints.iterator()
+                // (The method iterator() is ambiguous for the type Seq<EndPoint>)
+                IterableLike<EndPoint, Iterable<EndPoint>> endPoints = broker.endPoints();
                 Iterator<EndPoint> iter2 = endPoints.iterator();
                 while (iter2.hasNext()) {
                     EndPoint endPoint = iter2.next();
@@ -247,7 +263,7 @@ public class KafkaUtils implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (zkUtils != null) {
             zkUtils.close();
         }
@@ -255,46 +271,6 @@ public class KafkaUtils implements AutoCloseable {
             zkClient.close();
         }
         log.debug("Closed.");
-    }
-
-
-    public static List<List<MQPartition>> rangeAssignments(int threads, Map<String, Integer> streams) {
-        PartitionAssignor assignor = new RangeAssignor();
-        return assignments(assignor, threads, streams);
-    }
-
-    public static List<List<MQPartition>> roundRobinAssignments(int threads, Map<String, Integer> streams) {
-        PartitionAssignor assignor = new RoundRobinAssignor();
-        return assignments(assignor, threads, streams);
-    }
-
-
-    protected static List<List<MQPartition>> assignments(PartitionAssignor assignor, int threads, Map<String, Integer> streams) {
-        final List<PartitionInfo> parts = new ArrayList<>();
-        streams.forEach((streamName, size) -> parts.addAll(getPartsFor(streamName, size)));
-        Map<String, PartitionAssignor.Subscription> subscriptions = new HashMap<>();
-        List<String> streamNames = streams.keySet().stream().sorted().collect(Collectors.toList());
-        for (int i = 0; i < threads; i++) {
-            subscriptions.put(String.valueOf(i), new PartitionAssignor.Subscription(streamNames));
-        }
-        Cluster cluster = new Cluster("kafka-cluster", Collections.emptyList(), parts,
-                Collections.emptySet(), Collections.emptySet());
-        Map<String, PartitionAssignor.Assignment> assignments = assignor.assign(cluster, subscriptions);
-        List<List<MQPartition>> ret = new ArrayList<>(threads);
-        for (int i = 0; i < threads; i++) {
-            ret.add(assignments.get(String.valueOf(i)).partitions().stream()
-                    .map(part -> new MQPartition(part.topic(), part.partition()))
-                    .collect(Collectors.toList()));
-        }
-        return ret;
-    }
-
-    protected static Collection<PartitionInfo> getPartsFor(String topic, int partitions) {
-        Collection<PartitionInfo> ret = new ArrayList<>();
-        for (int i = 0; i < partitions; i++) {
-            ret.add(new PartitionInfo(topic, i, null, null, null));
-        }
-        return ret;
     }
 
 }
