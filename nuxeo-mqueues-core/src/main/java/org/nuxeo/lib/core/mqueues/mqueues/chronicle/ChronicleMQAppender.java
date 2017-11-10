@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.commons.io.FilenameUtils;
@@ -40,11 +41,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.ParseException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Stream;
@@ -321,37 +324,33 @@ public class ChronicleMQAppender<M extends Externalizable> implements MQAppender
 
         SingleChronicleQueue queue = (SingleChronicleQueue) queues.get(findQueueIndex(file));
 
-        int lowerCycle = queue.firstCycle();
-        int upperCycle = cycle - retentionNbCycles;
-
-        purgeQueue(lowerCycle, upperCycle, queue);
+        purgeOldCyclesIfNeeded(queue);
 
     }
 
-    /**
-     * Files in queue older than the current date minus the retention duration are candidates for purging, knowing that
-     * the more recent files should be kept to ensure no data loss (for example after an interruption longer than the
-     * retention duration).
-     */
-    protected void purgeQueue(int lowerCycle, int upperCycle, SingleChronicleQueue queue) {
-        // TODO: refactor this using new chronicle-queue lib methods
-        File[] files = queue.file().listFiles();
-
-        if (files != null && lowerCycle < upperCycle) {
-            RollingResourcesCache cache = new RollingResourcesCache(queue.rollCycle(), queue.epoch(),
-                    name -> new File(queue.file().getAbsolutePath(), name + SUFFIX),
-                    f -> FilenameUtils.removeExtension(f.getName()));
-
-            Arrays.stream(files)
-                    .sorted(Comparator.comparingLong(cache::toLong)) // Order files by cycles
-                    .limit(files.length - retentionNbCycles) // Keep the 'retentionNbCycles' more recent files
-                    .filter(f -> cache.parseCount(FilenameUtils.removeExtension(f.getName())) < upperCycle)
-                    .forEach(f -> {
-                        if (f.delete()) {
-                            log.info("Queue file deleted: " + f.getAbsolutePath());
-                        }
-                    });
+    protected synchronized void purgeOldCyclesIfNeeded(SingleChronicleQueue queue) {
+        List<Long> cycles = new ArrayList<>();
+        try {
+            NavigableSet<Long> cyclesBetween = queue.listCyclesBetween(queue.firstCycle(), queue.lastCycle());
+            cyclesBetween.iterator().forEachRemaining(cycles::add);
+        } catch (ParseException e) {
+            throw new RuntimeException("Fail to list cycles for queue: " + queue, e);
         }
+        if (cycles.size() <= retentionNbCycles) {
+            return;
+        }
+        for (Long cycleLong : cycles.subList(0, cycles.size() - retentionNbCycles)) {
+            int cycle = cycleLong.intValue();
+            WireStore store = queue.storeForCycle(cycle, queue.epoch(), false);
+            if (store != null) {
+                File file = store.file();
+                queue.release(store);
+                log.info("Deleting Chronicle file according to retention: " + file.getAbsolutePath());
+                file.delete();
+            }
+        }
+        // needed to update firstCycle after deletion
+        queue.createTailer();
     }
 
     @Override
