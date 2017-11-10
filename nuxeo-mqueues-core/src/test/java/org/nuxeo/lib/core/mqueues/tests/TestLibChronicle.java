@@ -28,10 +28,12 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.pattern.KeyValueMessage;
+import org.nuxeo.lib.core.mqueues.tests.mqueues.TestMQueueChronicle;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +55,11 @@ import static org.junit.Assert.fail;
  */
 public class TestLibChronicle implements StoreFileListener {
     protected static final Log log = LogFactory.getLog(TestLibChronicle.class);
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(TestMQueueChronicle.IS_WIN);
+    }
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();

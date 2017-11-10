@@ -18,13 +18,21 @@
  */
 package org.nuxeo.ecm.platform.mqueues.tests.workmanager;
 
+import org.junit.Before;
 import org.nuxeo.runtime.test.runner.LocalDeploy;
+
+import static org.nuxeo.ecm.platform.mqueues.tests.importer.TestAutomationChronicle.IS_WIN;
 
 /**
  * @since 9.2
  */
 @LocalDeploy("org.nuxeo.ecm.platform.mqueues.test:test-mq-chronicle-contrib.xml")
 public class TestWorkManagerChronicle extends TestWorkManager {
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(IS_WIN);
+    }
 
     @Override
     public String getMQConfig() {
