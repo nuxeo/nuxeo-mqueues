@@ -18,12 +18,14 @@
  */
 package org.nuxeo.lib.core.mqueues.tests.computation;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
 import org.nuxeo.lib.core.mqueues.computation.mqueue.MQComputationManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
+import org.nuxeo.lib.core.mqueues.tests.mqueues.TestMQueueChronicle;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +36,11 @@ import java.io.IOException;
 public class TestMQComputationManagerChronicle extends TestComputationManager {
 
     protected File basePath;
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(TestMQueueChronicle.IS_WIN);
+    }
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();

@@ -19,10 +19,13 @@
 package org.nuxeo.ecm.platform.mqueues.tests.importer;
 
 import org.junit.After;
+import org.junit.Before;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 
 import java.nio.file.Path;
+
+import static org.nuxeo.ecm.platform.mqueues.tests.importer.TestAutomationChronicle.IS_WIN;
 
 /**
  * @since 9.2
@@ -30,6 +33,11 @@ import java.nio.file.Path;
 public class TestDocumentImportChronicle extends TestDocumentImport {
 
     protected Path basePath;
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(IS_WIN);
+    }
 
     @After
     public void resetBasePath() throws Exception {

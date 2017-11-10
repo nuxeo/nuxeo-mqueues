@@ -18,12 +18,23 @@
  */
 package org.nuxeo.ecm.platform.mqueues.tests.importer;
 
+import org.junit.Before;
+
 import java.util.Map;
 
 /**
  * @since 9.2
  */
 public class TestAutomationChronicle extends TestAutomation {
+
+    protected final static String OS = System.getProperty("os.name").toLowerCase();
+
+    public final static boolean IS_WIN = OS.startsWith("win");
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(IS_WIN);
+    }
 
     @Override
     public void addExtraParams(Map<String, Object> params) {

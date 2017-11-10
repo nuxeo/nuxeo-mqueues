@@ -10,8 +10,9 @@ nuxeo-mqueues
 
 ## Warning
 
-This module is under development and still experimental, interfaces and implementations may change until it is announced as a stable module.
-
+This module is going to be migrated into nuxeo-runtime/nuxeo-stream and nuxeo-runtime/nuxeo-runtime-stream other contribution will be located appropriatly.
+Once this is done this module will be deprecated.
+See https://jira.nuxeo.com/browse/NXP-23252 for more information.
 
 ## Building
 

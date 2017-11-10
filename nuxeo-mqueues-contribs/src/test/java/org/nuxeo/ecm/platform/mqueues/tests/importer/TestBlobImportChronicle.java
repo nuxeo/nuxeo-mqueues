@@ -19,16 +19,24 @@
 
 package org.nuxeo.ecm.platform.mqueues.tests.importer;
 
+import org.junit.Before;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 
 import java.nio.file.Path;
+
+import static org.nuxeo.ecm.platform.mqueues.tests.importer.TestAutomationChronicle.IS_WIN;
 
 /**
  * @since 9.2
  */
 public class TestBlobImportChronicle extends TestBlobImport {
     protected Path basePath;
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(IS_WIN);
+    }
 
     @Override
     public MQManager getManager() throws Exception {

@@ -19,14 +19,22 @@
 package org.nuxeo.ecm.platform.mqueues.tests.tools;
 
 
+import org.junit.Before;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 
 import java.io.File;
 import java.nio.file.Path;
 
+import static org.nuxeo.ecm.platform.mqueues.tests.importer.TestAutomationChronicle.IS_WIN;
+
 public class TestDebugToolsChronicle extends TestDebugTools {
     public static final String BASE_PATH = "/tmp/nuxeo-server-tomcat-9.3-SNAPSHOT/nxserver/data/mqueue/work";
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(IS_WIN);
+    }
 
     @Override
     public MQManager createManager() {

@@ -19,6 +19,7 @@
 package org.nuxeo.lib.core.mqueues.tests.mqueues;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -41,6 +42,15 @@ import static org.junit.Assert.fail;
  */
 public class TestMQueueChronicle extends TestMQueue {
     protected Path basePath;
+
+    protected final static String OS = System.getProperty("os.name").toLowerCase();
+
+    public final static boolean IS_WIN = OS.startsWith("win");
+
+    @Before
+    public void skipWindowsThatDontCleanTempFolder() {
+        org.junit.Assume.assumeFalse(IS_WIN);
+    }
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
