@@ -228,8 +228,8 @@ public class TestLibChronicle implements StoreFileListener {
         assertEquals(TailerState.FOUND_CYCLE, tailer.state());
         try {
             KeyValueMessage receiveNode = poll(tailer);
-            fail("Expecting a NPE on closed tailer");
-        } catch (NullPointerException exception) {
+            fail("Expecting an exception on closed tailer");
+        } catch (IllegalStateException exception) {
             // here the queue has been closed the tailer is closed
         }
 
