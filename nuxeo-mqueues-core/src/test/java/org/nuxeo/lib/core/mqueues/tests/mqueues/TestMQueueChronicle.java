@@ -103,23 +103,23 @@ public class TestMQueueChronicle extends TestMQueue {
         MQAppender<KeyValueMessage> appender = manager.getAppender("foo");
 
         File queueFile = new File(manager.getBasePath(), "foo/Q-00");
-        assertEquals(0, queueFile.list().length);
+        assertEquals(1, queueFile.list().length);
 
         appender.append(0, msg1);
-        assertEquals(1, queueFile.list().length);
+        assertEquals(2, queueFile.list().length);
         Thread.sleep(1001);
         appender.append(0, msg2);
-        assertEquals(2, queueFile.list().length);
+        assertEquals(3, queueFile.list().length);
 
         Thread.sleep(4001);
 
         appender.append(0, msg3);
-        assertEquals(3, queueFile.list().length);
+        assertEquals(4, queueFile.list().length);
 
         // From now, there should be at least 3 retained files in the queue
         Thread.sleep(1001);
         appender.append(0, msg4);
-        assertEquals(3, queueFile.list().length);
+        assertEquals(4, queueFile.list().length);
 
     }
 
