@@ -45,7 +45,6 @@ public class ChronicleMQOffsetTracker implements AutoCloseable {
         queueIndex = queue;
         File offsetFile = new File(basePath, OFFSET_QUEUE_PREFIX + group);
         offsetQueue = binary(offsetFile).build();
-        offsetQueue.acquireAppender().pretouch();
     }
 
     public static boolean isOffsetTracker(String dirName) {
