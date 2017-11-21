@@ -19,10 +19,12 @@ package org.nuxeo.lib.core.mqueues.tests.pattern;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.lib.core.mqueues.tests.mqueues.TestMQueueChronicle;
+import org.nuxeo.runtime.test.runner.RandomBug;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -49,6 +51,13 @@ public class TestPatternQueuingChronicle extends TestPatternQueuing {
             basePath = folder.newFolder().toPath();
         }
         return new ChronicleMQManager(basePath);
+    }
+
+    @Override
+    @Test
+    @RandomBug.Repeat(issue = "NXP-23710", onFailure = 10, onSuccess = 30)
+    public void killConsumers() throws Exception {
+        super.killConsumers();
     }
 
 }
