@@ -18,7 +18,9 @@ package org.nuxeo.lib.core.mqueues.tests.pattern;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
@@ -51,4 +53,10 @@ public class TestPatternQueuingChronicle extends TestPatternQueuing {
         return new ChronicleMQManager(basePath);
     }
 
+    @Override
+    @Test
+    @Ignore("NXP-23710")
+    public void killConsumers() throws Exception {
+        super.killConsumers();
+    }
 }

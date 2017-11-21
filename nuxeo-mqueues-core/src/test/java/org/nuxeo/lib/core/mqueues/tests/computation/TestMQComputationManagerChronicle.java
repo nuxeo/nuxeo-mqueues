@@ -19,7 +19,9 @@
 package org.nuxeo.lib.core.mqueues.tests.computation;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
 import org.nuxeo.lib.core.mqueues.computation.mqueue.MQComputationManager;
@@ -57,5 +59,12 @@ public class TestMQComputationManagerChronicle extends TestComputationManager {
     @Override
     public ComputationManager getManager(MQManager mqManager) {
         return new MQComputationManager(mqManager);
+    }
+
+    @Override
+    @Test
+    @Ignore("NXP-23710")
+    public void testStopAndResume() throws Exception {
+        super.testStopAndResume();
     }
 }
