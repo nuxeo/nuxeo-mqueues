@@ -20,14 +20,12 @@ package org.nuxeo.lib.core.mqueues.tests.computation;
 
 import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.nuxeo.lib.core.mqueues.computation.ComputationManager;
 import org.nuxeo.lib.core.mqueues.computation.mqueue.MQComputationManager;
 import org.nuxeo.lib.core.mqueues.mqueues.MQManager;
 import org.nuxeo.lib.core.mqueues.mqueues.chronicle.ChronicleMQManager;
 import org.nuxeo.lib.core.mqueues.tests.mqueues.TestMQueueChronicle;
-import org.nuxeo.runtime.test.runner.RandomBug;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,12 +57,5 @@ public class TestMQComputationManagerChronicle extends TestComputationManager {
     @Override
     public ComputationManager getManager(MQManager mqManager) {
         return new MQComputationManager(mqManager);
-    }
-
-    @Override
-    @Test
-    @RandomBug.Repeat(issue = "NXP-23710", onFailure = 10, onSuccess = 30)
-    public void testStopAndResume() throws Exception {
-        super.testStopAndResume();
     }
 }
