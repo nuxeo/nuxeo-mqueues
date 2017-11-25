@@ -18,7 +18,24 @@
  */
 package org.nuxeo.ecm.platform.mqueues.workmanager;
 
-import com.codahale.metrics.MetricRegistry;
+import static java.lang.Math.min;
+
+import java.lang.reflect.Field;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import javax.naming.NamingException;
+import javax.transaction.RollbackException;
+import javax.transaction.Status;
+import javax.transaction.Synchronization;
+import javax.transaction.SystemException;
+import javax.transaction.Transaction;
+import javax.transaction.TransactionManager;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.NuxeoException;
@@ -43,23 +60,7 @@ import org.nuxeo.runtime.model.ComponentContext;
 import org.nuxeo.runtime.model.ComponentManager;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
-import java.lang.reflect.Field;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import javax.naming.NamingException;
-import javax.transaction.RollbackException;
-import javax.transaction.Status;
-import javax.transaction.Synchronization;
-import javax.transaction.SystemException;
-import javax.transaction.Transaction;
-import javax.transaction.TransactionManager;
-
-import static java.lang.Math.min;
+import com.codahale.metrics.MetricRegistry;
 
 
 /**
@@ -171,7 +172,7 @@ public class WorkManagerComputation extends WorkManagerImpl {
             manager.init(topology, settings);
             started = true;
 
-            Framework.getRuntime().getComponentManager().addListener(new ComponentManager.LifeCycleHandler() {
+            Framework.getRuntime().getComponentManager().addListener(new ComponentManager.Listener() {
                 @Override
                 public void beforeStop(ComponentManager mgr, boolean isStandby) {
                     try {
