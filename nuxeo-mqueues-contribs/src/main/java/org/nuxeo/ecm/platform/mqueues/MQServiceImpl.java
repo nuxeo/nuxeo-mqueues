@@ -18,6 +18,12 @@
  */
 package org.nuxeo.ecm.platform.mqueues;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.common.Environment;
@@ -34,14 +40,7 @@ import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentContext;
 import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.ComponentManager;
-import org.nuxeo.runtime.model.ComponentManager.LifeCycleHandler;
 import org.nuxeo.runtime.model.DefaultComponent;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @since 9.3
@@ -206,7 +205,7 @@ public class MQServiceImpl extends DefaultComponent implements MQService {
         }
     }
 
-    protected class ComponentsLifeCycleListener extends LifeCycleHandler {
+    protected class ComponentsLifeCycleListener implements ComponentManager.Listener {
         @Override
         public void afterStart(ComponentManager mgr, boolean isResume) {
             // this is called once all components are started and ready
