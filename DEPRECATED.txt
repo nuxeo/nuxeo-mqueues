@@ -1,0 +1,11 @@
+This experimental module is DEPRECATED since 9.10
+
+It has been refactored and superseded by nuxeo-stream.
+
+Visit:
+
+- https://github.com/nuxeo/nuxeo/tree/master/nuxeo-runtime/nuxeo-stream
+- https://github.com/nuxeo/nuxeo/tree/master/nuxeo-runtime/nuxeo-runtime-stream
+- https://github.com/nuxeo/nuxeo-platform-importer/tree/master/nuxeo-importer-stream
+
+for more information.
